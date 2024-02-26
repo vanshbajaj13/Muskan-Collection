@@ -157,86 +157,153 @@ const Sale = () => {
   };
 
   return (
-    <div>
-      <h2>Sale</h2>
-      <select
-        name="brand"
-        value={productDetails.brand}
-        onChange={handleBrandChange}
-      >
-        <option value="" disabled>
-          Select Brand
-        </option>
-        {dropdownOptions.products.map((product) => (
-          <option key={product._id} value={product.brand}>
-            {product.brand}
+    <div className="bg-white p-6 rounded shadow-lg">
+      <h2 className="text-2xl font-bold mb-6">Sale</h2>
+      <div className="mb-4">
+        <label
+          htmlFor="brand"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Brand
+        </label>
+        <select
+          name="brand"
+          value={productDetails.brand}
+          onChange={handleBrandChange}
+          className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        >
+          <option value="" disabled>
+            Select Brand
           </option>
-        ))}
-      </select>
+          {dropdownOptions.products.map((product) => (
+            <option key={product._id} value={product.brand}>
+              {product.brand}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <select
-        name="product"
-        value={productDetails.product}
-        onChange={handleInputChange}
-      >
-        <option value="" disabled>
-          Select Product
-        </option>
-        {productOfSelectedBrand.map((product) => (
-          <option key={product} value={product}>
-            {product}
+      <div className="mb-4">
+        <label
+          htmlFor="product"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Product
+        </label>
+        <select
+          name="product"
+          value={productDetails.product}
+          onChange={handleInputChange}
+          className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        >
+          <option value="" disabled>
+            Select Product
           </option>
-        ))}
-      </select>
+          {productOfSelectedBrand.map((product) => (
+            <option key={product} value={product}>
+              {product}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      <select
-        name="category"
-        value={productDetails.category}
-        onChange={handleInputChange}
+      <div className="mb-4">
+        <label
+          htmlFor="category"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Sub-category
+        </label>
+        <select
+          name="category"
+          value={productDetails.category}
+          onChange={handleInputChange}
+          className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        >
+          <option value="" disabled>
+            Select Sub-category
+          </option>
+          {dropdownOptions.categories.map((categoryObj) =>
+            categoryObj.category.map((subcategory) => (
+              <option key={subcategory} value={subcategory}>
+                {subcategory}
+              </option>
+            ))
+          )}
+        </select>
+      </div>
+
+      <div className="mb-4">
+        <label
+          htmlFor="size"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Size
+        </label>
+        <select
+          name="size"
+          value={productDetails.size}
+          onChange={handleInputChange}
+          className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        >
+          <option value="" disabled>
+            Select Size
+          </option>
+          {dropdownOptions.sizes.map((sizeObj) =>
+            sizeObj.size.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))
+          )}
+        </select>
+      </div>
+
+      <p className="mb-4">Available Quantity: {availableQuantity}</p>
+
+      <div className="mb-4">
+        <label
+          htmlFor="quantitySold"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Quantity Sold
+        </label>
+        <input
+          type="number"
+          placeholder="Quantity Sold"
+          name="quantitySold"
+          value={productDetails.quantitySold}
+          onChange={handleInputChange}
+          className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        />
+      </div>
+
+      <div className="mb-4">
+        <label
+          htmlFor="sellingPrice"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Selling Price
+        </label>
+        <input
+          type="number"
+          placeholder="Selling price"
+          name="sellingPrice"
+          value={productDetails.sellingPrice}
+          onChange={handleInputChange}
+          className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        />
+      </div>
+
+      <button
+        onClick={handleSale}
+        disabled={!isFormValid}
+        className={`w-full py-2 px-4 rounded focus:outline-none focus:shadow-outline-indigo active:bg-indigo-800 ${
+          isFormValid
+            ? "bg-indigo-500 text-white"
+            : "bg-gray-300 text-black opacity-50 cursor-not-allowed"
+        }`}
       >
-        <option value="" disabled>
-          Select Sub-category
-        </option>
-        {dropdownOptions.categories.map((categoryObj) =>
-          categoryObj.category.map((subcategory) => (
-            <option key={subcategory} value={subcategory}>
-              {subcategory}
-            </option>
-          ))
-        )}
-      </select>
-      <select
-        name="size"
-        value={productDetails.size}
-        onChange={handleInputChange}
-      >
-        <option value="" disabled>
-          Select Size
-        </option>
-        {dropdownOptions.sizes.map((sizeObj) =>
-          sizeObj.size.map((size) => (
-            <option key={size} value={size}>
-              {size}
-            </option>
-          ))
-        )}
-      </select>
-      <p>Available Quantity: {availableQuantity}</p>
-      <input
-        type="number"
-        placeholder="Quantity Sold"
-        name="quantitySold"
-        value={productDetails.quantitySold}
-        onChange={handleInputChange}
-      />
-      <input
-        type="number"
-        placeholder="Selling price"
-        name="sellingPrice"
-        value={productDetails.sellingPrice}
-        onChange={handleInputChange}
-      />
-      <button onClick={handleSale} disabled={!isFormValid}>
         Sell
       </button>
     </div>

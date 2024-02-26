@@ -108,89 +108,105 @@ const Purchase = () => {
   };
 
   return (
-    <div>
-      <h2>Purchase</h2>
-      <select
-        name="brand"
-        value={productDetails.brand}
-        onChange={handleBrandChange}
-      >
-        <option value="" disabled>
-          Select Brand
+    <div className="bg-white p-6 shadow-md rounded-md">
+    <h2 className="text-2xl font-semibold mb-6">Purchase</h2>
+
+    <select
+      name="brand"
+      value={productDetails.brand}
+      onChange={handleBrandChange}
+      className="w-full p-2 border rounded-md"
+    >
+      <option value="" disabled>
+        Select Brand
+      </option>
+      {dropdownOptions.products.map((product) => (
+        <option key={product._id} value={product.brand}>
+          {product.brand}
         </option>
-        {dropdownOptions.products.map((product) => (
-          <option key={product._id} value={product.brand}>
-            {product.brand}
+      ))}
+    </select>
+
+    <select
+      name="product"
+      value={productDetails.product}
+      onChange={handleInputChange}
+      className="w-full mt-4 p-2 border rounded-md"
+    >
+      <option value="" disabled>
+        Select Product
+      </option>
+      {productOfSelectedBrand.map((product) => (
+        <option key={product} value={product}>
+          {product}
+        </option>
+      ))}
+    </select>
+
+    <select
+      name="category"
+      value={productDetails.category}
+      onChange={handleInputChange}
+      className="w-full mt-4 p-2 border rounded-md"
+    >
+      <option value="" disabled>
+        Select Sub-category
+      </option>
+      {dropdownOptions.categories.map((categoryObj) =>
+        categoryObj.category.map((subcategory) => (
+          <option key={subcategory} value={subcategory}>
+            {subcategory}
           </option>
-        ))}
-      </select>
+        ))
+      )}
+    </select>
 
-      <select
-        name="product"
-        value={productDetails.product}
-        onChange={handleInputChange}
-      >
-        <option value="" disabled>
-          Select Product
-        </option>
-        {productOfSelectedBrand.map((product) => (
-          <option key={product} value={product}>
-            {product}
+    <select
+      name="size"
+      value={productDetails.size}
+      onChange={handleInputChange}
+      className="w-full mt-4 p-2 border rounded-md"
+    >
+      <option value="" disabled>
+        Select Size
+      </option>
+      {dropdownOptions.sizes.map((sizeObj) =>
+        sizeObj.size.map((size) => (
+          <option key={size} value={size}>
+            {size}
           </option>
-        ))}
-      </select>
+        ))
+      )}
+    </select>
 
-      <select
-        name="category"
-        value={productDetails.category}
-        onChange={handleInputChange}
-      >
-        <option value="" disabled>
-          Select Sub-category
-        </option>
-        {dropdownOptions.categories.map((categoryObj) =>
-          categoryObj.category.map((subcategory) => (
-            <option key={subcategory} value={subcategory}>
-              {subcategory}
-            </option>
-          ))
-        )}
-      </select>
-      <select
-        name="size"
-        value={productDetails.size}
-        onChange={handleInputChange}
-      >
-        <option value="" disabled>
-          Select Size
-        </option>
-        {dropdownOptions.sizes.map((sizeObj) =>
-          sizeObj.size.map((size) => (
-            <option key={size} value={size}>
-              {size}
-            </option>
-          ))
-        )}
-      </select>
+    <input
+      type="number"
+      placeholder="Quantity Buy"
+      name="quantityBuy"
+      value={productDetails.quantityBuy}
+      onChange={handleInputChange}
+      className="w-full mt-4 p-2 border rounded-md"
+    />
+    
+    <input
+      type="number"
+      placeholder="MRP"
+      name="mrp"
+      value={productDetails.mrp}
+      onChange={handleInputChange}
+      className="w-full mt-4 p-2 border rounded-md"
+    />
 
-      <input
-        type="number"
-        placeholder="Quantity Buy"
-        name="quantityBuy"
-        value={productDetails.quantityBuy}
-        onChange={handleInputChange}
-      />
-      <input
-        type="number"
-        placeholder="MRP"
-        name="mrp"
-        value={productDetails.mrp}
-        onChange={handleInputChange}
-      />
-      <button onClick={handlePurchase} disabled={!isFormValid}>
-        Add to Inventory
-      </button>
-    </div>
+    <button
+      onClick={handlePurchase}
+      disabled={!isFormValid}
+      className={`w-full mt-6 py-2 px-4 rounded focus:outline-none ${
+        isFormValid ? 'bg-indigo-500 text-white' : 'bg-gray-500 text-gray-500 opacity-50 cursor-not-allowed'
+      }`}
+    >
+      Add to Inventory
+    </button>
+  </div>
   );
 };
 

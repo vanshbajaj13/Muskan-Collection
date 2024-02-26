@@ -60,7 +60,6 @@ router.put("/products", async (req, res) => {
       options
     )
       .then(() => {
-        console.log("done");
         res.sendStatus(200);
       })
       .catch((error) => {
@@ -127,7 +126,6 @@ router.get("/categories", async (req, res) => {
 // POST a new category
 router.post("/categories", async (req, res) => {
   const { category } = req.body;
-
   try {
     await Category.updateOne({ $addToSet: { category: category } })
       .then((result) => {
