@@ -15,12 +15,13 @@ const Sale = () => {
     categories: [],
     sizes: [],
   });
-  //   const [selectedBrand, setSelectedBrand] = useState("");
-  const [productOfSelectedBrand, setproductOfSelectedBrand] = useState([]);
+
+  const [productOfSelectedBrand, setProductOfSelectedBrand] = useState([]);
   const [availableQuantity, setAvailableQuantity] = useState(0);
   const [isFormValid, setIsFormValid] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showTooltip, setShowTooltip] = useState(false);
 
-  //
   // Fetch available quantity when brand, product, category, or size changes
   const fetchAvailableQuantity = async () => {
     try {
@@ -65,7 +66,7 @@ const Sale = () => {
     }
   };
 
-  //   form validation
+  // form validation
   const checkFormValidity = ({
     brand,
     product,
@@ -85,6 +86,7 @@ const Sale = () => {
   useEffect(() => {
     fetchDropdownOptions();
   }, []);
+
   useEffect(() => {
     fetchAvailableQuantity();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,21 +102,31 @@ const Sale = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productDetails, availableQuantity]);
 
-  //   handle chnages in inputs
+  // handle changes in inputs
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+
+    // Ensure quantitySold and sellingPrice are positive values
+    if (
+      (name === "quantitySold" || name === "sellingPrice") &&
+      parseFloat(value) < 0
+    ) {
+      return;
+    }
+
     setProductDetails((prevDetails) => ({
       ...prevDetails,
       [name]: value,
     }));
   };
+
   const handleBrandChange = (e) => {
     const { name, value } = e.target;
     var selectedBrandProducts = dropdownOptions.products.filter(
       (product) => product.brand === value
     );
-    selectedBrandProducts = selectedBrandProducts[0].products;
-    setproductOfSelectedBrand(selectedBrandProducts);
+    selectedBrandProducts = selectedBrandProducts[0]?.products || [];
+    setProductOfSelectedBrand(selectedBrandProducts);
     setProductDetails((prevDetails) => ({
       ...prevDetails,
       [name]: value,
@@ -124,9 +136,13 @@ const Sale = () => {
   const handleSale = async () => {
     // Validation: Check if all fields are filled
     if (!isFormValid) {
-      console.error("Please fill in all fields before selling the product.");
+      console.error(
+        "Please fill in all fields and ensure the quantity sold and selling price are positive values."
+      );
       return;
     }
+
+    setIsLoading(true);
 
     try {
       const response = await fetch("http://localhost:5000/api/sell", {
@@ -148,11 +164,17 @@ const Sale = () => {
           sellingPrice: "",
         });
         console.log("Product sold from inventory successfully!");
+        setShowTooltip(true);
+        setTimeout(() => {
+          setShowTooltip(false);
+        }, 3000);
       } else {
         console.error("Failed to sell product from inventory");
       }
     } catch (error) {
       console.error("Error:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -295,16 +317,22 @@ const Sale = () => {
         />
       </div>
 
+      {showTooltip && (
+        <div className="text-green-500 text-sm mb-4">
+          Product sold from inventory successfully!
+        </div>
+      )}
+
       <button
         onClick={handleSale}
-        disabled={!isFormValid}
+        disabled={!isFormValid || isLoading}
         className={`w-full py-2 px-4 rounded focus:outline-none focus:shadow-outline-indigo active:bg-indigo-800 ${
           isFormValid
             ? "bg-indigo-500 text-white"
             : "bg-gray-300 text-black opacity-50 cursor-not-allowed"
         }`}
       >
-        Sell
+        {isLoading ? "Selling..." : "Sell"}
       </button>
     </div>
   );

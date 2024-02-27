@@ -1,9 +1,221 @@
-import React from 'react'
+import React, { useState, useEffect } from "react";
+import { Line, Bar } from "react-chartjs-2";
+import "chart.js/auto";
+// ... (imports remain unchanged)
 
 const Dashboard = () => {
-  return (
-    <div>Dashboard</div>
-  )
-}
+  const [salesData, setSalesData] = useState();
+  const [expensesData, setExpensesData] = useState();
+  const [selectedDays, setSelectedDays] = useState(30);
+  const [dailySalesSum, setDailySalesSum] = useState({});
+  const [totalSales, setTotalSales] = useState(0);
+  const [productsSold, setProductsSold] = useState({});
+  const [profitData, setProfitData] = useState({});
+  const [totalExpenses, setTotalExpenses] = useState(0);
 
-export default Dashboard
+  // Helper function to convert irregular profit data to regular data
+  const convertToRegularData = (irregularData) => {
+    const dates = Object.keys(irregularData);
+    const brands = Array.from(
+      new Set(dates.flatMap((date) => Object.keys(irregularData[date] || {})))
+    );
+
+    const regularData = dates.reduce((acc, date) => {
+      acc[date] = brands.reduce((brandAcc, brand) => {
+        brandAcc[brand] = irregularData[date]?.[brand] || 0;
+        return brandAcc;
+      }, {});
+      return acc;
+    }, {});
+
+    return regularData;
+  };
+
+  // calculate things according to selectedDays
+  const reCalculate = () => {
+    // Calculate daily sales sum for the selected days
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - selectedDays);
+
+    const last30DaysSales = salesData?.filter(
+      (sale) => new Date(sale.soldAt) > startDate
+    );
+
+    const dailySum = last30DaysSales?.reduce((acc, sale) => {
+      const saleDate = new Date(sale.soldAt).toLocaleDateString();
+      acc[saleDate] = (acc[saleDate] || 0) + sale.sellingPrice;
+      return acc;
+    }, {});
+
+    setDailySalesSum(dailySum || {});
+
+    // Calculate total sales for the selected days
+    const total = last30DaysSales?.reduce(
+      (sum, sale) => sum + sale.sellingPrice,
+      0
+    );
+    setTotalSales(total || 0);
+
+    // Calculate products sold
+    const productsSoldCount = last30DaysSales?.reduce((acc, sale) => {
+      const product = sale.product;
+      acc[product] = (acc[product] || 0) + 1;
+      return acc;
+    }, {});
+
+    setProductsSold(productsSoldCount || {});
+
+    // Calculate profits for each brand
+    const profits = last30DaysSales?.reduce((acc, sale) => {
+      const saleDate = new Date(sale.soldAt).toLocaleDateString();
+      const brand = sale.brand;
+      const profit = sale.sellingPrice - sale.mrp;
+      acc[saleDate] = acc[saleDate] || {};
+      acc[saleDate][brand] = (acc[saleDate][brand] || 0) + profit;
+      return acc;
+    }, {});
+
+    const convertedProfits = convertToRegularData(profits || {});
+    setProfitData(convertedProfits);
+
+    // Fetch total expenses for the selected days
+    const totalExpensesAmount = expensesData?.reduce(
+      (sum, expense) => sum + expense.expenseAmount,
+      0
+    );
+    setTotalExpenses(totalExpensesAmount || 0);
+  };
+
+  // Fetch sales and expenses data from the server
+  const fetchSalesAndExpensesData = async () => {
+    try {
+      const [salesResponse, expensesResponse] = await Promise.all([
+        fetch("http://127.0.0.1:5000/api/saleslog"),
+        fetch("http://127.0.0.1:5000/api/expenselog/totalexpense"),
+      ]);
+
+      if (!salesResponse.ok) {
+        console.error("Failed to fetch sales data");
+        return;
+      }
+
+      const salesData = await salesResponse.json();
+      setSalesData(salesData);
+
+      if (expensesResponse.ok) {
+        const expensesData = await expensesResponse.json();
+        setExpensesData(expensesData);
+      } else {
+        console.error("Failed to fetch expenses data");
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchSalesAndExpensesData();
+  }, []);
+
+  useEffect(() => {
+    reCalculate();
+  }, [selectedDays, salesData, expensesData]);
+
+  const handleDaysChange = (e) => {
+    setSelectedDays(parseInt(e.target.value, 10));
+  };
+
+  const lineChartData = {
+    labels: Object.keys(dailySalesSum),
+    datasets: [
+      {
+        label: "Daily Sales Sum",
+        data: Object.values(dailySalesSum),
+        fill: true,
+        backgroundColor: "rgba(75,192,192,0.2)",
+        borderColor: "rgba(75,192,192,1)",
+      },
+    ],
+  };
+
+  const barChartData = {
+    labels: Object.keys(productsSold),
+    datasets: [
+      {
+        label: "Products Sold",
+        data: Object.values(productsSold),
+        backgroundColor: "rgba(54, 162, 235, 0.5)",
+        borderColor: "rgba(54, 162, 235, 1)",
+        borderWidth: 1,
+      },
+    ],
+  };
+
+  const profitLineData = {
+    labels: Object.keys(profitData),
+    datasets: Object.keys(profitData[Object.keys(profitData)[0]] || {}).map(
+      (brand, index) => ({
+        label: brand,
+        data: Object.keys(profitData).map(
+          (date) => profitData[date][brand] || 0
+        ),
+        fill: false,
+        borderColor: `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(
+          Math.random() * 256
+        )}, ${Math.floor(Math.random() * 256)}, 1)`,
+      })
+    ),
+  };
+
+  return (
+    <div className="p-4 bg-gray-100 rounded-md shadow-md">
+      <h2 className="text-3xl font-bold mb-4">Sales Dashboard</h2>
+
+      <div className="mb-4">
+        <label className="block mb-2 text-lg">Select Days:</label>
+        <select
+          value={selectedDays}
+          onChange={handleDaysChange}
+          className="border p-2 rounded-md"
+        >
+          {[1, 3, 5, 7, 15, 30].map((days) => (
+            <option key={days} value={days}>
+              {`${days} Day${days > 1 ? "s" : ""}`}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold mb-2">
+          Total Sales in {selectedDays} days:
+        </h3>
+        <div className="text-xl font-bold">₹{totalSales}</div>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-semibold mb-2">
+          Total Expenses in {selectedDays} days:
+        </h3>
+        <div className="text-xl font-bold">₹{totalExpenses}</div>
+      </div>
+
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold mb-2">Sales Over Time</h3>
+        <Line data={lineChartData} height={150} />
+      </div>
+
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold mb-2">Products Sold</h3>
+        <Bar data={barChartData} />
+      </div>
+
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold mb-2">Profits by Brand</h3>
+        <Line data={profitLineData} height={150} />
+      </div>
+    </div>
+  );
+};
+
+export default Dashboard;

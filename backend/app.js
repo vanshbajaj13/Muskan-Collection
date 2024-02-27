@@ -7,6 +7,8 @@ const DropdownOption = require("./routes/dropdownOption");
 const Purchase = require("./routes/purchase");
 const Sell = require("./routes/sale");
 const availableQuantityRoute = require("./routes/availableQuantity");
+const saleslog = require("./routes/salesLog");
+const expenselog = require('./routes/expenseLog');
 const path = require("path");
 
 dotenv.config();
@@ -26,6 +28,8 @@ app.use("/api/dropdownoption", DropdownOption);
 app.use("/api/purchase", Purchase);
 app.use("/api/sell", Sell);
 app.use("/api/availablequantity", availableQuantityRoute);
+app.use("/api/saleslog", saleslog);
+app.use("/api/expenselog", expenselog);
 
 __dirname = path.resolve();
 

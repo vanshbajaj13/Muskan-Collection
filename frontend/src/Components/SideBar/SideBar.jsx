@@ -27,6 +27,12 @@ const SideBar = () => {
             Purchase
           </a>
           <a
+            href="/add-expense"
+            className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+          >
+            Add Expense
+          </a>
+          <a
             href="/add-brand-product"
             className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
           >
