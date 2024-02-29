@@ -98,7 +98,7 @@ const Inventory = () => {
   // Fetch inventory data from the server
   const fetchInventoryData = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:5000/api/item", {
+      const response = await fetch("/api/item", {
         headers: {
           Authorization: `Bearer ${
             JSON.parse(window.localStorage.getItem("userInfo")).token

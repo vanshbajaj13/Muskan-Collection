@@ -102,14 +102,14 @@ const Dashboard = () => {
     if (window.localStorage.getItem("userInfo")) {
       try {
         const [salesResponse, expensesResponse] = await Promise.all([
-          fetch("http://127.0.0.1:5000/api/saleslog", {
+          fetch("/api/saleslog", {
             headers: {
               Authorization: `Bearer ${
                 JSON.parse(window.localStorage.getItem("userInfo")).token
               }`,
             },
           }),
-          fetch("http://127.0.0.1:5000/api/expenselog/totalexpense", {
+          fetch("/api/expenselog/totalexpense", {
             headers: {
               Authorization: `Bearer ${
                 JSON.parse(window.localStorage.getItem("userInfo")).token

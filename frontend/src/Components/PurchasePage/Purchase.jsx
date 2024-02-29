@@ -36,7 +36,7 @@ const Purchase = () => {
     try {
       if (window.localStorage.getItem("userInfo")) {
         const response = await fetch(
-          "http://127.0.0.1:5000/api/dropdownoption/dropdownoptions",
+          "/api/dropdownoption/dropdownoptions",
           {
             headers: {
               Authorization: `Bearer ${
@@ -114,7 +114,7 @@ const Purchase = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/purchase", {
+      const response = await fetch("/api/purchase", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

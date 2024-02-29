@@ -26,7 +26,7 @@ const AddBrandProduct = () => {
       if (window.localStorage.getItem("userInfo")) {
         try {
           const response = await fetch(
-            "http://127.0.0.1:5000/api/dropdownoption/products",
+            "/api/dropdownoption/products",
             {
               headers: {
                 Authorization: `Bearer ${
@@ -90,7 +90,7 @@ const AddBrandProduct = () => {
     const selectedBrand = brandsData[selectedBrandIndex];
     try {
       const response = await fetch(
-        "http://127.0.0.1:5000/api/dropdownoption/products",
+        "/api/dropdownoption/products",
         {
           method: "PUT",
           headers: {

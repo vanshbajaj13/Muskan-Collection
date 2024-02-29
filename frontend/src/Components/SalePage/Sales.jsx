@@ -44,7 +44,7 @@ const Sale = () => {
         productDetails.size
       ) {
         const response = await fetch(
-          `http://localhost:5000/api/availablequantity?brand=${productDetails.brand}&product=${productDetails.product}&category=${productDetails.category}&size=${productDetails.size}`,
+          `/api/availablequantity?brand=${productDetails.brand}&product=${productDetails.product}&category=${productDetails.category}&size=${productDetails.size}`,
           {
             headers: {
               Authorization: `Bearer ${
@@ -73,7 +73,7 @@ const Sale = () => {
     if (window.localStorage.getItem("userInfo")) {
       try {
         const response = await fetch(
-          "http://127.0.0.1:5000/api/dropdownoption/dropdownoptions",
+          "/api/dropdownoption/dropdownoptions",
           {
             headers: {
               Authorization: `Bearer ${
@@ -176,7 +176,7 @@ const Sale = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5000/api/sell", {
+      const response = await fetch("/api/sell", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

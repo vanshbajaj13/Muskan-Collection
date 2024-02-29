@@ -25,7 +25,7 @@ const AddCategory = () => {
       if (window.localStorage.getItem("userInfo")) {
         try {
           const response = await fetch(
-            "http://127.0.0.1:5000/api/dropdownoption/categories",
+            "/api/dropdownoption/categories",
             {
               headers: {
                 Authorization: `Bearer ${
@@ -73,7 +73,7 @@ const AddCategory = () => {
       setIsLoading(true);
       console.log(newCategoryList);
       const response = await fetch(
-        "http://127.0.0.1:5000/api/dropdownoption/categories",
+        "/api/dropdownoption/categories",
         {
           method: "POST",
           headers: {

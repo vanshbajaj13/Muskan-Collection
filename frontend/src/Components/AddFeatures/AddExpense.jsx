@@ -32,7 +32,7 @@ const AddExpense = () => {
       setIsLoading(true);
 
       // Send a POST request to add the expense
-      const response = await fetch("http://127.0.0.1:5000/api/expenseLog", {
+      const response = await fetch("/api/expenseLog", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${

@@ -24,7 +24,7 @@ const AddSize = () => {
       if (window.localStorage.getItem("userInfo")) {
         try {
           const response = await fetch(
-            "http://127.0.0.1:5000/api/dropdownoption/sizes",
+            "/api/dropdownoption/sizes",
             {
               headers: {
                 Authorization: `Bearer ${
@@ -72,7 +72,7 @@ const AddSize = () => {
       setIsLoading(true);
 
       const response = await fetch(
-        "http://127.0.0.1:5000/api/dropdownoption/sizes",
+        "/api/dropdownoption/sizes",
         {
           method: "POST",
           headers: {
