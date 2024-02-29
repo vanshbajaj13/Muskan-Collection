@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const AddCategory = () => {
+  const naviagate = useNavigate();
   const [categoriesData, setCategoriesData] = useState([]);
   const [newCategoryList, setNewCategoryList] = useState([]);
   const [newCategory, setNewCategory] = useState("");
@@ -8,25 +10,47 @@ const AddCategory = () => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // auto navigate to login
+  useEffect(() => {
+    function isUserLogedIn() {
+      if (!window.localStorage.getItem("userInfo")) {
+        naviagate("/login");
+      }
+    }
+    isUserLogedIn();
+  }, [naviagate]);
   useEffect(() => {
     // Fetch available categories from the server
     const fetchCategoriesData = async () => {
-      try {
-        const response = await fetch(
-          "http://127.0.0.1:5000/api/dropdownoption/categories"
-        );
-        if (response.ok) {
-          const categoriesData = await response.json();
-          setCategoriesData(categoriesData[0].category);
-        } else {
-          console.error("Failed to fetch categories");
+      if (window.localStorage.getItem("userInfo")) {
+        try {
+          const response = await fetch(
+            "http://127.0.0.1:5000/api/dropdownoption/categories",
+            {
+              headers: {
+                Authorization: `Bearer ${
+                  JSON.parse(window.localStorage.getItem("userInfo")).token
+                }`,
+              },
+            }
+          );
+          if (response.ok) {
+            const categoriesData = await response.json();
+            setCategoriesData(categoriesData[0].category);
+          } else if (response.status === 401) {
+            window.localStorage.clear();
+            naviagate("/login");
+          } else {
+            console.error("Failed to fetch categories");
+          }
+        } catch (error) {
+          console.log(error);
         }
-      } catch (error) {
-        console.log(error);
       }
     };
 
     fetchCategoriesData();
+    // eslint-disable-next-line
   }, []);
 
   const handleNewCategoryChange = (e) => {
@@ -53,7 +77,9 @@ const AddCategory = () => {
         {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            Authorization: `Bearer ${
+              JSON.parse(window.localStorage.getItem("userInfo")).token
+            }`,
           },
           body: JSON.stringify({
             category: newCategoryList,
@@ -73,6 +99,9 @@ const AddCategory = () => {
         setTimeout(() => {
           setShowTooltip(false);
         }, 3000);
+      } else if (response.status === 401) {
+        window.localStorage.clear();
+        naviagate("/login");
       } else {
         console.error("Failed to save category");
       }

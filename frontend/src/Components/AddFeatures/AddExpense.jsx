@@ -1,6 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const AddExpense = () => {
+  const naviagate = useNavigate();
   const [expense, setExpense] = useState({
     expenseType: "",
     expenseAmount: "",
@@ -33,7 +35,9 @@ const AddExpense = () => {
       const response = await fetch("http://127.0.0.1:5000/api/expenseLog", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          Authorization: `Bearer ${
+            JSON.parse(window.localStorage.getItem("userInfo")).token
+          }`,
         },
         body: JSON.stringify(expense),
       });
@@ -53,6 +57,9 @@ const AddExpense = () => {
         setTimeout(() => {
           setShowTooltip(false);
         }, 3000);
+      } else if (response.status === 401) {
+        window.localStorage.clear();
+        naviagate("/login");
       } else {
         console.error("Failed to add expense");
       }
@@ -63,6 +70,16 @@ const AddExpense = () => {
       setIsLoading(false);
     }
   };
+
+  // auto navigate to login
+  useEffect(() => {
+    function isUserLogedIn() {
+      if (!window.localStorage.getItem("userInfo")) {
+        naviagate("/login");
+      }
+    }
+    isUserLogedIn();
+  }, [naviagate]);
 
   return (
     <div className="p-4">

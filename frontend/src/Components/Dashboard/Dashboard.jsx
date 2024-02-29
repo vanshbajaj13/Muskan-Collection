@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Line, Bar } from "react-chartjs-2";
 import "chart.js/auto";
-// ... (imports remain unchanged)
+import { useNavigate } from "react-router-dom";
 
 const Dashboard = () => {
+  const naviagate = useNavigate();
   const [salesData, setSalesData] = useState();
   const [expensesData, setExpensesData] = useState();
   const [selectedDays, setSelectedDays] = useState(30);
@@ -12,6 +13,16 @@ const Dashboard = () => {
   const [productsSold, setProductsSold] = useState({});
   const [profitData, setProfitData] = useState({});
   const [totalExpenses, setTotalExpenses] = useState(0);
+
+  // auto navigate to login
+  useEffect(() => {
+    function isUserLogedIn() {
+      if (!window.localStorage.getItem("userInfo")) {
+        naviagate("/login");
+      }
+    }
+    isUserLogedIn();
+  }, [naviagate]);
 
   // Helper function to convert irregular profit data to regular data
   const convertToRegularData = (irregularData) => {
@@ -88,37 +99,55 @@ const Dashboard = () => {
 
   // Fetch sales and expenses data from the server
   const fetchSalesAndExpensesData = async () => {
-    try {
-      const [salesResponse, expensesResponse] = await Promise.all([
-        fetch("http://127.0.0.1:5000/api/saleslog"),
-        fetch("http://127.0.0.1:5000/api/expenselog/totalexpense"),
-      ]);
+    if (window.localStorage.getItem("userInfo")) {
+      try {
+        const [salesResponse, expensesResponse] = await Promise.all([
+          fetch("http://127.0.0.1:5000/api/saleslog", {
+            headers: {
+              Authorization: `Bearer ${
+                JSON.parse(window.localStorage.getItem("userInfo")).token
+              }`,
+            },
+          }),
+          fetch("http://127.0.0.1:5000/api/expenselog/totalexpense", {
+            headers: {
+              Authorization: `Bearer ${
+                JSON.parse(window.localStorage.getItem("userInfo")).token
+              }`,
+            },
+          }),
+        ]);
 
-      if (!salesResponse.ok) {
-        console.error("Failed to fetch sales data");
-        return;
+        if (!salesResponse.ok) {
+          console.error("Failed to fetch sales data");
+          window.localStorage.clear();
+          naviagate("/login");
+          return;
+        }
+
+        const salesData = await salesResponse.json();
+        setSalesData(salesData);
+
+        if (expensesResponse.ok) {
+          const expensesData = await expensesResponse.json();
+          setExpensesData(expensesData);
+        } else {
+          console.error("Failed to fetch expenses data");
+        }
+      } catch (error) {
+        console.log(error);
       }
-
-      const salesData = await salesResponse.json();
-      setSalesData(salesData);
-
-      if (expensesResponse.ok) {
-        const expensesData = await expensesResponse.json();
-        setExpensesData(expensesData);
-      } else {
-        console.error("Failed to fetch expenses data");
-      }
-    } catch (error) {
-      console.log(error);
     }
   };
 
   useEffect(() => {
     fetchSalesAndExpensesData();
+    // eslint-disable-next-line
   }, []);
 
   useEffect(() => {
     reCalculate();
+    // eslint-disable-next-line
   }, [selectedDays, salesData, expensesData]);
 
   const handleDaysChange = (e) => {
@@ -162,7 +191,7 @@ const Dashboard = () => {
         fill: false,
         borderColor: `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(
           Math.random() * 256
-        )}, ${Math.floor(Math.random() * 256)}, 1)`,
+        )}, ${Math.floor(Math.random() * 256)}, 0.7)`,
       })
     ),
   };

@@ -9,6 +9,8 @@ import AddBrandProduct from "./AddFeatures/AddBrandProduct";
 import AddCategory from "./AddFeatures/AddCategory";
 import AddSize from "./AddFeatures/AddSize";
 import AddExpense from "./AddFeatures/AddExpense";
+import Login from "./LoginPage/Login";
+import Inventory from "./Inventory/Inventory";
 
 const Home = () => {
   return (
@@ -16,6 +18,7 @@ const Home = () => {
       <MenuBtn></MenuBtn>
       <BrowserRouter>
         <Routes>
+          <Route exact path="/login" element={<Login />} />
           <Route exact path="/menu" element={<SideBar />} />
           <Route exact path="/sale" element={<Sale />} />
           <Route exact path="/purchase" element={<Purchase />} />
@@ -27,6 +30,7 @@ const Home = () => {
           <Route exact path="/add-category" element={<AddCategory />} />
           <Route exact path="/add-size" element={<AddSize />} />
           <Route exact path="/dashboard" element={<Dashboard />} />
+          <Route exact path="/inventory" element={<Inventory />} />
           <Route exact path="/add-expense" element={<AddExpense />} />
           <Route path="*" element={<SideBar />} />
         </Routes>

@@ -1,8 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const { SaleLog } = require("../Models/salesLog");
+const protect= require("../middlewares/authMiddleWare");
 
-router.get("/", async (req, res) => {
+router.get("/",protect , async (req, res) => {
   await SaleLog.find().then((doc)=>{
       res.json(doc);
   }).catch((err)=>{

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Purchase = () => {
+  const naviagate = useNavigate();
   const [productDetails, setProductDetails] = useState({
     brand: "",
     product: "",
@@ -20,17 +22,37 @@ const Purchase = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
 
+  useEffect(() => {
+    function isUserLogedIn() {
+      if (!window.localStorage.getItem("userInfo")) {
+        naviagate("/login");
+      }
+    }
+    isUserLogedIn();
+  }, [naviagate]);
+
   // Fetch dropdown options from the server
   const fetchDropdownOptions = async () => {
     try {
-      const response = await fetch(
-        "http://127.0.0.1:5000/api/dropdownoption/dropdownoptions"
-      );
-      if (response.ok) {
-        const options = await response.json();
-        setDropdownOptions(options);
-      } else {
-        console.error("Failed to fetch dropdown options");
+      if (window.localStorage.getItem("userInfo")) {
+        const response = await fetch(
+          "http://127.0.0.1:5000/api/dropdownoption/dropdownoptions",
+          {
+            headers: {
+              Authorization: `Bearer ${
+                JSON.parse(window.localStorage.getItem("userInfo")).token
+              }`,
+            },
+          }
+        );
+        if (response.ok) {
+          const options = await response.json();
+          setDropdownOptions(options);
+        } else {
+          console.error("Failed to fetch dropdown options");
+          window.localStorage.clear();
+          naviagate("/login");
+        }
       }
     } catch (error) {
       console.log(error);
@@ -47,6 +69,7 @@ const Purchase = () => {
 
   useEffect(() => {
     fetchDropdownOptions();
+    // eslint-disable-next-line
   }, []);
 
   useEffect(() => {
@@ -84,7 +107,7 @@ const Purchase = () => {
 
   const handlePurchase = async () => {
     // Validation: Check if all fields are filled
-    if (!isFormValid) { 
+    if (!isFormValid) {
       return;
     }
 
@@ -95,6 +118,9 @@ const Purchase = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${
+            JSON.parse(window.localStorage.getItem("userInfo")).token
+          }`,
         },
         body: JSON.stringify(productDetails),
       });
@@ -114,6 +140,9 @@ const Purchase = () => {
         setTimeout(() => {
           setShowTooltip(false);
         }, 3000);
+      } else if (response.status === 401) {
+        window.localStorage.clear();
+        naviagate("/login");
       } else {
         console.error("Failed to add product to inventory");
       }

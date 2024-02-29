@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-
+import { useNavigate } from "react-router-dom";
 const AddSize = () => {
+  const naviagate = useNavigate();
   const [sizesData, setSizesData] = useState([]);
   const [newSizeList, setNewSizeList] = useState([]);
   const [newSize, setNewSize] = useState("");
@@ -8,25 +9,47 @@ const AddSize = () => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // auto navigate to login
+  useEffect(() => {
+    function isUserLogedIn() {
+      if (!window.localStorage.getItem("userInfo")) {
+        naviagate("/login");
+      }
+    }
+    isUserLogedIn();
+  }, [naviagate]);
   useEffect(() => {
     // Fetch available sizes from the server
     const fetchSizesData = async () => {
-      try {
-        const response = await fetch(
-          "http://127.0.0.1:5000/api/dropdownoption/sizes"
-        );
-        if (response.ok) {
-          const sizesData = await response.json();
-          setSizesData(sizesData[0].size);
-        } else {
-          console.error("Failed to fetch sizes");
+      if (window.localStorage.getItem("userInfo")) {
+        try {
+          const response = await fetch(
+            "http://127.0.0.1:5000/api/dropdownoption/sizes",
+            {
+              headers: {
+                Authorization: `Bearer ${
+                  JSON.parse(window.localStorage.getItem("userInfo")).token
+                }`,
+              },
+            }
+          );
+          if (response.ok) {
+            const sizesData = await response.json();
+            setSizesData(sizesData[0].size);
+          } else if (response.status === 401) {
+            window.localStorage.clear();
+            naviagate("/login");
+          } else {
+            console.error("Failed to fetch sizes");
+          }
+        } catch (error) {
+          console.log(error);
         }
-      } catch (error) {
-        console.log(error);
       }
     };
 
     fetchSizesData();
+    // eslint-disable-next-line
   }, []);
 
   const handleNewSizeChange = (e) => {
@@ -54,6 +77,9 @@ const AddSize = () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${
+              JSON.parse(window.localStorage.getItem("userInfo")).token
+            }`,
           },
           body: JSON.stringify({
             size: newSizeList,
@@ -73,6 +99,9 @@ const AddSize = () => {
         setTimeout(() => {
           setShowTooltip(false);
         }, 3000);
+      } else if (response.status === 401) {
+        window.localStorage.clear();
+        naviagate("/login");
       } else {
         console.error("Failed to save size");
       }

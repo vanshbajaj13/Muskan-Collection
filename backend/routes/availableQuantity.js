@@ -3,9 +3,10 @@
 const express = require("express");
 const router = express.Router();
 const { Item } = require("../Models/item");
+const protect= require("../middlewares/authMiddleWare");
 
 // Endpoint for retrieving available quantity
-router.get("/", async (req, res) => {
+router.get("/",protect , async (req, res) => {
   const { brand, product, category, size } = req.query;
   try {
     // Find the item based on brand, product, category, and size

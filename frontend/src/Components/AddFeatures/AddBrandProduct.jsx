@@ -1,7 +1,9 @@
 // AddBrandAndProduct.jsx
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const AddBrandProduct = () => {
+  const naviagate = useNavigate();
   const [brandsData, setBrandsData] = useState([]);
   const [newBrand, setNewBrand] = useState("");
   const [newBrandProducts, setNewBrandProducts] = useState([""]);
@@ -9,25 +11,47 @@ const AddBrandProduct = () => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  // auto navigate to login
+  useEffect(() => {
+    function isUserLogedIn() {
+      if (!window.localStorage.getItem("userInfo")) {
+        naviagate("/login");
+      }
+    }
+    isUserLogedIn();
+  }, [naviagate]);
   useEffect(() => {
     // Fetch available brands and products from the server
     const fetchBrandsData = async () => {
-      try {
-        const response = await fetch(
-          "http://127.0.0.1:5000/api/dropdownoption/products"
-        );
-        if (response.ok) {
-          const brandsData = await response.json();
-          setBrandsData(brandsData);
-        } else {
-          console.error("Failed to fetch brands and products");
+      if (window.localStorage.getItem("userInfo")) {
+        try {
+          const response = await fetch(
+            "http://127.0.0.1:5000/api/dropdownoption/products",
+            {
+              headers: {
+                Authorization: `Bearer ${
+                  JSON.parse(window.localStorage.getItem("userInfo")).token
+                }`,
+              },
+            }
+          );
+          if (response.ok) {
+            const brandsData = await response.json();
+            setBrandsData(brandsData);
+          } else if (response.status === 401) {
+            window.localStorage.clear();
+            naviagate("/login");
+          } else {
+            console.error("Failed to fetch brands and products");
+          }
+        } catch (error) {
+          console.log(error);
         }
-      } catch (error) {
-        console.log(error);
       }
     };
 
     fetchBrandsData();
+    // eslint-disable-next-line
   }, []);
 
   const handleBrandChange = (brandIndex) => {
@@ -70,7 +94,9 @@ const AddBrandProduct = () => {
         {
           method: "PUT",
           headers: {
-            "Content-Type": "application/json",
+            Authorization: `Bearer ${
+              JSON.parse(window.localStorage.getItem("userInfo")).token
+            }`,
           },
           body: JSON.stringify({
             brand: selectedBrand.brand,

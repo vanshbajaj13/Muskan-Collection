@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Sale = () => {
+  const naviagate = useNavigate();
+
   const [productDetails, setProductDetails] = useState({
     brand: "",
     product: "",
@@ -22,6 +25,15 @@ const Sale = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
 
+  useEffect(() => {
+    function isUserLogedIn() {
+      if (!window.localStorage.getItem("userInfo")) {
+        naviagate("/login");
+      }
+    }
+    isUserLogedIn();
+  }, [naviagate]);
+
   // Fetch available quantity when brand, product, category, or size changes
   const fetchAvailableQuantity = async () => {
     try {
@@ -32,7 +44,14 @@ const Sale = () => {
         productDetails.size
       ) {
         const response = await fetch(
-          `http://localhost:5000/api/availablequantity?brand=${productDetails.brand}&product=${productDetails.product}&category=${productDetails.category}&size=${productDetails.size}`
+          `http://localhost:5000/api/availablequantity?brand=${productDetails.brand}&product=${productDetails.product}&category=${productDetails.category}&size=${productDetails.size}`,
+          {
+            headers: {
+              Authorization: `Bearer ${
+                JSON.parse(window.localStorage.getItem("userInfo")).token
+              }`,
+            },
+          }
         );
         if (response.ok) {
           var { availableQuantity } = await response.json();
@@ -51,18 +70,29 @@ const Sale = () => {
 
   // Fetch dropdown options from the server
   const fetchDropdownOptions = async () => {
-    try {
-      const response = await fetch(
-        "http://127.0.0.1:5000/api/dropdownoption/dropdownoptions"
-      );
-      if (response.ok) {
-        const options = await response.json();
-        setDropdownOptions(options);
-      } else {
-        console.error("Failed to fetch dropdown options");
+    if (window.localStorage.getItem("userInfo")) {
+      try {
+        const response = await fetch(
+          "http://127.0.0.1:5000/api/dropdownoption/dropdownoptions",
+          {
+            headers: {
+              Authorization: `Bearer ${
+                JSON.parse(window.localStorage.getItem("userInfo")).token
+              }`,
+            },
+          }
+        );
+        if (response.ok) {
+          const options = await response.json();
+          setDropdownOptions(options);
+        } else {
+          console.error("Failed to fetch dropdown options");
+          window.localStorage.clear();
+          naviagate("/login");
+        }
+      } catch (error) {
+        console.log(error);
       }
-    } catch (error) {
-      console.log(error);
     }
   };
 
@@ -85,6 +115,7 @@ const Sale = () => {
 
   useEffect(() => {
     fetchDropdownOptions();
+    // eslint-disable-next-line
   }, []);
 
   useEffect(() => {
@@ -149,6 +180,9 @@ const Sale = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${
+            JSON.parse(window.localStorage.getItem("userInfo")).token
+          }`,
         },
         body: JSON.stringify(productDetails),
       });
@@ -168,6 +202,10 @@ const Sale = () => {
         setTimeout(() => {
           setShowTooltip(false);
         }, 3000);
+      }
+      else if (response.status === 401) {
+        window.localStorage.clear();
+        naviagate("/login");
       } else {
         console.error("Failed to sell product from inventory");
       }

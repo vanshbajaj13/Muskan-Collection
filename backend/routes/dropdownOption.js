@@ -3,9 +3,10 @@ const router = express.Router();
 const Product = require("../Models/product");
 const Size = require("../Models/size");
 const Category = require("../Models/category");
+const protect= require("../middlewares/authMiddleWare");
 
 // GET all brands
-router.get("/brands", async (req, res) => {
+router.get("/brands",protect , async (req, res) => {
   try {
     const products = await Product.find();
     const brands = products.map((product) => product.brand);
@@ -17,7 +18,7 @@ router.get("/brands", async (req, res) => {
 });
 
 // POST a new brand
-router.post("/brands", async (req, res) => {
+router.post("/brands",protect , async (req, res) => {
   const { brand } = req.body;
 
   try {
@@ -37,7 +38,7 @@ router.post("/brands", async (req, res) => {
 });
 
 // GET all products
-router.get("/products", async (req, res) => {
+router.get("/products",protect , async (req, res) => {
   try {
     const products = await Product.find();
     res.json(products);
@@ -48,7 +49,7 @@ router.get("/products", async (req, res) => {
 });
 
 // POST a new product
-router.put("/products", async (req, res) => {
+router.put("/products",protect , async (req, res) => {
   const { brand, products } = req.body;
   try {
     options = { upsert: true, new: true };
@@ -72,7 +73,7 @@ router.put("/products", async (req, res) => {
 });
 
 // GET all sizes
-router.get("/sizes", async (req, res) => {
+router.get("/sizes",protect , async (req, res) => {
   try {
     await Size.find()
       .then((doc) => {
@@ -88,7 +89,7 @@ router.get("/sizes", async (req, res) => {
 });
 
 // POST a new size
-router.post("/sizes", async (req, res) => {
+router.post("/sizes",protect , async (req, res) => {
   const { size } = req.body;
   try {
     await Size.updateOne({ $addToSet: { size: size } })
@@ -108,7 +109,7 @@ router.post("/sizes", async (req, res) => {
 });
 
 // GET all categories
-router.get("/categories", async (req, res) => {
+router.get("/categories",protect , async (req, res) => {
   try {
     await Category.find()
       .then((doc) => {
@@ -124,7 +125,7 @@ router.get("/categories", async (req, res) => {
 });
 
 // POST a new category
-router.post("/categories", async (req, res) => {
+router.post("/categories",protect , async (req, res) => {
   const { category } = req.body;
   try {
     await Category.updateOne({ $addToSet: { category: category } })
@@ -147,7 +148,7 @@ router.post("/categories", async (req, res) => {
 });
 
 // GET dropdown options
-router.get("/dropdownoptions", async (req, res) => {
+router.get("/dropdownoptions",protect , async (req, res) => {
   try {
     const products = await Product.find({});
     const categories = await Category.find({});

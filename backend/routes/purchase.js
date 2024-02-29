@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const { Item } = require("../Models/item");
+const protect= require("../middlewares/authMiddleWare");
 
 // Endpoint for adding a product to inventory
-router.post("/", async (req, res) => {
+router.post("/",protect , async (req, res) => {
   const { brand, product, category, size, quantityBuy, mrp } = req.body;
 
   try {

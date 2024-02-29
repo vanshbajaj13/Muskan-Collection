@@ -9,6 +9,8 @@ const Sell = require("./routes/sale");
 const availableQuantityRoute = require("./routes/availableQuantity");
 const saleslog = require("./routes/salesLog");
 const expenselog = require('./routes/expenseLog');
+const login = require('./routes/login');
+const signup = require('./routes/signUp');
 const path = require("path");
 
 dotenv.config();
@@ -30,6 +32,8 @@ app.use("/api/sell", Sell);
 app.use("/api/availablequantity", availableQuantityRoute);
 app.use("/api/saleslog", saleslog);
 app.use("/api/expenselog", expenselog);
+app.use("/login", login);
+app.use("/signup", signup);
 
 __dirname = path.resolve();
 
