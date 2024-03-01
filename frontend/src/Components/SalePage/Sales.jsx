@@ -9,7 +9,8 @@ const Sale = () => {
     product: "",
     category: "",
     size: "",
-    quantitySold: "",
+    mrp: "",
+    quantitySold: 1,
     sellingPrice: "",
   });
 
@@ -24,6 +25,8 @@ const Sale = () => {
   const [isFormValid, setIsFormValid] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [mrpList, setMRPList] = useState([]);
+  const [fetchingQuantity, setFetchingQuantity] = useState(false);
 
   useEffect(() => {
     function isUserLogedIn() {
@@ -34,17 +37,19 @@ const Sale = () => {
     isUserLogedIn();
   }, [naviagate]);
 
-  // Fetch available quantity when brand, product, category, or size changes
+  // Fetch available quantity when brand, product, category, mrp, or size changes
   const fetchAvailableQuantity = async () => {
     try {
       if (
         productDetails.brand &&
         productDetails.product &&
         productDetails.category &&
-        productDetails.size
+        productDetails.size &&
+        productDetails.mrp
       ) {
+        setFetchingQuantity(true);
         const response = await fetch(
-          `/api/availablequantity?brand=${productDetails.brand}&product=${productDetails.product}&category=${productDetails.category}&size=${productDetails.size}`,
+          `/api/availablequantity?brand=${productDetails.brand}&product=${productDetails.product}&category=${productDetails.category}&size=${productDetails.size}&mrp=${productDetails.mrp}`,
           {
             headers: {
               Authorization: `Bearer ${
@@ -59,7 +64,10 @@ const Sale = () => {
         } else {
           setAvailableQuantity(0);
           console.log("Failed to fetch available quantity");
+          window.localStorage.clear();
+          naviagate("/login");
         }
+        setFetchingQuantity(false);
       } else {
         setAvailableQuantity(0);
       }
@@ -67,13 +75,17 @@ const Sale = () => {
       console.log(error);
     }
   };
-
-  // Fetch dropdown options from the server
-  const fetchDropdownOptions = async () => {
-    if (window.localStorage.getItem("userInfo")) {
-      try {
+  // Fetch mrp list when brand, product, category, or size changes
+  const fetchMrpList = async () => {
+    try {
+      if (
+        productDetails.brand &&
+        productDetails.product &&
+        productDetails.category &&
+        productDetails.size
+      ) {
         const response = await fetch(
-          "/api/dropdownoption/dropdownoptions",
+          `/api/item/list?brand=${productDetails.brand}&product=${productDetails.product}&category=${productDetails.category}&size=${productDetails.size}`,
           {
             headers: {
               Authorization: `Bearer ${
@@ -82,6 +94,42 @@ const Sale = () => {
             },
           }
         );
+
+        if (response.ok) {
+          const listOfItems = await response.json();
+
+          // Extract unique MRPs from the list of items
+          const uniqueMRPs = Array.from(
+            new Set(listOfItems.map((item) => item.mrp))
+          );
+
+          // Set the MRP list state
+          setMRPList(uniqueMRPs);
+        } else {
+          setMRPList([]);
+          console.log("Failed to fetch list");
+          window.localStorage.clear();
+          naviagate("/login");
+        }
+      } else {
+        setMRPList([]);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // Fetch dropdown options from the server
+  const fetchDropdownOptions = async () => {
+    if (window.localStorage.getItem("userInfo")) {
+      try {
+        const response = await fetch("/api/dropdownoption/dropdownoptions", {
+          headers: {
+            Authorization: `Bearer ${
+              JSON.parse(window.localStorage.getItem("userInfo")).token
+            }`,
+          },
+        });
         if (response.ok) {
           const options = await response.json();
           setDropdownOptions(options);
@@ -109,8 +157,8 @@ const Sale = () => {
     product !== "" &&
     category !== "" &&
     size !== "" &&
-    availableQuantity > 0 &&
-    parseInt(quantitySold) > 0 &&
+    availableQuantity !== "" &&
+    parseInt(quantitySold) === 1 &&
     parseInt(sellingPrice) > 0;
 
   useEffect(() => {
@@ -120,6 +168,16 @@ const Sale = () => {
 
   useEffect(() => {
     fetchAvailableQuantity();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    productDetails.brand,
+    productDetails.product,
+    productDetails.category,
+    productDetails.size,
+    productDetails.mrp,
+  ]);
+  useEffect(() => {
+    fetchMrpList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     productDetails.brand,
@@ -202,8 +260,7 @@ const Sale = () => {
         setTimeout(() => {
           setShowTooltip(false);
         }, 3000);
-      }
-      else if (response.status === 401) {
+      } else if (response.status === 401) {
         window.localStorage.clear();
         naviagate("/login");
       } else {
@@ -319,7 +376,34 @@ const Sale = () => {
         </select>
       </div>
 
-      <p className="mb-4">Available Quantity: {availableQuantity}</p>
+      <div className="mb-4">
+        <label
+          htmlFor="mrp"
+          className="block text-sm font-medium text-gray-700"
+        >
+          MRP
+        </label>
+        <select
+          name="mrp"
+          value={productDetails.mrp}
+          onChange={handleInputChange}
+          className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        >
+          <option value="" disabled>
+            Select MRP
+          </option>
+          {mrpList.map((mrp) => (
+            <option key={mrp} value={mrp}>
+              {mrp}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <p className="mb-4 text-green-500">
+        Available Quantity:{" "}
+        {fetchingQuantity ? "Fetching Quantity..." : availableQuantity}
+      </p>
 
       <div className="mb-4">
         <label
@@ -333,7 +417,7 @@ const Sale = () => {
           placeholder="Quantity Sold"
           name="quantitySold"
           value={productDetails.quantitySold}
-          onChange={handleInputChange}
+          // onChange={handleInputChange}
           className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
         />
       </div>

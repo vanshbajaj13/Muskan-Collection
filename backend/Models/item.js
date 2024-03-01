@@ -33,21 +33,5 @@ const itemSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-function createItem(
-  brand,
-  product,
-  category,
-  quantity,
-  mrp
-) {
-  const item = new Item({
-    brand: brand,
-    product: product,
-    category: category,
-    quantity: quantity,
-    mrp: mrp,
-  });
-  return item;
-}
 const Item = new mongoose.model("Item", itemSchema);
-module.exports = { Item, createItem };
+module.exports = { Item };

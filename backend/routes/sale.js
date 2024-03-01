@@ -6,24 +6,16 @@ const protect= require("../middlewares/authMiddleWare");
 
 // Endpoint for adding a product to inventory
 router.post("/",protect , async (req, res) => {
-  const { brand, product, category, size, quantitySold, sellingPrice } = req.body;
+  const { brand, product, category, size,mrp, quantitySold, sellingPrice } = req.body;
 
   try {
-    // Create a new item and save it to the database
-    const newItem = new Item({
-      brand: brand,
-      product: product,
-      category: category,
-      size: size,
-      quantitySold: quantitySold,
-      sellingPrice: sellingPrice,
-    });
     await Item.findOneAndUpdate(
       {
         brand: brand,
         product: product,
         category: category,
         size: size,
+        mrp:mrp,
       },
       { $inc: { quantitySold: quantitySold }}
     )
@@ -34,7 +26,7 @@ router.post("/",protect , async (req, res) => {
                 product:product,
                 category:category,
                 size:size,
-                mrp:result.mrp,
+                mrp:mrp,
                 sellingPrice:sellingPrice,
                 soldAt:Date.now()
             });

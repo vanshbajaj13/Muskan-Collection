@@ -13,6 +13,7 @@ const Dashboard = () => {
   const [productsSold, setProductsSold] = useState({});
   const [profitData, setProfitData] = useState({});
   const [totalExpenses, setTotalExpenses] = useState(0);
+  const [totalProfit, setTotalProfit] = useState(0);
 
   // auto navigate to login
   useEffect(() => {
@@ -88,6 +89,20 @@ const Dashboard = () => {
 
     const convertedProfits = convertToRegularData(profits || {});
     setProfitData(convertedProfits);
+
+    // calculate total profit in selected days
+    const totalProfits = profits
+      ? Object.values(profits).reduce((acc, dateProfits) => {
+          return (
+            acc +
+            Object.values(dateProfits).reduce((brandAcc, profit) => {
+              return brandAcc + profit;
+            }, 0)
+          );
+        }, 0)
+      : 0;
+
+    setTotalProfit(totalProfits);
 
     // Fetch total expenses for the selected days
     const totalExpensesAmount = expensesData?.reduce(
@@ -220,6 +235,12 @@ const Dashboard = () => {
           Total Sales in {selectedDays} days:
         </h3>
         <div className="text-xl font-bold">₹{totalSales}</div>
+      </div>
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold mb-2">
+          Total Profit in {selectedDays} days:
+        </h3>
+        <div className="text-xl font-bold">₹{totalProfit}</div>
       </div>
 
       <div>
