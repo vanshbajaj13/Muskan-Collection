@@ -71,12 +71,12 @@ const AddCategory = () => {
     try {
       // Set loading state to true
       setIsLoading(true);
-      console.log(newCategoryList);
       const response = await fetch(
         "/api/dropdownoption/categories",
         {
           method: "POST",
           headers: {
+            "Content-Type": "application/json",
             Authorization: `Bearer ${
               JSON.parse(window.localStorage.getItem("userInfo")).token
             }`,
