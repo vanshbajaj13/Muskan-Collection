@@ -35,6 +35,7 @@ const AddExpense = () => {
       const response = await fetch("/api/expenseLog", {
         method: "POST",
         headers: {
+          "Content-Type": "application/json",
           Authorization: `Bearer ${
             JSON.parse(window.localStorage.getItem("userInfo")).token
           }`,

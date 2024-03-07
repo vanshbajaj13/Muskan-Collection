@@ -19,8 +19,8 @@ router.get("/brands", protect, async (req, res) => {
 
 // POST a new brand
 router.post("/brands", protect, async (req, res) => {
-  const { brand } = req.body;
-
+  var { brand } = req.body;
+  brand = brand.toUpperCase();
   try {
     const newBrand = new Product({ brand: brand, products: [] });
     await Product.create(newBrand)
@@ -50,7 +50,12 @@ router.get("/products", protect, async (req, res) => {
 
 // POST a new product
 router.put("/products", protect, async (req, res) => {
-  const { brand, products } = req.body;
+  var { brand, products } = req.body;
+  // Convert each value in the product array to lowercase
+  products = products.map((productItem) => productItem.toLowerCase());
+  // Convert brand to uppercase
+  brand = brand.toUpperCase();
+
   try {
     options = { upsert: true, new: true };
     // upsert - create new if not found
@@ -90,8 +95,9 @@ router.get("/sizes", protect, async (req, res) => {
 
 // POST a new size
 router.post("/sizes", protect, async (req, res) => {
-  const { size } = req.body;
-  console.log(req.body);
+  var { size } = req.body;
+  // Convert each value in the size array to Uppercase
+  size = size.map((sizeItem) => sizeItem.toUpperCase());
   try {
     await Size.updateOne({ $addToSet: { size: size } })
       .then(() => {
@@ -127,7 +133,9 @@ router.get("/categories", protect, async (req, res) => {
 
 // POST a new category
 router.post("/categories", protect, async (req, res) => {
-  const { category } = req.body;
+  var { category } = req.body;
+  // Convert each value in the category array to lowercase
+  category = category.map((categoryItem) => categoryItem.toLowerCase());
   try {
     await Category.updateOne({ $addToSet: { category: category } })
       .then((result) => {

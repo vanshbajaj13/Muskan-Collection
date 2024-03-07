@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const { ExpenseLog } = require("../Models/expenseLog");
-const protect= require("../middlewares/authMiddleWare");
+const protect = require("../middlewares/authMiddleWare");
 
 // Get all expenses
-router.get("/",protect ,async (req, res) => {
+router.get("/", protect, async (req, res) => {
   try {
     const expenseLogs = await ExpenseLog.find();
     res.json(expenseLogs);
@@ -13,9 +13,9 @@ router.get("/",protect ,async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-router.get("/totalexpense",protect , async (req, res) => {
+router.get("/totalexpense", protect, async (req, res) => {
   try {
-    const expenseLogs = await ExpenseLog.find({},{"expenseAmount":1,_id:0});
+    const expenseLogs = await ExpenseLog.find({}, { expenseAmount: 1, _id: 0 });
     res.json(expenseLogs);
   } catch (error) {
     console.error(error);
@@ -24,9 +24,11 @@ router.get("/totalexpense",protect , async (req, res) => {
 });
 
 // Post a new expense
-router.post("/",protect , async (req, res) => {
+router.post("/", protect, async (req, res) => {
   try {
-    const { expenseType, expenseAmount, expenseDescription } = req.body;
+    var { expenseType, expenseAmount, expenseDescription } = req.body;
+    expenseType = expenseType.toUpperCase();
+    expenseDescription = expenseDescription.toLowerCase();
     // Create a new expense log
     const date = Date.now();
     const newExpenseLog = new ExpenseLog({
