@@ -1,7 +1,10 @@
 const mongoose = require("mongoose");
 
 const saleLogSchema = new mongoose.Schema(
-  {
+  { 
+    code:{
+      type: String,
+    },
     brand: {
       type: String,
       required: true,

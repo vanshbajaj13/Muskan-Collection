@@ -2,6 +2,11 @@ const mongoose = require("mongoose");
 
 const itemSchema = new mongoose.Schema(
   {
+    code: {
+      type: String,
+      required: true,
+      unique: true,
+    },
     brand: {
       type: String,
       required: true,
@@ -20,6 +25,7 @@ const itemSchema = new mongoose.Schema(
     },
     quantityBuy: {
       type: Number,
+      default : 1,
     },
     quantitySold: {
       type: Number,

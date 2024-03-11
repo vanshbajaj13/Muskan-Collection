@@ -7,15 +7,11 @@ const protect= require("../middlewares/authMiddleWare");
 
 // Endpoint for retrieving available quantity
 router.get("/",protect , async (req, res) => {
-  const { brand, product, category, size,mrp } = req.query;
+  const { code } = req.query;
   try {
     // Find the item based on brand, product, category, and size
     await Item.findOne({
-      brand: brand,
-      product: product,
-      category: category,
-      size: size,
-      mrp:mrp,
+      code: code
     })
       .then((doc) => {
         if (doc) {
