@@ -1,5 +1,5 @@
-import React from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Route, Routes, useNavigate } from "react-router-dom";
 import Sale from "./SalePage/Sales";
 import Purchase from "./PurchasePage/Purchase";
 import SideBar from "./SideBar/SideBar";
@@ -13,28 +13,58 @@ import Login from "./LoginPage/Login";
 import Inventory from "./Inventory/Inventory";
 
 const Home = () => {
+  const naviagate = useNavigate();
+  const [userRole, setUserRole] = useState("user");
+
+  useEffect(() => {
+    // Define a function to fetch the user role
+    const fetchUserRole = async () => {
+      try {
+        if (window.localStorage.getItem("userInfo")) {
+          const response = await fetch("/api/role", {
+            headers: {
+              Authorization: `Bearer ${
+                JSON.parse(window.localStorage.getItem("userInfo")).token
+              }`,
+            },
+          });
+          if (response.ok) {
+            const role = await response.json();
+            setUserRole(role.role);
+          } else {
+            console.error("Failed to fetch role");
+            window.localStorage.clear();
+            naviagate("/login");
+          }
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    // Call the fetchUserRole function
+    fetchUserRole();
+    // eslint-disable-next-line
+  }, []);
+
+  const isAdmin = userRole === "admin";
+
   return (
     <>
       <MenuBtn></MenuBtn>
-      <BrowserRouter>
-        <Routes>
-          <Route exact path="/login" element={<Login />} />
-          <Route exact path="/menu" element={<SideBar />} />
-          <Route exact path="/sale" element={<Sale />} />
-          <Route exact path="/purchase" element={<Purchase />} />
-          <Route
-            exact
-            path="/add-brand-product"
-            element={<AddBrandProduct />}
-          />
-          <Route exact path="/add-category" element={<AddCategory />} />
-          <Route exact path="/add-size" element={<AddSize />} />
-          <Route exact path="/dashboard" element={<Dashboard />} />
-          <Route exact path="/inventory" element={<Inventory />} />
-          <Route exact path="/add-expense" element={<AddExpense />} />
-          <Route path="*" element={<SideBar />} />
-        </Routes>
-      </BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/menu" element={<SideBar />} />
+        <Route path="/sale" element={<Sale />} />
+        <Route path="/purchase" element={<Purchase />} />
+        {isAdmin && <Route path="/dashboard" element={<Dashboard />} />}
+        <Route path="/add-brand-product" element={<AddBrandProduct />} />
+        <Route path="/add-category" element={<AddCategory />} />
+        <Route path="/add-size" element={<AddSize />} />
+        {isAdmin && <Route path="/inventory" element={<Inventory />} />}
+        <Route path="/add-expense" element={<AddExpense />} />
+        <Route path="*" element={<SideBar />} />
+      </Routes>
     </>
   );
 };

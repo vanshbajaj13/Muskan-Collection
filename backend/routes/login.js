@@ -24,7 +24,8 @@ router.post(
               res.send("invalid credential");
             } else {
               if (result) {
-                var token = tokenGenerator(docs._id.toString());
+                // Include the role in the token generation
+                var token = tokenGenerator(docs._id.toString(), docs.role);
                 res.json({ email: docs.email, token: token });
               } else {
                 res.send("invalid password");

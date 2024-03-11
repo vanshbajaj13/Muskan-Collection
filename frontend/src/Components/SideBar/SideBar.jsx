@@ -1,8 +1,41 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const SideBar = () => {
   const naviagate = useNavigate();
+  const [userRole, setUserRole] = useState("user");
+
+  useEffect(() => {
+    // Define a function to fetch the user role
+    const fetchUserRole = async () => {
+      try {
+        if (window.localStorage.getItem("userInfo")) {
+          const response = await fetch("/api/role", {
+            headers: {
+              Authorization: `Bearer ${
+                JSON.parse(window.localStorage.getItem("userInfo")).token
+              }`,
+            },
+          });
+          if (response.ok) {
+            const role = await response.json();
+            setUserRole(role.role);
+          } else {
+            console.error("Failed to fetch role");
+            window.localStorage.clear();
+            naviagate("/login");
+          }
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    // Call the fetchUserRole function
+    fetchUserRole();
+    // eslint-disable-next-line
+  }, []);
+
   // auto navigate to login
   useEffect(() => {
     function isUserLogedIn() {
@@ -17,7 +50,7 @@ const SideBar = () => {
     window.localStorage.clear();
     naviagate("/login");
   }
-
+  var isAdmin = userRole === "admin";
   return (
     <>
       <div
@@ -25,18 +58,22 @@ const SideBar = () => {
       >
         <div>
           <h2 className="text-2xl font-bold mb-8">Menu</h2>
-          <a
-            href="/dashboard"
-            className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
-          >
-            Dashboard
-          </a>
-          <a
-            href="/inventory"
-            className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
-          >
-            Inventory
-          </a>
+          {isAdmin && (
+            <a
+              href="/dashboard"
+              className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+            >
+              Dashboard
+            </a>
+          )}
+          {isAdmin && (
+            <a
+              href="/inventory"
+              className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+            >
+              Inventory
+            </a>
+          )}
           <a
             href="/sale"
             className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"

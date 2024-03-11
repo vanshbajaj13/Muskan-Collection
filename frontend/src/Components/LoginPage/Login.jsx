@@ -9,7 +9,8 @@ const Login = () => {
     if (userInfo) {
       navigate("/");
     }
-  });
+    // eslint-disable-next-line
+  }, []);
 
   const [loginDetails, setLoginDetails] = useState({
     email: "",
