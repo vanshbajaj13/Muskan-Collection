@@ -12,7 +12,7 @@ router.post(
   "/",
   asyncHandler(async (req, res) => {
     var { email, password } = req.body;
-    // email = email.toLowerCase();
+    email = email.toLowerCase();
     const userExists = await User.findOne({ email: email });
     if (userExists) {
       console.log("user already exists");
