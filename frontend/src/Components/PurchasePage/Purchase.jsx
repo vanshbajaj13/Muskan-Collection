@@ -7,7 +7,7 @@ const Purchase = () => {
     brand: "",
     product: "",
     category: "",
-    size: "",
+    size: [],
     quantityBuy: 1,
     mrp: "",
   });
@@ -15,7 +15,7 @@ const Purchase = () => {
   const [dropdownOptions, setDropdownOptions] = useState({
     products: [],
     categories: [],
-    sizes: [],
+    sizes: [{ size: [] }],
   });
   const [productOfSelectedBrand, setProductOfSelectedBrand] = useState([]);
   const [isFormValid, setIsFormValid] = useState(false);
@@ -58,11 +58,11 @@ const Purchase = () => {
     }
   };
 
-  // form validation
+  // Form validation
   const checkFormValidity = () => {
-    const isFormValid = Object.values(productDetails).every(
-      (value) => value !== ""
-    );
+    const isFormValid =
+      Object.values(productDetails).every((value) => value !== "") &&
+      productDetails.size.length > 0; // Check if at least one size is selected
     setIsFormValid(isFormValid);
   };
 
@@ -88,6 +88,24 @@ const Purchase = () => {
     setProductDetails((prevDetails) => ({
       ...prevDetails,
       [name]: value,
+    }));
+  };
+
+  // Handle size selection change
+  const handleSizeChange = (e) => {
+    const { value } = e.target;
+    let updatedSizes = [...productDetails.size];
+    if (updatedSizes.includes(value)) {
+      // If size already exists in the array, remove it
+      updatedSizes = updatedSizes.filter((size) => size !== value);
+    } else {
+      // If size doesn't exist in the array, add it
+      updatedSizes.push(value);
+    }
+    // Update the productDetails state with the new sizes array
+    setProductDetails((prevDetails) => ({
+      ...prevDetails,
+      size: updatedSizes,
     }));
   };
 
@@ -135,10 +153,10 @@ const Purchase = () => {
           mrp: "",
         });
 
-        const { code } = await response.json();
+        const { items } = await response.json();
 
         // Set the returned code and open the modal
-        setReturnedCode(code);
+        setReturnedCode(items);
         setIsModalOpen(true);
 
         console.log("Product added to inventory successfully!");
@@ -172,8 +190,22 @@ const Purchase = () => {
               className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative w-full m-5"
               role="alert"
             >
-              <strong className="font-bold">Code of the item :</strong>
-              <span className="block sm:inline">{returnedCode}</span>
+              <strong className="font-bold">Items added to inventory:</strong>
+              {returnedCode.map((item) => (
+                <div
+                  key={item.code}
+                  className="flex items-center justify-evenly mb-2"
+                >
+                  <div className="rounded-md p-2 mr-2">
+                    <span className="block sm:inline font-semibold">Code:</span>
+                    <span className="block sm:inline ml-1">{item.code}</span>
+                  </div>
+                  <div className="rounded-md p-2">
+                    <span className="block sm:inline font-semibold">Size:</span>
+                    <span className="block sm:inline ml-1">{item.size}</span>
+                  </div>
+                </div>
+              ))}
               <span className="absolute top-0 bottom-0 right-0 px-4 py-3">
                 <svg
                   className="fill-current h-6 w-6 text-green-500 cursor-pointer"
@@ -240,25 +272,26 @@ const Purchase = () => {
           ))
         )}
       </select>
-
-      <select
-        name="size"
-        value={productDetails.size}
-        onChange={handleInputChange}
-        className="w-full mt-4 p-2 border rounded-md"
-      >
-        <option value="" disabled>
-          Select Size
-        </option>
-        {dropdownOptions.sizes.map((sizeObj) =>
-          sizeObj.size.map((size) => (
-            <option key={size} value={size}>
-              {size}
-            </option>
-          ))
-        )}
-      </select>
-
+      {/* Size selection with checkboxes */}
+      <div className="mt-4">
+        <p className="font-semibold mb-1">Select Size:</p>
+        <div className="flex flex-wrap">
+          {dropdownOptions.sizes[0].size.map((size, index) => (
+            <div key={index} className="flex items-center mr-4 mb-2">
+              <input
+                type="checkbox"
+                id={size}
+                name={size}
+                value={size}
+                checked={productDetails.size.includes(size)}
+                onChange={handleSizeChange}
+                className="mr-1"
+              />
+              <label htmlFor={size}>{size}</label>
+            </div>
+          ))}
+        </div>
+      </div>
       <input
         type="number"
         placeholder="MRP"

@@ -11,6 +11,7 @@ import AddSize from "./AddFeatures/AddSize";
 import AddExpense from "./AddFeatures/AddExpense";
 import Login from "./LoginPage/Login";
 import Inventory from "./Inventory/Inventory";
+import History from "./HistoryPage/History";
 
 const Home = () => {
   const naviagate = useNavigate();
@@ -63,6 +64,7 @@ const Home = () => {
         <Route path="/add-size" element={<AddSize />} />
         {isAdmin && <Route path="/inventory" element={<Inventory />} />}
         <Route path="/add-expense" element={<AddExpense />} />
+        {isAdmin && <Route path="/history" element={<History />} />}
         <Route path="*" element={<SideBar />} />
       </Routes>
     </>
