@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import QrScanner from "react-qr-scanner";
 
 const Sale = () => {
   const naviagate = useNavigate();
@@ -15,6 +16,8 @@ const Sale = () => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [availableQuantity, setAvailableQuantity] = useState(0);
   const [fetchingQuantity, setFetchingQuantity] = useState(false);
+  const [qrCodeScanned, setQrCodeScanned] = useState("");
+  const [showScanner, setShowScanner] = useState(false);
 
   useEffect(() => {
     function isUserLoggedIn() {
@@ -83,6 +86,25 @@ const Sale = () => {
     }));
   };
 
+  // Handle QR code scan
+  const handleScan = (data) => {
+    // Check if the scanned code matches the specified format (3 uppercase letters followed by 4 numbers)
+    const regex = /^[A-Z]{3}\d{4}$/;
+    if (data && regex.test(data.text)) {
+      setProductDetails((prevDetails) => ({
+        ...prevDetails,
+        code: data.text,
+      }));
+      setQrCodeScanned(data.text);
+      setShowScanner(false);
+    }
+  };
+
+  // Handle error during QR code scan
+  const handleError = (error) => {
+    console.error("Error while scanning QR code:", error);
+  };
+
   const handleSale = async () => {
     setIsLoading(true);
     setButtonActive(false);
@@ -142,7 +164,42 @@ const Sale = () => {
           onChange={handleInputChange}
           className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
         ></input>
+        <div className="flex justify-center">
+          <button
+            onClick={() => {
+              setQrCodeScanned("");
+              setProductDetails((prevDetails) => ({
+                ...prevDetails,
+                code: "",
+              }));
+            }}
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-1"
+          >
+            Reset QR Code
+          </button>
+        </div>
       </div>
+      <div className="flex justify-center">
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-1"
+          onClick={() => setShowScanner(!showScanner)}
+        >
+          Toggle Scanner
+        </button>
+      </div>
+      {showScanner && (
+        <QrScanner
+          onScan={handleScan}
+          onError={handleError}
+          constraints={{
+            audio: false,
+            video: { facingMode: "environment" },
+          }}
+          style={{ width: "100%" }}
+        />
+      )}
+
+      {qrCodeScanned && <p>QR Code Scanned: {qrCodeScanned}</p>}
       <div className="mb-4">
         <label
           htmlFor="sellingPrice"
