@@ -9,6 +9,7 @@ const Sale = () => {
     code: "",
     sellingPrice: "",
     quantitySold: 1,
+    customerPhoneNo: "",
   });
 
   const [buttonActive, setButtonActive] = useState(false);
@@ -18,6 +19,7 @@ const Sale = () => {
   const [fetchingQuantity, setFetchingQuantity] = useState(false);
   const [qrCodeScanned, setQrCodeScanned] = useState("");
   const [showScanner, setShowScanner] = useState(false);
+  const [showInvalidPhoneTooltip, setShowInvalidPhoneTooltip] = useState(false);
 
   useEffect(() => {
     function isUserLoggedIn() {
@@ -80,6 +82,19 @@ const Sale = () => {
       return;
     }
 
+    // Validate phone number
+    if (name === "customerPhoneNo") {
+      if (!/^\d*$/.test(value)) {
+        // If the entered value contains non-numeric characters, prevent it
+        return;
+      }
+      if (value.length === 10 || value.length === 0) {
+        setShowInvalidPhoneTooltip(false); // Hide tooltip if phone number is valid
+      } else {
+        setShowInvalidPhoneTooltip(true); // Show tooltip for invalid phone number
+      }
+    }
+
     setProductDetails((prevDetails) => ({
       ...prevDetails,
       [name]: value.toUpperCase(),
@@ -126,6 +141,7 @@ const Sale = () => {
           code: "",
           sellingPrice: "",
           quantitySold: 1,
+          customerPhoneNo: "",
         });
         console.log("Product sold from inventory successfully!");
         setShowTooltip(true);
@@ -164,24 +180,43 @@ const Sale = () => {
           onChange={handleInputChange}
           className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
         ></input>
-        <div className="flex justify-center">
-          <button
-            onClick={() => {
-              setQrCodeScanned("");
-              setProductDetails((prevDetails) => ({
-                ...prevDetails,
-                code: "",
-              }));
-            }}
-            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mt-1"
+        <div className="mb-4">
+          <label
+            htmlFor="customerPhoneNo"
+            className="block text-sm font-medium text-gray-700"
           >
-            Reset QR Code
-          </button>
+            Customer Phone No.
+          </label>
+          <input
+            name="customerPhoneNo"
+            type="tel"
+            placeholder="Customer's phone number"
+            value={productDetails.customerPhoneNo}
+            onChange={handleInputChange}
+            className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          />
         </div>
+        {showInvalidPhoneTooltip && (
+          <div className="mt-2 p-2 bg-red-400 text-white font-bold text-center rounded-md">
+            Invalid phone number
+          </div>
+        )}
       </div>
       <div className="flex justify-center">
         <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-1"
+          onClick={() => {
+            setQrCodeScanned("");
+            setProductDetails((prevDetails) => ({
+              ...prevDetails,
+              code: "",
+            }));
+          }}
+          className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded m-1"
+        >
+          Reset QR Code
+        </button>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded m-1"
           onClick={() => setShowScanner(!showScanner)}
         >
           Toggle Scanner

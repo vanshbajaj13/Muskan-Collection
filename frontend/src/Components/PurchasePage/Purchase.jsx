@@ -46,6 +46,15 @@ const Purchase = () => {
         });
         if (response.ok) {
           const options = await response.json();
+          // Sort dropdown options alphabetically
+          options.products.sort((a, b) => a.brand.localeCompare(b.brand));
+          // Sort products within each brand
+          options.products.forEach((brand) => {
+            brand.products.sort();
+          });
+          options.categories.sort((a, b) =>
+            a.category.localeCompare(b.category)
+          );
           setDropdownOptions(options);
         } else {
           console.error("Failed to fetch dropdown options");
@@ -148,8 +157,8 @@ const Purchase = () => {
           brand: "",
           product: "",
           category: "",
-          size: "",
-          quantityBuy: "",
+          size: [],
+          quantityBuy: 1,
           mrp: "",
         });
 

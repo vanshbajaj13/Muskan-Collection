@@ -10,6 +10,7 @@ router.post("/", protect, async (req, res) => {
     code,
     quantitySold,
     sellingPrice,
+    customerPhoneNo,
   } = req.body;
 
   try {
@@ -29,6 +30,7 @@ router.post("/", protect, async (req, res) => {
             size: result.size,
             mrp: result.mrp,
             sellingPrice: sellingPrice,
+            customerPhoneNo: customerPhoneNo,
             soldAt: Date.now(),
           });
           SaleLog.create(newSaleLog)
