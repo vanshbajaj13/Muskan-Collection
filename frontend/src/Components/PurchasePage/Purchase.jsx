@@ -52,9 +52,7 @@ const Purchase = () => {
           options.products.forEach((brand) => {
             brand.products.sort();
           });
-          options.categories.sort((a, b) =>
-            a.category.localeCompare(b.category)
-          );
+          options.categories[0].category.sort((a, b) => a.localeCompare(b));
           setDropdownOptions(options);
         } else {
           console.error("Failed to fetch dropdown options");
@@ -104,6 +102,7 @@ const Purchase = () => {
   const handleSizeChange = (e) => {
     const { value } = e.target;
     let updatedSizes = [...productDetails.size];
+
     if (updatedSizes.includes(value)) {
       // If size already exists in the array, remove it
       updatedSizes = updatedSizes.filter((size) => size !== value);
@@ -111,6 +110,14 @@ const Purchase = () => {
       // If size doesn't exist in the array, add it
       updatedSizes.push(value);
     }
+
+    // Reorder the updatedSizes array based on the index of the selected value in the size list
+    updatedSizes.sort((a, b) => {
+      const indexA = dropdownOptions.sizes[0].size.indexOf(a);
+      const indexB = dropdownOptions.sizes[0].size.indexOf(b);
+      return indexA - indexB;
+    });
+
     // Update the productDetails state with the new sizes array
     setProductDetails((prevDetails) => ({
       ...prevDetails,
@@ -271,7 +278,7 @@ const Purchase = () => {
         className="w-full mt-4 p-2 border rounded-md"
       >
         <option value="" disabled>
-          Select Sub-category
+          Select Category
         </option>
         {dropdownOptions.categories.map((categoryObj) =>
           categoryObj.category.map((subcategory) => (
@@ -306,6 +313,14 @@ const Purchase = () => {
         placeholder="MRP"
         name="mrp"
         value={productDetails.mrp}
+        onChange={handleInputChange}
+        className="w-full mt-4 p-2 border rounded-md"
+      />
+      <input
+        type="number"
+        placeholder="Quantity to Purchase"
+        name="quantityBuy"
+        value={productDetails.quantityBuy}
         onChange={handleInputChange}
         className="w-full mt-4 p-2 border rounded-md"
       />

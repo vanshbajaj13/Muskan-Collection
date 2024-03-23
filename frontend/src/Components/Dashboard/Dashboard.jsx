@@ -258,14 +258,14 @@ const Dashboard = () => {
         <Line data={lineChartData} height={150} />
       </div>
 
-      <div className="mb-8">
+      <div className="mb-8 w-screen h-screen">
         <h3 className="text-lg font-semibold mb-2">Products Sold</h3>
-        <Bar data={barChartData} />
+        <Bar data={barChartData} options={{ maintainAspectRatio: false }} />
       </div>
 
-      <div className="mb-8">
+      <div className="mb-8 w-screen h-screen">
         <h3 className="text-lg font-semibold mb-2">Profits by Brand</h3>
-        <Line data={profitLineData} height={150} />
+        <Line data={profitLineData} options={{ maintainAspectRatio: false }} />
       </div>
     </div>
   );

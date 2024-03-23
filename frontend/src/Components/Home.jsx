@@ -12,6 +12,7 @@ import AddExpense from "./AddFeatures/AddExpense";
 import Login from "./LoginPage/Login";
 import Inventory from "./Inventory/Inventory";
 import History from "./HistoryPage/History";
+import EditItem from "./AddFeatures/EditItem";
 
 const Home = () => {
   const naviagate = useNavigate();
@@ -65,6 +66,7 @@ const Home = () => {
         {isAdmin && <Route path="/inventory" element={<Inventory />} />}
         <Route path="/add-expense" element={<AddExpense />} />
         {isAdmin && <Route path="/history" element={<History />} />}
+        {isAdmin && <Route path="/edit-item/:code" element={<EditItem />} />}
         <Route path="*" element={<SideBar />} />
       </Routes>
     </>

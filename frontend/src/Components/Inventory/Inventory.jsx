@@ -55,12 +55,16 @@ const Inventory = () => {
         existingProduct.totalValue +=
           (item.quantityBuy - item.quantitySold) * item.mrp;
         existingProduct.totalPieces += item.quantityBuy - item.quantitySold;
+        existingProduct.quantityBuy += item.quantityBuy;
+        existingProduct.quantitySold += item.quantitySold;
       } else {
         // If the product doesn't exist, add it to the accumulator array
         acc.push({
           product,
           totalValue: (item.quantityBuy - item.quantitySold) * item.mrp,
           totalPieces: item.quantityBuy - item.quantitySold,
+          quantityBuy: item.quantityBuy,
+          quantitySold: item.quantitySold,
         });
       }
 
@@ -182,14 +186,23 @@ const Inventory = () => {
     ],
   };
 
+  // Doughnut Chart for Product
   const doughnutProductChartData = {
     labels: productChartData.map((item) => item.product),
     datasets: [
       {
-        data: productChartData.map((item) => item.totalPieces),
+        data: productChartData.map((item) => item.quantityBuy),
         backgroundColor: generateRandomColors(productChartData.length),
         borderWidth: 1,
-        label: "Quantity Available",
+        label: "Quantity Buy",
+      },
+      {
+        data: productChartData.map((item) => item.quantitySold),
+        backgroundColor: generateRandomColors(productChartData.length).map(
+          (color) => color.replace("0.7", "0.3")
+        ), // Use lighter color for quantitySold
+        borderWidth: 1,
+        label: "Quantity Sold",
       },
     ],
   };
@@ -240,16 +253,22 @@ const Inventory = () => {
       </div>
       {/* Doughnut Chart for Brand */}
       <h3 className="text-lg font-semibold mb-2">Inventory by Brand</h3>
-      <div className="flex items-center justify-center">
-        <div className="w-auto">
-          <Doughnut data={brandChartData} height={100} />
+      <div className="flex items-center justify-center ">
+        <div className="w-screen h-screen">
+          <Doughnut
+            data={brandChartData}
+            options={{ maintainAspectRatio: false }}
+          />
         </div>
       </div>
       {/* Doughnut Chart for Product */}
       <h3 className="text-lg font-semibold mb-2">Inventory by Product</h3>
       <div className="flex items-center justify-center">
-        <div className="w-auto">
-          <Doughnut data={doughnutProductChartData} height={100} />
+        <div className="w-screen h-screen">
+          <Doughnut
+            data={doughnutProductChartData}
+            options={{ maintainAspectRatio: false }}
+          />
         </div>
       </div>
       <select
@@ -282,11 +301,14 @@ const Inventory = () => {
       <h3 className="text-lg font-semibold mb-2">
         Quantity Bought and Sold by Brand
       </h3>
-      {/* <div className="flex items-center justify-center">
-        <div className="w-auto"> */}
-      <Bar data={comparingBrandData} height={150} />
-      {/* </div> */}
-      {/* </div> */}
+      <div className="flex items-center justify-center">
+        <div className="w-screen h-screen">
+          <Bar
+            data={comparingBrandData}
+            options={{ maintainAspectRatio: false }}
+          />
+        </div>
+      </div>
     </div>
   );
 };

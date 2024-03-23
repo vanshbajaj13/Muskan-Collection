@@ -24,6 +24,7 @@ const AddBrandProduct = () => {
 
         if (response.ok) {
           const brandsData = await response.json();
+          sortBrandsAndProducts(brandsData);
           setBrandsData(brandsData);
         } else if (response.status === 401) {
           window.localStorage.clear();
@@ -39,8 +40,24 @@ const AddBrandProduct = () => {
     fetchBrandsData();
   }, [navigate]);
 
+  // function to sort brand and product
+  function sortBrandsAndProducts(data) {
+    // Sort brands alphabetically
+    data.sort((a, b) => a.brand.localeCompare(b.brand));
+
+    // Sort products within each brand alphabetically
+    data.forEach((brand) => {
+      brand.products.sort((a, b) => a.localeCompare(b));
+    });
+
+    return data;
+  }
+  useEffect(() => {
+    sortBrandsAndProducts(brandsData);
+  }, [brandsData]);
+
   const handleNewBrandChange = (e) => {
-    setNewBrand(e.target.value);
+    setNewBrand((e.target.value).toUpperCase());
   };
 
   const handleNewBrandProductsChange = (e) => {

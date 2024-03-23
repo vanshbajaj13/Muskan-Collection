@@ -24,18 +24,16 @@ const AddCategory = () => {
     const fetchCategoriesData = async () => {
       if (window.localStorage.getItem("userInfo")) {
         try {
-          const response = await fetch(
-            "/api/dropdownoption/categories",
-            {
-              headers: {
-                Authorization: `Bearer ${
-                  JSON.parse(window.localStorage.getItem("userInfo")).token
-                }`,
-              },
-            }
-          );
+          const response = await fetch("/api/dropdownoption/categories", {
+            headers: {
+              Authorization: `Bearer ${
+                JSON.parse(window.localStorage.getItem("userInfo")).token
+              }`,
+            },
+          });
           if (response.ok) {
             const categoriesData = await response.json();
+            sortCategory(categoriesData);
             setCategoriesData(categoriesData[0].category);
           } else if (response.status === 401) {
             window.localStorage.clear();
@@ -52,6 +50,11 @@ const AddCategory = () => {
     fetchCategoriesData();
     // eslint-disable-next-line
   }, []);
+
+  function sortCategory(data) {
+    data[0].category.sort((a, b) => a.localeCompare(b));
+    return data;
+  }
 
   const handleNewCategoryChange = (e) => {
     setNewCategory(e.target.value);
@@ -71,21 +74,18 @@ const AddCategory = () => {
     try {
       // Set loading state to true
       setIsLoading(true);
-      const response = await fetch(
-        "/api/dropdownoption/categories",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${
-              JSON.parse(window.localStorage.getItem("userInfo")).token
-            }`,
-          },
-          body: JSON.stringify({
-            category: newCategoryList,
-          }),
-        }
-      );
+      const response = await fetch("/api/dropdownoption/categories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${
+            JSON.parse(window.localStorage.getItem("userInfo")).token
+          }`,
+        },
+        body: JSON.stringify({
+          category: newCategoryList,
+        }),
+      });
 
       if (response.ok) {
         setNewCategory("");

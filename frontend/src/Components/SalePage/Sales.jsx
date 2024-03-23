@@ -30,7 +30,20 @@ const Sale = () => {
     isUserLoggedIn();
   }, [naviagate]);
 
-  // Fetch available quantity when brand, product, category, mrp, or size changes
+
+  useEffect(() => {
+    if (
+      availableQuantity > 0 &&
+      productDetails.sellingPrice !== "" &&
+      parseFloat(productDetails.sellingPrice) > 0
+    ) {
+      setButtonActive(true);
+    } else {
+      setButtonActive(false);
+    }
+  }, [availableQuantity, productDetails.sellingPrice]);
+
+  // Fetch available quantity
   const fetchAvailableQuantity = async () => {
     try {
       if (productDetails.code) {
@@ -48,9 +61,6 @@ const Sale = () => {
         if (response.ok) {
           var { availableQuantity } = await response.json();
           setAvailableQuantity(availableQuantity);
-          if (availableQuantity > 0) {
-            setButtonActive(true);
-          }
         } else {
           setButtonActive(false);
           setAvailableQuantity(0);
