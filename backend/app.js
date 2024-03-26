@@ -13,7 +13,6 @@ const login = require("./routes/login");
 const signup = require("./routes/signUp");
 const role = require("./routes/role");
 const path = require("path");
-const { Item } = require("./Models/item");
 
 dotenv.config();
 

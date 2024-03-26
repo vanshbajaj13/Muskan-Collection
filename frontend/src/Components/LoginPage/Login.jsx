@@ -25,57 +25,79 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
 
-  const isFormValid =
-    !validationErrors.email && loginDetails.password.length >= 8;
-
   const handleLogin = async (event) => {
     event.preventDefault();
     setLoading(true);
-    try {
-      const config = {
-        headers: {
-          "Content-type": "application/json",
-        },
-      };
+    if (validateEmail()) {
+      try {
+        const config = {
+          headers: {
+            "Content-type": "application/json",
+          },
+        };
 
-      const { data } = await axios.post(
-        "/login",
-        {
-          email: loginDetails.email,
-          password: loginDetails.password,
-        },
-        config
-      );
-      if (typeof data === "object") {
-        window.localStorage.setItem("userInfo", JSON.stringify(data));
-        navigate("/");
-      } else {
-        if (data) {
-          setShowTooltip(true);
-          setTimeout(() => {
-            setShowTooltip(false);
-          }, 3000);
+        const { data } = await axios.post(
+          "/login",
+          {
+            email: loginDetails.email,
+            password: loginDetails.password,
+          },
+          config
+        );
+        if (typeof data === "object") {
+          window.localStorage.setItem("userInfo", JSON.stringify(data));
+          navigate("/");
+        } else {
+          if (data) {
+            setShowTooltip(true);
+            setTimeout(() => {
+              setShowTooltip(false);
+            }, 3000);
+          }
         }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoginDetails({
+          email: "",
+          password: "",
+        });
       }
-    } catch (error) {
-      console.error(error);
     }
-    setLoginDetails({
-      email: "",
-      password: "",
-    });
     setLoading(false);
   };
 
   const validateEmail = () => {
-    const { email } = loginDetails;
+    const { email, password } = loginDetails;
     let errors = {};
 
     if (!email || !/\S+@\S+\.\S+/.test(email)) {
       errors.email = "Please enter a valid email address";
+      setValidationErrors(errors);
+      return false; // Return false if email is invalid
     }
+    if (!password || password.length < 8) {
+      errors.password = "Please enter full password";
+      setValidationErrors(errors);
+      return false;
+    }
+    return true; // Return true if email is valid
+  };
 
-    setValidationErrors(errors);
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setLoginDetails({
+      ...loginDetails,
+      [name]: value,
+    });
+
+    // Clear validation error when user starts typing again
+    if (validationErrors[name]) {
+      setValidationErrors({
+        ...validationErrors,
+        [name]: "",
+      });
+    }
   };
 
   return (
@@ -99,13 +121,7 @@ const Login = () => {
                 autoComplete="email"
                 required
                 value={loginDetails.email}
-                onChange={(e) =>
-                  setLoginDetails({
-                    ...loginDetails,
-                    email: e.target.value,
-                  })
-                }
-                onBlur={validateEmail}
+                onChange={handleInputChange}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Email address"
               />
@@ -126,12 +142,7 @@ const Login = () => {
                 autoComplete="current-password"
                 required
                 value={loginDetails.password}
-                onChange={(e) =>
-                  setLoginDetails({
-                    ...loginDetails,
-                    password: e.target.value,
-                  })
-                }
+                onChange={handleInputChange}
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Password"
               />
@@ -151,12 +162,7 @@ const Login = () => {
           <div>
             <button
               type="submit"
-              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white  ${
-                isFormValid
-                  ? "bg-indigo-500 hover:bg-indigo-700 text-white"
-                  : "bg-gray-500 opacity-50 cursor-not-allowed text-black"
-              }`}
-              disabled={!isFormValid}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-500 hover:bg-indigo-700 "
             >
               {loading ? "Loading..." : "Login"}
             </button>

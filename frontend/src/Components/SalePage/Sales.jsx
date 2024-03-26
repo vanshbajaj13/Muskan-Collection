@@ -30,7 +30,6 @@ const Sale = () => {
     isUserLoggedIn();
   }, [naviagate]);
 
-
   useEffect(() => {
     if (
       availableQuantity > 0 &&
@@ -190,6 +189,27 @@ const Sale = () => {
           onChange={handleInputChange}
           className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
         ></input>
+        <p className="mb-4 text-green-500">
+          {/* Update with your available quantity logic */}
+          Available Quantity:{" "}
+          {fetchingQuantity ? "Fetching Quantity..." : availableQuantity}
+        </p>
+        <div className="mb-4">
+        <label
+          htmlFor="sellingPrice"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Selling Price
+        </label>
+        <input
+          type="number"
+          placeholder="Selling price"
+          name="sellingPrice"
+          value={productDetails.sellingPrice}
+          onChange={handleInputChange}
+          className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        />
+      </div>
         <div className="mb-4">
           <label
             htmlFor="customerPhoneNo"
@@ -245,28 +265,7 @@ const Sale = () => {
       )}
 
       {qrCodeScanned && <p>QR Code Scanned: {qrCodeScanned}</p>}
-      <div className="mb-4">
-        <label
-          htmlFor="sellingPrice"
-          className="block text-sm font-medium text-gray-700"
-        >
-          Selling Price
-        </label>
-        <input
-          type="number"
-          placeholder="Selling price"
-          name="sellingPrice"
-          value={productDetails.sellingPrice}
-          onChange={handleInputChange}
-          className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-        />
-      </div>
-
-      <p className="mb-4 text-green-500">
-        {/* Update with your available quantity logic */}
-        Available Quantity:{" "}
-        {fetchingQuantity ? "Fetching Quantity..." : availableQuantity}
-      </p>
+      
 
       {showTooltip && (
         <>

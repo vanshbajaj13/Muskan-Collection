@@ -117,6 +117,12 @@ const SideBar = () => {
             History
           </a>
           <a
+            href="/sale-history"
+            className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+          >
+            Sale History
+          </a>
+          <a
             href="/login"
             className="block py-2 px-4 text-red-600 rounded transition duration-300 hover:bg-gray-700"
             onClick={Logout}

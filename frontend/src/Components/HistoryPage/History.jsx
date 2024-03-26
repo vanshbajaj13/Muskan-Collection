@@ -12,6 +12,7 @@ const History = () => {
   const [expandedItemId, setExpandedItemId] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOption, setSearchOption] = useState("Code"); // Default search option is Code
+  const [exactMatch, setExactMatch] = useState(false);
 
   const toggleExpand = (itemId) => {
     setExpandedItemId((prevId) => (prevId === itemId ? null : itemId));
@@ -25,13 +26,18 @@ const History = () => {
   const fetchItemWithOption = async (option, query) => {
     setSearching(true);
     try {
-      const response = await fetch(`/api/item/search/${option}/${query}`, {
-        headers: {
-          Authorization: `Bearer ${
-            JSON.parse(window.localStorage.getItem("userInfo")).token
-          }`,
-        },
-      });
+      const response = await fetch(
+        `/api/item/${
+          exactMatch ? "exact-search" : "search"
+        }/${option}/${query}`,
+        {
+          headers: {
+            Authorization: `Bearer ${
+              JSON.parse(window.localStorage.getItem("userInfo")).token
+            }`,
+          },
+        }
+      );
       if (response.ok) {
         const data = await response.json();
         setSearchedItem(data); // Clear searchedItem state
@@ -110,7 +116,7 @@ const History = () => {
   useEffect(() => {
     fetchItemWithOption(searchOption, searchQuery);
     // eslint-disable-next-line
-  }, [searchOption]);
+  }, [searchOption, exactMatch]);
 
   const handleSearchOptionChange = (e) => {
     setSearchOption(e.target.value);
@@ -132,6 +138,11 @@ const History = () => {
     navigate(`/edit-item/${code}`); // Navigate to the EditItem page with the item's code
   };
 
+  const handleToggleExactMatch = (e) => {
+    e.preventDefault();
+    setExactMatch((prevExactMatch) => !prevExactMatch); // Toggle exact match state
+  };
+
   return (
     <div>
       <h1 className="text-2xl font-semibold mb-4">Purchase History</h1>
@@ -140,7 +151,7 @@ const History = () => {
         <select
           value={searchOption}
           onChange={handleSearchOptionChange}
-          className="border border-gray-300 rounded-l px-4 py-2"
+          className="border border-gray-300 rounded-l px-4 py-2 w-1/4"
         >
           <option value="Code">Code</option>
           <option value="Brand">Brand</option>
@@ -153,15 +164,26 @@ const History = () => {
           value={searchQuery}
           onChange={handleSearch}
           placeholder="Search by code"
-          className="border border-gray-300 rounded-l px-4 py-2 flex-grow"
+          className="border border-gray-300 rounded-l px-4 py-2 w-2/4"
         />
         <button
           type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r w-1/4"
         >
           {searching ? "Serahcing" : "Search"}
         </button>
+        {/* Toggle button for exact match search */}
       </form>
+      <div className="flex justify-center">
+        <button
+          onClick={handleToggleExactMatch}
+          className={`bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded ${
+            exactMatch ? "bg-blue-500 hover:bg-blue-700 text-white" : ""
+          }`}
+        >
+          {exactMatch ? "Exact Match Search On" : "Exact Match Search Off"}
+        </button>
+      </div>
 
       {searching && (
         <p className="text-green-500 text-center font-semibold"> Searching</p>

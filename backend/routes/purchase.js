@@ -46,7 +46,7 @@ async function generateUniqueCodesArray(size) {
 
     // Check if the code already exists in the database
     const existingItem = await Item.findOne({ code: uniqueCode });
-    
+
     if (existingItem === null) {
       uniqueCodes.push(uniqueCode);
       let incrementedCode = uniqueCode;
@@ -77,6 +77,39 @@ async function generateUniqueCodesArray(size) {
   return uniqueCodes;
 }
 
+function convertToCode(number) {
+  const codeMap = {
+    1: "J",
+    2: "A",
+    3: "I",
+    4: "S",
+    5: "U",
+    6: "L",
+    7: "T",
+    8: "AB",
+    9: "N",
+  };
+
+  // add 35 to make round off mid value to 25
+  number += 35;
+  // Round the number to the nearest multiple of 100
+  var roundedNumber = Math.round(number / 100) * 100;
+
+  if (roundedNumber === 0) {
+    return "J";
+  }
+  while (roundedNumber % 10 === 0) {
+    roundedNumber /= 10;
+  }
+  // Get the code corresponding to the rounded number
+  var code = "";
+  let st = roundedNumber.toString();
+  for (let i = 0; i < st.length; i++) {
+    code += codeMap[st[i]];
+  }
+  return code;
+}
+
 // Endpoint for adding a product to inventory
 router.post("/", protect, async (req, res) => {
   const { brand, product, category, size, quantityBuy, mrp } = req.body;
@@ -88,6 +121,7 @@ router.post("/", protect, async (req, res) => {
     // Create and save items for each size
     const items = [];
     for (let i = 0; i < size.length; i++) {
+      let sCode = convertToCode(Number(mrp));
       const newItem = new Item({
         code: codes[i],
         brand: brand,
@@ -96,6 +130,7 @@ router.post("/", protect, async (req, res) => {
         size: size[i], // Use the current size from the array
         quantityBuy: quantityBuy,
         mrp: mrp,
+        secretCode: sCode,
       });
 
       // Save the new item

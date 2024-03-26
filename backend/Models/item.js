@@ -35,6 +35,9 @@ const itemSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    secretCode: {
+      type: String,
+    },
   },
   { timestamps: true }
 );
