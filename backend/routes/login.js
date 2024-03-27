@@ -26,7 +26,7 @@ router.post(
               if (result) {
                 // Include the role in the token generation
                 var token = tokenGenerator(docs._id.toString(), docs.role);
-                res.json({ email: docs.email, token: token });
+                res.json({ email: docs.email, token: token,role: docs.role });
               } else {
                 res.send("invalid password");
               }

@@ -222,7 +222,7 @@ const EditItem = () => {
               className="bg-white border  px-4 py-3 rounded relative w-full m-5"
               role="alert"
             >
-              <strong className="font-bold text-center text-center">
+              <strong className="font-bold text-center">
                 Are you sure ?
               </strong>
               <div>

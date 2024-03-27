@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Route, Routes, useNavigate } from "react-router-dom";
+import React from "react";
+import { Route, Routes } from "react-router-dom";
 import Sale from "./SalePage/Sales";
 import Purchase from "./PurchasePage/Purchase";
 import SideBar from "./SideBar/SideBar";
@@ -15,44 +15,13 @@ import History from "./HistoryPage/History";
 import EditItem from "./AddFeatures/EditItem";
 import SaleHistory from "./HistoryPage/SaleHistory";
 import PrintableContent from "./Print/Tag";
+import { useUserRole } from "../auth/UserRoleContext";
 
 const Home = () => {
-  const naviagate = useNavigate();
-  const [userRole, setUserRole] = useState("user");
-
-  useEffect(() => {
-    // Define a function to fetch the user role
-    const fetchUserRole = async () => {
-      try {
-        if (window.localStorage.getItem("userInfo")) {
-          const response = await fetch("/api/role", {
-            headers: {
-              Authorization: `Bearer ${
-                JSON.parse(window.localStorage.getItem("userInfo")).token
-              }`,
-            },
-          });
-          if (response.ok) {
-            const role = await response.json();
-            setUserRole(role.role);
-          } else {
-            console.error("Failed to fetch role");
-            window.localStorage.clear();
-            naviagate("/login");
-          }
-        }
-      } catch (error) {
-        console.log(error);
-      }
-    };
-
-    // Call the fetchUserRole function
-    fetchUserRole();
-    // eslint-disable-next-line
-  }, []);
+  const [userRole] = useUserRole();
 
   const isAdmin = userRole === "admin";
-
+  var isDev = userRole === "dev";
   return (
     <>
       <MenuBtn></MenuBtn>
@@ -61,16 +30,22 @@ const Home = () => {
         <Route path="/menu" element={<SideBar />} />
         <Route path="/sale" element={<Sale />} />
         <Route path="/purchase" element={<Purchase />} />
-        {isAdmin && <Route path="/dashboard" element={<Dashboard />} />}
+        {(isAdmin || isDev) && (
+          <Route path="/dashboard" element={<Dashboard />} />
+        )}
         <Route path="/add-brand-product" element={<AddBrandProduct />} />
         <Route path="/add-category" element={<AddCategory />} />
         <Route path="/add-size" element={<AddSize />} />
-        {isAdmin && <Route path="/inventory" element={<Inventory />} />}
+        {(isAdmin || isDev) && (
+          <Route path="/inventory" element={<Inventory />} />
+        )}
         <Route path="/add-expense" element={<AddExpense />} />
-        <Route path="/print" element={<PrintableContent/>} />
-        {isAdmin && <Route path="/history" element={<History />} />}
-        {isAdmin && <Route path="/sale-history" element={<SaleHistory />} />}
-        {isAdmin && <Route path="/edit-item/:code" element={<EditItem />} />}
+        <Route path="/print" element={<PrintableContent />} />
+        {(isAdmin || isDev) && <Route path="/history" element={<History />} />}
+        {(isAdmin || isDev) && (
+          <Route path="/sale-history" element={<SaleHistory />} />
+        )}
+        {isDev && <Route path="/edit-item/:code" element={<EditItem />} />}
         <Route path="*" element={<SideBar />} />
       </Routes>
     </>

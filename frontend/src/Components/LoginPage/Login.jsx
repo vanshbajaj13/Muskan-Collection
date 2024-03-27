@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useUserRole } from "../../auth/UserRoleContext";
 
 const Login = () => {
   const navigate = useNavigate();
+  // eslint-disable-next-line
+  const [userRole, setUserRole] = useUserRole();
   useEffect(() => {
     const userInfo = window.localStorage.getItem("userInfo");
     if (userInfo) {
@@ -35,7 +38,7 @@ const Login = () => {
             "Content-type": "application/json",
           },
         };
-
+  
         const { data } = await axios.post(
           "/login",
           {
@@ -44,8 +47,10 @@ const Login = () => {
           },
           config
         );
+  
         if (typeof data === "object") {
           window.localStorage.setItem("userInfo", JSON.stringify(data));
+          setUserRole(data.role); 
           navigate("/");
         } else {
           if (data) {
@@ -66,7 +71,7 @@ const Login = () => {
     }
     setLoading(false);
   };
-
+  
   const validateEmail = () => {
     const { email, password } = loginDetails;
     let errors = {};

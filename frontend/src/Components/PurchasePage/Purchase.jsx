@@ -159,7 +159,7 @@ const Purchase = () => {
     // Round the number to the nearest multiple of 100
     mrp -= 100;
     var roundedNumber = Math.ceil(mrp / 100) * 100;
-    return roundedNumber * 2;
+    return ((roundedNumber * 2)-4);
   }
 
   const handlePurchase = async () => {

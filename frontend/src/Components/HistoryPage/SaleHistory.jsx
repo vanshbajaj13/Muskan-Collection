@@ -159,7 +159,7 @@ const SaleHistory = () => {
           type="text"
           value={searchQuery}
           onChange={handleSearch}
-          placeholder="Search       by code"
+          placeholder="Search by code"
           className="border border-gray-300 rounded-l px-4 py-2 w-2/4"
         />
         <button
