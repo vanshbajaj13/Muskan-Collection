@@ -293,7 +293,7 @@ const EditItem = () => {
             className="w-full mt-4 p-2 border rounded-md"
           >
             <option value="" disabled>
-              Select Sub-category
+              Select Category
             </option>
             {dropdownOptions.categories.map((categoryObj) =>
               categoryObj.category.map((subcategory) => (
@@ -344,7 +344,7 @@ const EditItem = () => {
         className={`w-full mt-6 py-2 px-4 rounded focus:outline-none ${
           isFormValid
             ? "bg-indigo-500 text-white"
-            : "bg-gray-500 text-gray-500 opacity-50 cursor-not-allowed"
+            : "bg-gray-300 text-gray-500 cursor-not-allowed"
         }`}
       >
         {isLoading ? "Updating..." : "Update"}
@@ -366,7 +366,7 @@ const EditItem = () => {
       {isDeleteModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded-md">
-            <p className="mb-4">Type 'confirm' to delete this item:</p>
+            <p className="mb-4">Type 'CONFIRM' to delete this item:</p>
             <input
               type="text"
               value={confirmText}

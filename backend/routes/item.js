@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { Item } = require("../Models/item");
+const { RecentlyDeletedItem } = require("../Models/recentlyDeletedItem");
 const protect = require("../middlewares/authMiddleWare");
 
 router.get("/", protect, async (req, res) => {
@@ -48,11 +49,29 @@ router.delete("/:code", protect, async (req, res) => {
   const { code } = req.params;
   const upperCaseCode = code.toUpperCase();
   try {
-    // Find the item by its code and delete it
-    const item = await Item.findOneAndDelete({ code: upperCaseCode });
-    if (item) {
-      res.json({ message: "Item deleted successfully" });
-    } else {
+     // Find the item by its code
+     const item = await Item.findOne({ code: upperCaseCode });
+     if (item) {
+       // Instead of directly deleting, move the item to the recycle bin
+       const recycleBinItem = new RecentlyDeletedItem({
+        code: item.code,
+        brand: item.brand,
+        product: item.product,
+        category: item.category,
+        size: item.size, // Use the current size from the array
+        quantityBuy: item.quantityBuy,
+        quantitySold: item.quantitySold,
+        mrp: item.mrp,
+        secretCode: item.secretCode,
+         
+       });
+       await recycleBinItem.save();
+ 
+       // Now delete the item from the original collection
+       await Item.deleteOne({ code: upperCaseCode });
+ 
+       res.json({ message: "Item moved to recycle bin successfully" });
+     } else {
       res.status(404).json({ message: "Item not found" });
     }
   } catch (error) {

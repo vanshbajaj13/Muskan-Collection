@@ -48,12 +48,13 @@ const Dashboard = () => {
     // Calculate daily sales sum for the selected days
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - selectedDays);
+    startDate.setHours(0, 0, 0, 0); // Set time to midnight
 
     const lastSelectedDaysSales = salesData?.filter(
-      (sale) => new Date(sale.soldAt) > startDate
+      (sale) => new Date(sale.soldAt).setHours(0, 0, 0, 0) > startDate
     );
     const lastSelectedDaysExpense = expensesData?.filter(
-      (expense) => new Date(expense.date) > startDate
+      (expense) => new Date(expense.date).setHours(0, 0, 0, 0) > startDate
     );
 
     const dailySum = lastSelectedDaysSales?.reduce((acc, sale) => {
