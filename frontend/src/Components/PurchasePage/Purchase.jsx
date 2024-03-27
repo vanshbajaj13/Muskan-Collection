@@ -24,24 +24,8 @@ const Purchase = () => {
   const [isFormValid, setIsFormValid] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(true);
-  const [returnedCode, setReturnedCode] = useState([
-    {
-      code: "DEQ1708",
-      brand: "VANSH",
-      product: "a",
-      category: "front cut",
-      size: "S",
-      quantityBuy: 1,
-      quantitySold: 0,
-      mrp: 236,
-      secretCode: "J",
-      _id: "6602ab51d17d7058b837f159",
-      createdAt: "2024-03-26T11:02:41.277Z",
-      updatedAt: "2024-03-26T11:02:41.277Z",
-      __v: 0,
-    },
-  ]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [returnedCode, setReturnedCode] = useState([]);
   const [buttonActive, setButtonActive] = useState(false);
   const [isQRCodeView, setIsQRCodeView] = useState(false);
 
