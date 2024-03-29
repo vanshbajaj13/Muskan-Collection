@@ -14,6 +14,7 @@ const Dashboard = () => {
   const [profitData, setProfitData] = useState({});
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [totalProfit, setTotalProfit] = useState(0);
+  const [isCalculating, setIsCalculating] = useState(false);
 
   // auto navigate to login
   useEffect(() => {
@@ -114,11 +115,13 @@ const Dashboard = () => {
       0
     );
     setTotalExpenses(totalExpensesAmount || 0);
+    setIsCalculating(false);
   };
 
   // Fetch sales and expenses data from the server
   const fetchSalesAndExpensesData = async () => {
     if (window.localStorage.getItem("userInfo")) {
+      setIsCalculating(true);
       try {
         const [salesResponse, expensesResponse] = await Promise.all([
           fetch("/api/saleslog", {
@@ -238,20 +241,26 @@ const Dashboard = () => {
         <h3 className="text-lg font-semibold mb-2">
           Total Sales in {selectedDays} days:
         </h3>
-        <div className="text-xl font-bold">₹{totalSales}</div>
+        <div className="text-xl font-bold">
+          ₹{isCalculating ? " Calculating....." : (totalSales).toLocaleString('hi')}
+        </div>
       </div>
       <div className="mb-8">
         <h3 className="text-lg font-semibold mb-2">
           Total Profit in {selectedDays} days:
         </h3>
-        <div className="text-xl font-bold">₹{totalProfit}</div>
+        <div className="text-xl font-bold">
+          ₹{isCalculating ? " Calculating....." : (totalProfit).toLocaleString('hi')}
+        </div>
       </div>
 
       <div>
         <h3 className="text-lg font-semibold mb-2">
           Total Expenses in {selectedDays} days:
         </h3>
-        <div className="text-xl font-bold">₹{totalExpenses}</div>
+        <div className="text-xl font-bold">
+          ₹{isCalculating ? " Calculating....." : (totalExpenses).toLocaleString('hi')}
+        </div>
       </div>
 
       <div className="mb-8">

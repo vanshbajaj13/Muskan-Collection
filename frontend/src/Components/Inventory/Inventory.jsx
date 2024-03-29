@@ -249,7 +249,9 @@ const Inventory = () => {
       <h2 className="text-3xl font-bold mb-4">Inventory</h2>
       <div className="mb-8">
         <h3 className="text-lg font-semibold mb-2">Total Inventory Value:</h3>
-        <div className="text-xl font-bold">₹{totalInventoryValue}</div>
+        <div className="text-xl font-bold">
+          ₹{totalInventoryValue ? (totalInventoryValue).toLocaleString('hi') : "  Calculating......."}
+        </div>
       </div>
       {/* Doughnut Chart for Brand */}
       <h3 className="text-lg font-semibold mb-2">Inventory by Brand</h3>

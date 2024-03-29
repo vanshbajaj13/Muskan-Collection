@@ -158,6 +158,8 @@ const History = () => {
           <option value="Product">Product</option>
           <option value="Category">Category</option>
           <option value="Size">Size</option>
+          <option value="mrp>=">MRP Gt</option>
+          <option value="mrp<=">MRP Ls</option>
         </select>
         <input
           type="text"

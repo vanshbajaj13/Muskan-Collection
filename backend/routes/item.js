@@ -5,7 +5,7 @@ const { RecentlyDeletedItem } = require("../Models/recentlyDeletedItem");
 const protect = require("../middlewares/authMiddleWare");
 
 router.get("/", protect, async (req, res) => {
-  const items = await Item.find();
+  const items = await Item.find().sort({ brand: 1 });
   // console.log(items);
   res.json(items);
 });
@@ -49,11 +49,11 @@ router.delete("/:code", protect, async (req, res) => {
   const { code } = req.params;
   const upperCaseCode = code.toUpperCase();
   try {
-     // Find the item by its code
-     const item = await Item.findOne({ code: upperCaseCode });
-     if (item) {
-       // Instead of directly deleting, move the item to the recycle bin
-       const recycleBinItem = new RecentlyDeletedItem({
+    // Find the item by its code
+    const item = await Item.findOne({ code: upperCaseCode });
+    if (item) {
+      // Instead of directly deleting, move the item to the recycle bin
+      const recycleBinItem = new RecentlyDeletedItem({
         code: item.code,
         brand: item.brand,
         product: item.product,
@@ -63,15 +63,14 @@ router.delete("/:code", protect, async (req, res) => {
         quantitySold: item.quantitySold,
         mrp: item.mrp,
         secretCode: item.secretCode,
-         
-       });
-       await recycleBinItem.save();
- 
-       // Now delete the item from the original collection
-       await Item.deleteOne({ code: upperCaseCode });
- 
-       res.json({ message: "Item moved to recycle bin successfully" });
-     } else {
+      });
+      await recycleBinItem.save();
+
+      // Now delete the item from the original collection
+      await Item.deleteOne({ code: upperCaseCode });
+
+      res.json({ message: "Item moved to recycle bin successfully" });
+    } else {
       res.status(404).json({ message: "Item not found" });
     }
   } catch (error) {
@@ -109,6 +108,14 @@ router.get("/search/:option/:query", protect, async (req, res) => {
         // Search by size
         items = await Item.find({ size: { $regex: query, $options: "i" } });
         break;
+      case "mrp<=":
+        // Search by MRP less than or equal to the specified value
+        items = await Item.find({ mrp: { $lte: parseFloat(query) } }).sort({ mrp: 1 });
+        break;
+      case "mrp>=":
+        // Search by MRP greater than or equal to the specified value
+        items = await Item.find({ mrp: { $gte: parseFloat(query) } }).sort({ mrp: 1 });
+        break;
       default:
         return res.status(400).json({ message: "Invalid search option" });
     }
@@ -135,23 +142,33 @@ router.get("/exact-search/:option/:query", protect, async (req, res) => {
     switch (searchField) {
       case "code":
         // Search by code (case-insensitive)
-        items = await Item.find({ code: { $regex: new RegExp(`^${query}$`, 'i') } });
+        items = await Item.find({
+          code: { $regex: new RegExp(`^${query}$`, "i") },
+        });
         break;
       case "brand":
         // Search by brand (case-insensitive)
-        items = await Item.find({ brand: { $regex: new RegExp(`^${query}$`, 'i') } });
+        items = await Item.find({
+          brand: { $regex: new RegExp(`^${query}$`, "i") },
+        });
         break;
       case "product":
         // Search by product (case-insensitive)
-        items = await Item.find({ product: { $regex: new RegExp(`^${query}$`, 'i') } });
+        items = await Item.find({
+          product: { $regex: new RegExp(`^${query}$`, "i") },
+        });
         break;
       case "category":
         // Search by category (case-insensitive)
-        items = await Item.find({ category: { $regex: new RegExp(`^${query}$`, 'i') } });
+        items = await Item.find({
+          category: { $regex: new RegExp(`^${query}$`, "i") },
+        });
         break;
       case "size":
         // Search by size (case-insensitive)
-        items = await Item.find({ size: { $regex: new RegExp(`^${query}$`, 'i') } });
+        items = await Item.find({
+          size: { $regex: new RegExp(`^${query}$`, "i") },
+        });
         break;
       default:
         return res.status(400).json({ message: "Invalid search option" });
@@ -167,8 +184,6 @@ router.get("/exact-search/:option/:query", protect, async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
-
 
 router.get("/list", protect, async (req, res) => {
   const { brand, product, category, size } = req.query;

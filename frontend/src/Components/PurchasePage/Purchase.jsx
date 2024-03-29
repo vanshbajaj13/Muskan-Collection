@@ -282,7 +282,7 @@ const Purchase = () => {
                           <div className="relative font-bold text-black pt-1">
                             <div className="flex justify-center">
                               <img
-                                src={`Images/Ganesha.jpg`}
+                                src={`Images/Ganesha.png`}
                                 alt="project"
                                 width={"20mm"}
                               />
