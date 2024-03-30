@@ -11,6 +11,11 @@ const SaleHistory = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOption, setSearchOption] = useState("Code"); // Default search option is Sale Code
   const [exactMatch, setExactMatch] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [showDeleteTooltip, setShowDeleteTooltip] = useState(false);
+  const [deleteCode, setDeleteCode] = useState("");
+  const [searchedSaleDeleted, setSearchedSaleDeleted] = useState(false);
 
   const toggleExpand = (saleId) => {
     setExpandedSaleId((prevId) => (prevId === saleId ? null : saleId));
@@ -117,7 +122,7 @@ const SaleHistory = () => {
   useEffect(() => {
     fetchSaleWithOption(searchOption, searchQuery);
     // eslint-disable-next-line
-  }, [searchOption, exactMatch]);
+  }, [searchOption, exactMatch,searchedSaleDeleted]);
 
   const handleSearchOptionChange = (e) => {
     setSearchOption(e.target.value);
@@ -137,6 +142,52 @@ const SaleHistory = () => {
   const handleToggleExactMatch = (e) => {
     e.preventDefault();
     setExactMatch((prevExactMatch) => !prevExactMatch); // Toggle exact match state
+  };
+
+  const handleOpenDeleteModal = (code) => {
+    setIsDeleteModalOpen(true);
+    setDeleteCode(code);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setConfirmText("");
+    setIsDeleteModalOpen(false);
+  };
+
+  const handleUserInputChange = (e) => {
+    setConfirmText(e.target.value.toUpperCase());
+  };
+  const handleSaleDelete = async () => {
+    if (confirmText === "CONFIRM") {
+      try {
+        const response = await fetch(`/api/saleslog/${deleteCode}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${
+              JSON.parse(window.localStorage.getItem("userInfo")).token
+            }`,
+          },
+        });
+        if (response.ok) {
+          await fetchSales();
+          setSearchedSaleDeleted(!searchedSaleDeleted);
+          setDeleteCode("");
+          setIsDeleteModalOpen(false);
+          setConfirmText("");
+        } else {
+          console.error("Failed to delete ");
+          setConfirmText("");
+          setIsDeleteModalOpen(false);
+          setShowDeleteTooltip(true);
+          setTimeout(() => {
+            setShowDeleteTooltip(false);
+          }, 3000);
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      }
+    } else {
+    }
   };
 
   return (
@@ -241,6 +292,20 @@ const SaleHistory = () => {
                         Loss : {sale.sellingPrice - sale.mrp}
                       </p>
                     )}
+                    {showDeleteTooltip && (
+                      <div className="text-red-500 text-center text-sm mt-2">
+                        Error while Deleting try again..
+                      </div>
+                    )}
+                    {/* Delete Button */}
+                    <button
+                      onClick={() => {
+                        handleOpenDeleteModal(sale.code);
+                      }}
+                      className="w-full mt-6 py-2 px-4 rounded focus:outline-none bg-red-500 text-white"
+                    >
+                      Return
+                    </button>
                   </div>
                 </div>
               )}
@@ -310,6 +375,20 @@ const SaleHistory = () => {
                       Loss : {sale.sellingPrice - sale.mrp}
                     </p>
                   )}
+                  {showDeleteTooltip && (
+                    <div className="text-red-500 text-center text-sm mt-2">
+                      Error while Deleting try again..
+                    </div>
+                  )}
+                  {/* Delete Button */}
+                  <button
+                    onClick={() => {
+                      handleOpenDeleteModal(sale.code);
+                    }}
+                    className="w-full mt-6 py-2 px-4 rounded focus:outline-none bg-red-500 text-white"
+                  >
+                    Return
+                  </button>
                 </div>
               </div>
             )}
@@ -324,6 +403,38 @@ const SaleHistory = () => {
           </button>
         </div>
       </div>
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded-md">
+            <p className="mb-4">Type 'CONFIRM' to delete this item:</p>
+            <input
+              type="text"
+              value={confirmText}
+              onChange={handleUserInputChange}
+              className="border border-gray-300 p-2 rounded-md mb-4"
+            />
+            <div className="flex justify-between">
+              <button
+                onClick={handleCloseDeleteModal}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md mr-2"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={confirmText !== "CONFIRM"}
+                onClick={handleSaleDelete}
+                className={`px-4 py-2 rounded-md ${
+                  confirmText !== "CONFIRM"
+                    ? "bg-gray-300 text-gray-700 cursor-not-allowed"
+                    : "bg-red-500 text-white"
+                }`}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

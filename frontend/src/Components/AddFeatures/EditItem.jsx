@@ -10,6 +10,7 @@ const EditItem = () => {
     category: "",
     size: "",
     mrp: "",
+    quantityBuy: "",
   });
   const [productDetails, setProductDetails] = useState({
     ...originalProductDetails,
@@ -99,7 +100,7 @@ const EditItem = () => {
       // eslint-disable-next-line
       (key) => originalProductDetails[key] != productDetails[key]
     );
-    var valid = isAnyFieldChanged && productDetails.mrp !== "";
+    var valid = isAnyFieldChanged && productDetails.mrp !== "" && productDetails.quantityBuy !== "";
     setIsFormValid(valid);
   };
 
@@ -118,6 +119,9 @@ const EditItem = () => {
 
     // Ensure quantity and mrp are positive values
     if (name === "mrp" && parseFloat(value) < 0) {
+      return;
+    }
+    if (name === "quantityBuy" && parseFloat(value) < 0) {
       return;
     }
 
@@ -325,6 +329,14 @@ const EditItem = () => {
             placeholder="MRP"
             name="mrp"
             value={productDetails.mrp}
+            onChange={handleInputChange}
+            className="w-full mt-4 p-2 border rounded-md"
+          />
+          <input
+            type="number"
+            placeholder="Quantity Buy"
+            name="quantityBuy"
+            value={productDetails.quantityBuy}
             onChange={handleInputChange}
             className="w-full mt-4 p-2 border rounded-md"
           />

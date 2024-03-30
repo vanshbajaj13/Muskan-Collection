@@ -14,7 +14,6 @@ import Inventory from "./Inventory/Inventory";
 import History from "./HistoryPage/History";
 import EditItem from "./AddFeatures/EditItem";
 import SaleHistory from "./HistoryPage/SaleHistory";
-import PrintableContent from "./Print/Tag";
 import { useUserRole } from "../auth/UserRoleContext";
 
 const Home = () => {
@@ -40,10 +39,12 @@ const Home = () => {
           <Route path="/inventory" element={<Inventory />} />
         )}
         <Route path="/add-expense" element={<AddExpense />} />
-        <Route path="/print" element={<PrintableContent />} />
         {(isAdmin || isDev) && <Route path="/history" element={<History />} />}
         {(isAdmin || isDev) && (
           <Route path="/sale-history" element={<SaleHistory />} />
+        )}
+        {(isDev) && (
+          <Route path="/sale-history/:code" element={<SaleHistory />} />
         )}
         {isDev && <Route path="/edit-item/:code" element={<EditItem />} />}
         <Route path="*" element={<SideBar />} />
