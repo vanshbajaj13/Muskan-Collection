@@ -159,7 +159,7 @@ const Purchase = () => {
     // Round the number to the nearest multiple of 100
     mrp -= 100;
     var roundedNumber = Math.ceil(mrp / 100) * 100;
-    return ((roundedNumber * 2)-4);
+    return roundedNumber * 2 + 100 - 4;
   }
 
   const handlePurchase = async () => {
@@ -276,15 +276,16 @@ const Purchase = () => {
                           }}
                           className="flex justify-evenly bg-white"
                         >
-                          <div className="p-2 pl-0">
-                            <QRCode value={item.code} size={75} />
+                          <div className="p-2 pr-0">
+                            <QRCode value={item.code} size={60} />
+                            <p className="text-black">{item.code}</p>
                           </div>
                           <div className="relative font-bold text-black pt-1">
                             <div className="flex justify-center">
                               <img
-                                src={`Images/Ganesha.png`}
+                                src={`Images/Ganesha.jpg`}
                                 alt="project"
-                                width={"20mm"}
+                                width={"25mm"}
                               />
                             </div>
                             <div>
