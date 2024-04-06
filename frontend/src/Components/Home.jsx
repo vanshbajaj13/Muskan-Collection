@@ -15,6 +15,7 @@ import History from "./HistoryPage/History";
 import EditItem from "./AddFeatures/EditItem";
 import SaleHistory from "./HistoryPage/SaleHistory";
 import { useUserRole } from "../auth/UserRoleContext";
+import PrintTag from "./AddFeatures/PrintTag";
 
 const Home = () => {
   const [userRole] = useUserRole();
@@ -29,6 +30,7 @@ const Home = () => {
         <Route path="/menu" element={<SideBar />} />
         <Route path="/sale" element={<Sale />} />
         <Route path="/purchase" element={<Purchase />} />
+        <Route path="/print-tag" element={<PrintTag />} />
         {(isAdmin || isDev) && (
           <Route path="/dashboard" element={<Dashboard />} />
         )}

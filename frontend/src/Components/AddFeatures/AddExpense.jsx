@@ -6,7 +6,6 @@ const AddExpense = () => {
   const [expense, setExpense] = useState({
     expenseType: "",
     expenseAmount: "",
-    expenseDescription: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -14,7 +13,6 @@ const AddExpense = () => {
   // Function to check if the "Add Expense" button should be enabled
   const isAddButtonEnabled = () => {
     return (
-      !!expense.expenseType &&
       !isNaN(expense.expenseAmount) &&
       expense.expenseAmount > 0
     );
@@ -49,7 +47,6 @@ const AddExpense = () => {
         setExpense({
           expenseType: "",
           expenseAmount: "",
-          expenseDescription: "",
         });
         // Show the tooltip
         setShowTooltip(true);
@@ -110,17 +107,6 @@ const AddExpense = () => {
           className="border p-2 w-full"
         />
       </div>
-      <div className="mb-4">
-        <label className="block mb-2">Expense Description:</label>
-        <textarea
-          value={expense.expenseDescription}
-          onChange={(e) =>
-            setExpense({ ...expense, expenseDescription: e.target.value })
-          }
-          className="border p-2 w-full"
-        ></textarea>
-      </div>
-
       {showTooltip && (
         <div className="text-green-500 mt-4">Expense added successfully!</div>
       )}

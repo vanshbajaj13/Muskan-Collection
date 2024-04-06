@@ -16,6 +16,7 @@ const SaleHistory = () => {
   const [showDeleteTooltip, setShowDeleteTooltip] = useState(false);
   const [deleteCode, setDeleteCode] = useState("");
   const [searchedSaleDeleted, setSearchedSaleDeleted] = useState(false);
+  const [groupedSales, setGroupedSales] = useState({});
 
   const toggleExpand = (saleId) => {
     setExpandedSaleId((prevId) => (prevId === saleId ? null : saleId));
@@ -122,7 +123,7 @@ const SaleHistory = () => {
   useEffect(() => {
     fetchSaleWithOption(searchOption, searchQuery);
     // eslint-disable-next-line
-  }, [searchOption, exactMatch,searchedSaleDeleted]);
+  }, [searchOption, exactMatch, searchedSaleDeleted]);
 
   const handleSearchOptionChange = (e) => {
     setSearchOption(e.target.value);
@@ -190,6 +191,22 @@ const SaleHistory = () => {
     }
   };
 
+  // Use useEffect to preprocess the sales data whenever it changes
+  useEffect(() => {
+    const groupSalesByDate = () => {
+      const grouped = {};
+      sales.forEach((sale) => {
+        const date = new Date(sale.soldAt).getDate();
+        if (!grouped[date]) {
+          grouped[date] = [];
+        }
+        grouped[date].push(sale);
+      });
+      return grouped;
+    };
+
+    setGroupedSales(groupSalesByDate());
+  }, [sales]);
   return (
     <div>
       <h1 className="text-2xl font-semibold mb-4">Sale History</h1>
@@ -324,76 +341,114 @@ const SaleHistory = () => {
 
       <div>
         <h2 className="text-xl font-semibold mb-2">All Sales</h2>
-        {sales.map((sale) => (
-          <div
-            key={sale._id}
-            className="bg-gray-200 border border-black text-black px-4 py-3 rounded relative"
-          >
-            <div
-              className="flex justify-between items-center cursor-pointer"
-              onClick={() => toggleExpand(sale._id)}
-            >
-              <div>
-                <p className="font-semibold text-lg">Code: {sale.code}</p>
-                <p className="text-black">Brand : {sale.brand}</p>
-              </div>
-              <div>
-                {new Date(sale.soldAt).toLocaleString()}
-                <svg
-                  className={`h-6 w-6 ${
-                    expandedSaleId === sale._id ? "transform rotate-180" : ""
-                  }`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </div>
-            </div>
-            {expandedSaleId === sale._id && (
-              <div className="flex items-center justify-evenly border-t border-gray-300 mt-4 pt-4">
-                <div className="text-black">
-                  <p className="font-semibold py-1">Product: {sale.product}</p>
-                  <p className="font-semibold py-1">
-                    Category: {sale.category}
-                  </p>
-                  <p className="font-semibold py-1">
-                    Selling Price: {sale.sellingPrice}
-                  </p>
-                  {sale.sellingPrice - sale.mrp >= 0 ? (
-                    <p className="font-semibold py-1 text-green-500">
-                      Profit : {sale.sellingPrice - sale.mrp}
+        {Object.keys(groupedSales)
+          .sort((a, b) => new Date(b) - new Date(a))
+          .map((date, index) => {
+            const salesForDate = groupedSales[date];
+            // Calculate total sale and profit for the current date
+            const totalSale = salesForDate.reduce(
+              (acc, sale) => acc + sale.sellingPrice,
+              0
+            );
+            const totalProfit = salesForDate.reduce(
+              (acc, sale) => acc + (sale.sellingPrice - sale.mrp),
+              0
+            );
+            return (
+              <React.Fragment key={date}>
+                <div className="bg-green-200 border border-black text-black px-4 py-3 rounded relative flex justify-between items-center cursor-pointer font-semibold">
+                  <p>{new Date(salesForDate[0].soldAt).toLocaleDateString()}</p>
+                  <p>Sale - {totalSale}</p>
+                  {totalProfit >= 0 ? (
+                    <p className="font-semibold py-1 text-black">
+                      Profit : {totalProfit}
                     </p>
                   ) : (
                     <p className="font-semibold py-1 text-red-500">
-                      Loss : {sale.sellingPrice - sale.mrp}
+                      Loss : {totalProfit}
                     </p>
                   )}
-                  {showDeleteTooltip && (
-                    <div className="text-red-500 text-center text-sm mt-2">
-                      Error while Deleting try again..
-                    </div>
-                  )}
-                  {/* Delete Button */}
-                  <button
-                    onClick={() => {
-                      handleOpenDeleteModal(sale.code);
-                    }}
-                    className="w-full mt-6 py-2 px-4 rounded focus:outline-none bg-red-500 text-white"
-                  >
-                    Return
-                  </button>
                 </div>
-              </div>
-            )}
-          </div>
-        ))}
+                {salesForDate.map((sale) => (
+                  <div
+                    key={sale._id}
+                    className="bg-gray-200 border border-black text-black px-4 py-3 rounded relative"
+                  >
+                    <div
+                      className="flex justify-between items-center cursor-pointer"
+                      onClick={() => toggleExpand(sale._id)}
+                    >
+                      <div>
+                        <p className="font-semibold text-lg">
+                          Code: {sale.code}
+                        </p>
+                        <p className="text-black">Brand : {sale.brand}</p>
+                      </div>
+                      <div>
+                        {new Date(sale.soldAt).toLocaleString()}
+                        <svg
+                          className={`h-6 w-6 ${
+                            expandedSaleId === sale._id
+                              ? "transform rotate-180"
+                              : ""
+                          }`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </div>
+                    </div>
+                    {expandedSaleId === sale._id && (
+                      <div className="flex items-center justify-evenly border-t border-gray-300 mt-4 pt-4">
+                        <div className="text-black">
+                          <p className="font-semibold py-1">
+                            Product: {sale.product}
+                          </p>
+                          <p className="font-semibold py-1">
+                            Category: {sale.category}
+                          </p>
+                          <p className="font-semibold py-1">
+                            Selling Price: {sale.sellingPrice}
+                          </p>
+                          {sale.sellingPrice - sale.mrp >= 0 ? (
+                            <p className="font-semibold py-1 text-green-500">
+                              Profit : {sale.sellingPrice - sale.mrp}
+                            </p>
+                          ) : (
+                            <p className="font-semibold py-1 text-red-500">
+                              Loss : {sale.sellingPrice - sale.mrp}
+                            </p>
+                          )}
+                          {showDeleteTooltip && (
+                            <div className="text-red-500 text-center text-sm mt-2">
+                              Error while Deleting try again..
+                            </div>
+                          )}
+                          {/* Delete Button */}
+                          <button
+                            onClick={() => {
+                              handleOpenDeleteModal(sale.code);
+                            }}
+                            className="w-full mt-6 py-2 px-4 rounded focus:outline-none bg-red-500 text-white"
+                          >
+                            Return
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </React.Fragment>
+            );
+          })}
+
         <div className="flex justify-center">
           <button
             onClick={loadMoreSales}

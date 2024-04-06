@@ -6,12 +6,7 @@ const protect = require("../middlewares/authMiddleWare");
 
 // Endpoint for adding a product to inventory
 router.post("/", protect, async (req, res) => {
-  const {
-    code,
-    quantitySold,
-    sellingPrice,
-    customerPhoneNo,
-  } = req.body;
+  const { code, quantitySold, sellingPrice, customerPhoneNo } = req.body;
 
   try {
     await Item.findOneAndUpdate(
@@ -36,12 +31,10 @@ router.post("/", protect, async (req, res) => {
           SaleLog.create(newSaleLog)
             .then((doc) => {
               if (doc) {
-                res
-                  .status(200)
-                  .json({
-                    message:
-                      "Product sold from inventory successfully and log also saved",
-                  });
+                res.status(200).json({
+                  message:
+                    "Product sold from inventory successfully and log also saved",
+                });
               }
             })
             .catch((err) => {

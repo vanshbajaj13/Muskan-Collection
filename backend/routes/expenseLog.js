@@ -15,7 +15,7 @@ router.get("/", protect, async (req, res) => {
 });
 router.get("/totalexpense", protect, async (req, res) => {
   try {
-    const expenseLogs = await ExpenseLog.find({}, { expenseAmount: 1, _id: 0 });
+    const expenseLogs = await ExpenseLog.find({}, { expenseAmount: 1, _id: 0,date: 1 });
     res.json(expenseLogs);
   } catch (error) {
     console.error(error);
@@ -26,16 +26,14 @@ router.get("/totalexpense", protect, async (req, res) => {
 // Post a new expense
 router.post("/", protect, async (req, res) => {
   try {
-    var { expenseType, expenseAmount, expenseDescription } = req.body;
+    var { expenseType, expenseAmount } = req.body;
     expenseType = expenseType.toUpperCase();
-    expenseDescription = expenseDescription.toLowerCase();
     // Create a new expense log
     const date = Date.now();
     const newExpenseLog = new ExpenseLog({
       expenseType,
       expenseAmount,
       date,
-      expenseDescription,
     });
 
     // Save the expense log to the database

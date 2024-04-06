@@ -4,7 +4,6 @@ const expenseLogSchema = new mongoose.Schema(
   {
     expenseType: {
       type: String,
-      required: true,
     },
     expenseAmount: {
       type: Number,
@@ -13,9 +12,6 @@ const expenseLogSchema = new mongoose.Schema(
     date: {
       type: Number, 
       required: true,
-    },
-    expenseDescription: {
-      type: String,
     },
   },
   { timestamps: true }

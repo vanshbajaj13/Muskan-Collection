@@ -47,9 +47,15 @@ const SideBar = () => {
           )}
           <a
             href="/sale"
-            className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+            className="text-green-500 block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
           >
             Sale
+          </a>
+          <a
+            href="/add-expense"
+            className="text-red-500 block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+          >
+            Add Expense
           </a>
           <a
             href="/purchase"
@@ -57,12 +63,22 @@ const SideBar = () => {
           >
             Purchase
           </a>
-          <a
-            href="/add-expense"
-            className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
-          >
-            Add Expense
-          </a>
+          {(isAdmin || isDev) && (
+            <a
+              href="/history"
+              className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+            >
+              History
+            </a>
+          )}
+          {(isAdmin || isDev) && (
+            <a
+              href="/sale-history"
+              className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+            >
+              Sale History / Return
+            </a>
+          )}
           <a
             href="/add-brand-product"
             className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
@@ -81,21 +97,15 @@ const SideBar = () => {
           >
             Add Category
           </a>
-          {(isAdmin || isDev) && <a
-            href="/history"
+          <a
+            href="/print-tag"
             className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
           >
-            History
-          </a>}
-          {(isAdmin || isDev) && <a
-            href="/sale-history"
-            className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
-          >
-            Sale History
-          </a>}
+            Print Tags
+          </a>
           <a
             href="/login"
-            className="block py-2 px-4 text-red-600 rounded transition duration-300 hover:bg-gray-700"
+            className="font-bold block py-2 px-4 text-red-500 rounded transition duration-300 hover:bg-gray-700"
             onClick={Logout}
           >
             Log Out

@@ -229,7 +229,7 @@ const Dashboard = () => {
           onChange={handleDaysChange}
           className="border p-2 rounded-md"
         >
-          {[1, 3, 5, 7, 15, 30, 180, 365].map((days) => (
+          {[1, 2, 3, 4, 5, 6, 7, 15, 30, 180, 365].map((days) => (
             <option key={days} value={days}>
               {`${days} Day${days > 1 ? "s" : ""}`}
             </option>
@@ -242,7 +242,10 @@ const Dashboard = () => {
           Total Sales in {selectedDays} days:
         </h3>
         <div className="text-xl font-bold">
-          ₹{isCalculating ? " Calculating....." : (totalSales).toLocaleString('hi')}
+          ₹
+          {isCalculating
+            ? " Calculating....."
+            : totalSales.toLocaleString("hi")}
         </div>
       </div>
       <div className="mb-8">
@@ -250,7 +253,10 @@ const Dashboard = () => {
           Total Profit in {selectedDays} days:
         </h3>
         <div className="text-xl font-bold">
-          ₹{isCalculating ? " Calculating....." : (totalProfit).toLocaleString('hi')}
+          ₹
+          {isCalculating
+            ? " Calculating....."
+            : totalProfit.toLocaleString("hi")}
         </div>
       </div>
 
@@ -259,7 +265,10 @@ const Dashboard = () => {
           Total Expenses in {selectedDays} days:
         </h3>
         <div className="text-xl font-bold">
-          ₹{isCalculating ? " Calculating....." : (totalExpenses).toLocaleString('hi')}
+          ₹
+          {isCalculating
+            ? " Calculating....."
+            : totalExpenses.toLocaleString("hi")}
         </div>
       </div>
 
