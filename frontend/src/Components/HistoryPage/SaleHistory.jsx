@@ -462,12 +462,14 @@ const SaleHistory = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded-md">
             <p className="mb-4">Type 'CONFIRM' to delete this item:</p>
-            <input
-              type="text"
-              value={confirmText}
-              onChange={handleUserInputChange}
-              className="border border-gray-300 p-2 rounded-md mb-4"
-            />
+            <div className="flex justify-center">
+              <input
+                type="text"
+                value={confirmText}
+                onChange={handleUserInputChange}
+                className="border border-gray-300 p-2 rounded-md mb-4"
+              />
+            </div>
             <div className="flex justify-between">
               <button
                 onClick={handleCloseDeleteModal}

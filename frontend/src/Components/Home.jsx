@@ -16,6 +16,7 @@ import EditItem from "./AddFeatures/EditItem";
 import SaleHistory from "./HistoryPage/SaleHistory";
 import { useUserRole } from "../auth/UserRoleContext";
 import PrintTag from "./AddFeatures/PrintTag";
+import ExpenseHistory from "./HistoryPage/ExpenseHistory";
 
 const Home = () => {
   const [userRole] = useUserRole();
@@ -48,6 +49,7 @@ const Home = () => {
         {(isDev) && (
           <Route path="/sale-history/:code" element={<SaleHistory />} />
         )}
+          <Route path="/expense-history" element={<ExpenseHistory />} />
         {isDev && <Route path="/edit-item/:code" element={<EditItem />} />}
         <Route path="*" element={<SideBar />} />
       </Routes>
