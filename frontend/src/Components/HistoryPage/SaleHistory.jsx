@@ -28,9 +28,10 @@ const SaleHistory = () => {
   }, [page]);
 
   const fetchSaleWithOption = async (option, query) => {
-    setSearching(true);
-    try {
-      const response = await fetch(
+    if (query !== "") {
+      setSearching(true);
+      try {
+        const response = await fetch(
         `/api/saleslog/${
           exactMatch ? "exact-search" : "search"
         }/${option}/${query}`,
@@ -63,6 +64,9 @@ const SaleHistory = () => {
     } finally {
       setSearching(false);
     }
+  } else {
+   setSaleNotFound(false);
+  }
   };
 
   const fetchSales = async () => {
@@ -196,7 +200,7 @@ const SaleHistory = () => {
     const groupSalesByDate = () => {
       const grouped = {};
       sales.forEach((sale) => {
-        const date = new Date(sale.soldAt).getDate();
+        const date = new Date(sale.soldAt).toLocaleDateString();
         if (!grouped[date]) {
           grouped[date] = [];
         }
@@ -343,7 +347,7 @@ const SaleHistory = () => {
         <h2 className="text-xl font-semibold mb-2">All Sales</h2>
         {Object.keys(groupedSales)
           .sort((a, b) => new Date(b) - new Date(a))
-          .map((date, index) => {
+          .map((date) => {
             const salesForDate = groupedSales[date];
             // Calculate total sale and profit for the current date
             const totalSale = salesForDate.reduce(
