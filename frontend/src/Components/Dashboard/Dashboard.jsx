@@ -229,7 +229,7 @@ const Dashboard = () => {
           onChange={handleDaysChange}
           className="border p-2 rounded-md"
         >
-          {[1, 2, 3, 4, 5, 6, 7, 15, 30, 180, 365].map((days) => (
+          {[1, 2, 3, 4, 5, 6, 7, 15,20,25, 30,60, 180, 365].map((days) => (
             <option key={days} value={days}>
               {`${days} Day${days > 1 ? "s" : ""}`}
             </option>

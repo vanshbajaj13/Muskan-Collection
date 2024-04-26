@@ -236,13 +236,18 @@ const History = () => {
                     <p className="font-semibold py-1">
                       Quantity Available: {item.quantityBuy - item.quantitySold}
                     </p>
+                    <p className="font-semibold py-1">
+                      Quantity Sold: {item.quantitySold}
+                    </p>
                     <p className="font-semibold py-1">MRP: {item.mrp}</p>
-                    <button
-                      onClick={() => handleEdit(item.code)}
-                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-1 mr-2"
-                    >
-                      Edit
-                    </button>
+                    <div className="flex justify-center">
+                      <button
+                        onClick={() => handleEdit(item.code)}
+                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-1 mr-2"
+                      >
+                        Edit
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -301,13 +306,18 @@ const History = () => {
                   <p className="font-semibold py-1">
                     Quantity Available: {item.quantityBuy - item.quantitySold}
                   </p>
+                  <p className="font-semibold py-1">
+                    Quantity Sold: {item.quantitySold}
+                  </p>
                   <p className="font-semibold py-1">MRP: {item.mrp}</p>
-                  <button
-                    onClick={() => handleEdit(item.code)}
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-1 mr-2"
-                  >
-                    Edit
-                  </button>
+                  <div className="flex justify-center">
+                    <button
+                      onClick={() => handleEdit(item.code)}
+                      className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-1 mr-2"
+                    >
+                      Edit
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

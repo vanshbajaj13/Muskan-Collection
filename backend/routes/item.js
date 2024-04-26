@@ -3,6 +3,7 @@ const router = express.Router();
 const { Item } = require("../Models/item");
 const { RecentlyDeletedItem } = require("../Models/recentlyDeletedItem");
 const protect = require("../middlewares/authMiddleWare");
+const { ItemHistory } = require("../Models/itemHistory");
 
 router.get("/", protect, async (req, res) => {
   const items = await Item.find().sort({ brand: 1 });
@@ -110,11 +111,15 @@ router.get("/search/:option/:query", protect, async (req, res) => {
         break;
       case "mrp<=":
         // Search by MRP less than or equal to the specified value
-        items = await Item.find({ mrp: { $lte: parseFloat(query) } }).sort({ mrp: 1 });
+        items = await Item.find({ mrp: { $lte: parseFloat(query) } }).sort({
+          mrp: 1,
+        });
         break;
       case "mrp>=":
         // Search by MRP greater than or equal to the specified value
-        items = await Item.find({ mrp: { $gte: parseFloat(query) } }).sort({ mrp: 1 });
+        items = await Item.find({ mrp: { $gte: parseFloat(query) } }).sort({
+          mrp: 1,
+        });
         break;
       default:
         return res.status(400).json({ message: "Invalid search option" });
@@ -215,14 +220,39 @@ router.patch("/:code", protect, async (req, res) => {
   const { code } = req.params;
   const updateFields = req.body;
   try {
+    // Find the item by code
+    const existingItem = await Item.findOne({ code });
+
+    if (!existingItem) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    // Store the previous values of the fields that are being updated
+    const previousValues = {};
+    for (const key in updateFields) {
+      if (existingItem[key] !== undefined) {
+        previousValues[key] = existingItem[key];
+      }
+    }
+
     // Find the item by code and update the specified fields
     const updatedItem = await Item.findOneAndUpdate(
       { code },
       { $set: updateFields },
-      { new: true }
+      { new: false }
     );
 
     if (updatedItem) {
+
+      // Create a new item history entry with just the updated fields
+      const itemHistoryEntry = new ItemHistory({
+        code: code,
+        ...previousValues,
+      });
+
+      // Save the item history entry
+      await itemHistoryEntry.save();
+
       res.json(updatedItem);
     } else {
       res.status(404).json({ message: "Item not found" });

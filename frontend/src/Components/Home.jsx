@@ -17,6 +17,7 @@ import SaleHistory from "./HistoryPage/SaleHistory";
 import { useUserRole } from "../auth/UserRoleContext";
 import PrintTag from "./AddFeatures/PrintTag";
 import ExpenseHistory from "./HistoryPage/ExpenseHistory";
+import Repurchase from "./RepurchasePage/Repurchase";
 
 const Home = () => {
   const [userRole] = useUserRole();
@@ -43,6 +44,7 @@ const Home = () => {
         )}
         <Route path="/add-expense" element={<AddExpense />} />
         {(isAdmin || isDev) && <Route path="/history" element={<History />} />}
+        {(isAdmin || isDev) && <Route path="/repurchase" element={<Repurchase />} />}
         {(isAdmin || isDev) && (
           <Route path="/sale-history" element={<SaleHistory />} />
         )}

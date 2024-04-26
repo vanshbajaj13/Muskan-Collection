@@ -65,6 +65,14 @@ const SideBar = () => {
           </a>
           {(isAdmin || isDev) && (
             <a
+              href="/repurchase"
+              className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+            >
+              Re-Purchase
+            </a>
+          )}
+          {(isAdmin || isDev) && (
+            <a
               href="/history"
               className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
             >
