@@ -40,7 +40,10 @@ router.get("/paginate", protect, async (req, res) => {
 
 router.get("/totalexpense", protect, async (req, res) => {
   try {
-    const expenseLogs = await ExpenseLog.find({}, { expenseAmount: 1, _id: 0,date: 1 });
+    const expenseLogs = await ExpenseLog.find(
+      {},
+      { expenseAmount: 1, _id: 0, date: 1,goodsPayment : 1 }
+    );
     res.json(expenseLogs);
   } catch (error) {
     console.error(error);
@@ -51,7 +54,7 @@ router.get("/totalexpense", protect, async (req, res) => {
 // Post a new expense
 router.post("/", protect, async (req, res) => {
   try {
-    var { expenseType, expenseAmount } = req.body;
+    var { expenseType, expenseAmount, goodsPayment } = req.body;
     expenseType = expenseType.toUpperCase();
     // Create a new expense log
     const date = Date.now();
@@ -59,6 +62,7 @@ router.post("/", protect, async (req, res) => {
       expenseType,
       expenseAmount,
       date,
+      goodsPayment,
     });
 
     // Save the expense log to the database

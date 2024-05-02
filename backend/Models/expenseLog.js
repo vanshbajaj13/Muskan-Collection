@@ -13,6 +13,10 @@ const expenseLogSchema = new mongoose.Schema(
       type: Number, 
       required: true,
     },
+    goodsPayment: {
+      type: Boolean,
+      default: false,
+    }
   },
   { timestamps: true }
 );

@@ -2,10 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const AddExpense = () => {
-  const naviagate = useNavigate();
+  const navigate = useNavigate();
   const [expense, setExpense] = useState({
     expenseType: "",
     expenseAmount: "",
+    goodsPayment: false, // Default value for goodsPayment
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -47,6 +48,7 @@ const AddExpense = () => {
         setExpense({
           expenseType: "",
           expenseAmount: "",
+          goodsPayment: "No", // Reset goodsPayment to default value after success
         });
         // Show the tooltip
         setShowTooltip(true);
@@ -57,7 +59,7 @@ const AddExpense = () => {
         }, 3000);
       } else if (response.status === 401) {
         window.localStorage.clear();
-        naviagate("/login");
+        navigate("/login");
       } else {
         console.error("Failed to add expense");
       }
@@ -71,13 +73,13 @@ const AddExpense = () => {
 
   // auto navigate to login
   useEffect(() => {
-    function isUserLogedIn() {
+    function isUserLoggedIn() {
       if (!window.localStorage.getItem("userInfo")) {
-        naviagate("/login");
+        navigate("/login");
       }
     }
-    isUserLogedIn();
-  }, [naviagate]);
+    isUserLoggedIn();
+  }, [navigate]);
 
   return (
     <div className="p-4">
@@ -106,6 +108,19 @@ const AddExpense = () => {
           }
           className="border p-2 w-full"
         />
+      </div>
+      <div className="mb-4">
+        <label className="block mb-2">Goods Payment:</label>
+        <select
+          value={expense.goodsPayment}
+          onChange={(e) =>
+            setExpense({ ...expense, goodsPayment: e.target.value })
+          }
+          className="border p-2 w-full"
+        >
+          <option value={false}>No</option>
+          <option value={true}>Yes</option>
+        </select>
       </div>
       {showTooltip && (
         <div className="text-green-500 mt-4">Expense added successfully!</div>

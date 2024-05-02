@@ -8,14 +8,22 @@ const Dashboard = () => {
   const [salesData, setSalesData] = useState();
   const [expensesData, setExpensesData] = useState();
   const [selectedDays, setSelectedDays] = useState(1);
+  const [selectedMonth, setSelectedMonth] = useState(null); // Default to the current month
   const [dailySalesSum, setDailySalesSum] = useState({});
   const [totalSales, setTotalSales] = useState(0);
   const [productsSold, setProductsSold] = useState({});
   const [profitData, setProfitData] = useState({});
   const [totalExpenses, setTotalExpenses] = useState(0);
+  const [totalGoodsPayment, setTotalGoodsPayment] = useState(0);
   const [totalProfit, setTotalProfit] = useState(0);
   const [isCalculating, setIsCalculating] = useState(false);
-
+  const [initialized, setInitialized] = useState(false);
+  const [showByDays, setShowByDays] = useState(true);
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  
   // auto navigate to login
   useEffect(() => {
     function isUserLogedIn() {
@@ -114,7 +122,110 @@ const Dashboard = () => {
       (sum, expense) => sum + expense.expenseAmount,
       0
     );
+    const totalExpensesAmountGoodsPayment = lastSelectedDaysExpense?.reduce(
+      (sum, expense) => {
+        if (expense.goodsPayment === true) {
+          return sum + expense.expenseAmount;
+        }
+        return sum; // Return the sum unchanged if the condition is not met
+      },
+      0
+    );
+
     setTotalExpenses(totalExpensesAmount || 0);
+    setTotalGoodsPayment(totalExpensesAmountGoodsPayment || 0);
+    setIsCalculating(false);
+  };
+
+  // calculate things according to selectedDays and selectedMonth
+  const reCalculateForMonth = () => {
+    // Calculate daily sales sum for the selected month
+    const currentDate = new Date();
+
+    const currentYear = currentDate.getFullYear();
+    const lastSelectedMonthSales = salesData?.filter((sale) => {
+      const saleDate = new Date(sale.soldAt);
+      return (
+        saleDate.getMonth() === selectedMonth &&
+        saleDate.getFullYear() === currentYear
+      );
+    });
+    const lastSelectedMonthExpenses = expensesData?.filter((expense) => {
+      const expenseDate = new Date(expense.date);
+      return (
+        expenseDate.getMonth() === selectedMonth &&
+        expenseDate.getFullYear() === currentYear
+      );
+    });
+
+    const dailySum = lastSelectedMonthSales?.reduce((acc, sale) => {
+      const saleDate = new Date(sale.soldAt).toLocaleDateString();
+      acc[saleDate] = (acc[saleDate] || 0) + sale.sellingPrice;
+      return acc;
+    }, {});
+
+    setDailySalesSum(dailySum || {});
+
+    // Calculate total sales for the selected days
+    const total = lastSelectedMonthSales?.reduce(
+      (sum, sale) => sum + sale.sellingPrice,
+      0
+    );
+    setTotalSales(total || 0);
+
+    // Calculate products sold
+    const productsSoldCount = lastSelectedMonthSales?.reduce((acc, sale) => {
+      const product = sale.product;
+      acc[product] = (acc[product] || 0) + 1;
+      return acc;
+    }, {});
+
+    setProductsSold(productsSoldCount || {});
+
+    // Calculate profits for each brand
+    const profits = lastSelectedMonthSales?.reduce((acc, sale) => {
+      const saleDate = new Date(sale.soldAt).toLocaleDateString();
+      const brand = sale.brand;
+      const profit = sale.sellingPrice - sale.mrp;
+      acc[saleDate] = acc[saleDate] || {};
+      acc[saleDate][brand] = (acc[saleDate][brand] || 0) + profit;
+      return acc;
+    }, {});
+
+    const convertedProfits = convertToRegularData(profits || {});
+    setProfitData(convertedProfits);
+
+    // calculate total profit in selected days
+    const totalProfits = profits
+      ? Object.values(profits).reduce((acc, dateProfits) => {
+          return (
+            acc +
+            Object.values(dateProfits).reduce((brandAcc, profit) => {
+              return brandAcc + profit;
+            }, 0)
+          );
+        }, 0)
+      : 0;
+
+    setTotalProfit(totalProfits);
+
+    // Fetch total expenses for the selected days
+    const totalExpensesAmount = lastSelectedMonthExpenses?.reduce(
+      (sum, expense) => sum + expense.expenseAmount,
+      0
+    );
+    const totalExpensesAmountGoodsPayment = lastSelectedMonthExpenses?.reduce(
+      (sum, expense) => {
+        if (expense.goodsPayment === true) {
+          return sum + expense.expenseAmount;
+        }
+        return sum; // Return the sum unchanged if the condition is not met
+      },
+      0
+    );
+
+    setTotalExpenses(totalExpensesAmount || 0);
+    setTotalGoodsPayment(totalExpensesAmountGoodsPayment || 0);
     setIsCalculating(false);
   };
 
@@ -174,6 +285,19 @@ const Dashboard = () => {
 
   const handleDaysChange = (e) => {
     setSelectedDays(parseInt(e.target.value, 10));
+    setShowByDays(true);
+  };
+  
+  useEffect(() => {
+    if (selectedMonth !== null && initialized) {
+      reCalculateForMonth();
+    }
+    // eslint-disable-next-line
+  }, [selectedMonth, initialized]);
+  const handleMonthChange = (e) => {
+    setSelectedMonth(parseInt(e.target.value, 10));
+    setInitialized(true); // Set initialized to true when a month is selected
+    setShowByDays(false);
   };
 
   const lineChartData = {
@@ -229,7 +353,7 @@ const Dashboard = () => {
           onChange={handleDaysChange}
           className="border p-2 rounded-md"
         >
-          {[1, 2, 3, 4, 5, 6, 7, 15,20,25, 30,60, 180, 365].map((days) => (
+          {[1, 2, 3, 4, 5, 6, 7, 15, 20, 25, 30, 60, 180, 365].map((days) => (
             <option key={days} value={days}>
               {`${days} Day${days > 1 ? "s" : ""}`}
             </option>
@@ -237,9 +361,30 @@ const Dashboard = () => {
         </select>
       </div>
 
+      <div className="mb-4">
+        <label className="block mb-2 text-lg">Select Month:</label>
+        <select
+          value={selectedMonth === null ? "" : selectedMonth}
+          onChange={handleMonthChange}
+          className="border p-2 rounded-md"
+        >
+          <option value="">-</option>
+          {Array.from({ length: 12 }).map((_, monthIndex) => (
+            <option key={monthIndex} value={monthIndex}>
+              {new Date(new Date().getFullYear(), monthIndex, 1).toLocaleString(
+                "default",
+                {
+                  month: "long",
+                }
+              )}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="mb-8">
         <h3 className="text-lg font-semibold mb-2">
-          Total Sales in {selectedDays} days:
+          Total Sales in {showByDays ? (selectedDays + " days "): months[selectedMonth]} :
         </h3>
         <div className="text-xl font-bold">
           ₹
@@ -250,7 +395,7 @@ const Dashboard = () => {
       </div>
       <div className="mb-8">
         <h3 className="text-lg font-semibold mb-2">
-          Total Profit in {selectedDays} days:
+          Total Profit in {showByDays ? (selectedDays + " days "): months[selectedMonth]}:
         </h3>
         <div className="text-xl font-bold">
           ₹
@@ -262,13 +407,24 @@ const Dashboard = () => {
 
       <div>
         <h3 className="text-lg font-semibold mb-2">
-          Total Expenses in {selectedDays} days:
+          Total Expenses in {showByDays ? (selectedDays + " days "): months[selectedMonth]}:
         </h3>
         <div className="text-xl font-bold">
           ₹
           {isCalculating
             ? " Calculating....."
-            : totalExpenses.toLocaleString("hi")}
+            : (totalExpenses - totalGoodsPayment).toLocaleString("hi")}
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold mb-2">
+            Total Payment in {showByDays ? (selectedDays + " days "): months[selectedMonth]}:
+          </h3>
+          <div className="text-xl font-bold">
+            ₹
+            {isCalculating
+              ? " Calculating....."
+              : totalGoodsPayment.toLocaleString("hi")}
+          </div>
         </div>
       </div>
 
