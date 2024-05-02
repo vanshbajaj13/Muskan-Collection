@@ -383,7 +383,7 @@ const EditItem = () => {
               type="text"
               value={confirmText}
               onChange={handleUserInputChange}
-              className="border border-gray-300 p-2 rounded-md mb-4"
+              className="border border-gray-300 p-2 rounded-md mb-4 text-center"
             />
             <div className="flex justify-between">
               <button

@@ -32,41 +32,41 @@ const SaleHistory = () => {
       setSearching(true);
       try {
         const response = await fetch(
-        `/api/saleslog/${
-          exactMatch ? "exact-search" : "search"
-        }/${option}/${query}`,
-        {
-          headers: {
-            Authorization: `Bearer ${
-              JSON.parse(window.localStorage.getItem("userInfo")).token
-            }`,
-          },
+          `/api/saleslog/${
+            exactMatch ? "exact-search" : "search"
+          }/${option}/${query}`,
+          {
+            headers: {
+              Authorization: `Bearer ${
+                JSON.parse(window.localStorage.getItem("userInfo")).token
+              }`,
+            },
+          }
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setSearchedSales(data); // Clear searchedSales state
+          setSaleNotFound(false); // Reset saleNotFound state
+        } else if (response.status === 401) {
+          window.localStorage.clear();
+          setSearchedSales(null); // Clear searchedSales state
+          setSaleNotFound(true); // Set saleNotFound state to true
+          setSearching(false);
+          // navigate("/login");
+        } else {
+          setSearchedSales(null); // Clear searchedSales state
+          setSaleNotFound(true); // Set saleNotFound state to true
+          setSearching(false);
+          // console.error("Failed to fetch sales");
         }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setSearchedSales(data); // Clear searchedSales state
-        setSaleNotFound(false); // Reset saleNotFound state
-      } else if (response.status === 401) {
-        window.localStorage.clear();
-        setSearchedSales(null); // Clear searchedSales state
-        setSaleNotFound(true); // Set saleNotFound state to true
+      } catch (error) {
+        // console.log(error);
+      } finally {
         setSearching(false);
-        // navigate("/login");
-      } else {
-        setSearchedSales(null); // Clear searchedSales state
-        setSaleNotFound(true); // Set saleNotFound state to true
-        setSearching(false);
-        // console.error("Failed to fetch sales");
       }
-    } catch (error) {
-      // console.log(error);
-    } finally {
-      setSearching(false);
+    } else {
+      setSaleNotFound(false);
     }
-  } else {
-   setSaleNotFound(false);
-  }
   };
 
   const fetchSales = async () => {
@@ -182,7 +182,6 @@ const SaleHistory = () => {
         } else {
           console.error("Failed to delete ");
           setConfirmText("");
-          setIsDeleteModalOpen(false);
           setShowDeleteTooltip(true);
           setTimeout(() => {
             setShowDeleteTooltip(false);
@@ -197,6 +196,7 @@ const SaleHistory = () => {
 
   // Use useEffect to preprocess the sales data whenever it changes
   useEffect(() => {
+    console.log(sales);
     const groupSalesByDate = () => {
       const grouped = {};
       sales.forEach((sale) => {
@@ -471,8 +471,15 @@ const SaleHistory = () => {
                 type="text"
                 value={confirmText}
                 onChange={handleUserInputChange}
-                className="border border-gray-300 p-2 rounded-md mb-4"
+                className="border border-gray-300 p-2 rounded-md text-center"
               />
+            </div>
+            <div className="mb-2">
+              {showDeleteTooltip && (
+                <div className="text-red-500 text-center text-sm mt-2">
+                  Error while Deleting try again..
+                </div>
+              )}
             </div>
             <div className="flex justify-between">
               <button
