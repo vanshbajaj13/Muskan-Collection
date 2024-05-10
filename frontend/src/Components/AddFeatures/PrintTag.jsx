@@ -119,17 +119,7 @@ const PrintTag = () => {
                   className="flex flex-wrap"
                 >
                   {selectedItems.length % 2 !== 0 &&
-                    selectedItems.push({
-                      code: "",
-                      brand: "",
-                      product: "",
-                      category: "",
-                      size: "",
-                      quantityBuy: 0,
-                      quantitySold: 0,
-                      mrp: 100,
-                      secretCode: "",
-                    })}
+                    selectedItems.push(selectedItems[selectedItems.length-1])}
                   {selectedItems.map((item, index) => (
                     <div
                       key={index}

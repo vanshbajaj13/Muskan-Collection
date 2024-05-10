@@ -16,20 +16,21 @@ router.get("/", protect, async (req, res) => {
   // console.log(items);
 });
 
-router.delete("/:code", protect, async (req, res) => {
-  const { code } = req.params;
+router.delete("/:_id", protect, async (req, res) => {
+  const { _id } = req.params;
   try {
     // Find the sale log with the given code
-    const saleLog = await SaleLog.findOne({ code });
+    const saleLog = await SaleLog.findOne({ _id });
 
     if (!saleLog) {
       return res.status(404).json({ message: "Sale log not found" });
     }
     // Update the item with the given code to decrease the quantity sold by one
-    await Item.updateOne({ code }, { $inc: { quantitySold: -1 } });
+    await Item.updateOne({ code : saleLog.code }, { $inc: { quantitySold: -1 } });
 
     // move to recyle bin
     const recycleBinSale = new RecentlyDeletedSaleLog({
+      _id : saleLog._id,
       code: saleLog.code,
       brand: saleLog.brand,
       product: saleLog.product,
@@ -42,7 +43,7 @@ router.delete("/:code", protect, async (req, res) => {
     });
     await recycleBinSale.save();
     // Delete the sale log
-    await SaleLog.deleteOne({ code });
+    await SaleLog.deleteOne({ _id });
 
     res.status(200).json({ message: "Sale log deleted successfully" });
   } catch (error) {
@@ -58,7 +59,7 @@ router.get("/paginate", protect, async (req, res) => {
 
   try {
     const sales = await SaleLog.find()
-      .sort({ createdAt: -1 }) // Assuming you have a createdAt field in your items
+      .sort({ soldAt: -1 }) // Assuming you have a createdAt field in your items
       .skip((page - 1) * limit)
       .limit(limit);
     res.json({ sales });

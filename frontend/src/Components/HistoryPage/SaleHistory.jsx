@@ -149,9 +149,9 @@ const SaleHistory = () => {
     setExactMatch((prevExactMatch) => !prevExactMatch); // Toggle exact match state
   };
 
-  const handleOpenDeleteModal = (code) => {
+  const handleOpenDeleteModal = (id) => {
     setIsDeleteModalOpen(true);
-    setDeleteCode(code);
+    setDeleteCode(id);
   };
 
   const handleCloseDeleteModal = () => {
@@ -196,7 +196,6 @@ const SaleHistory = () => {
 
   // Use useEffect to preprocess the sales data whenever it changes
   useEffect(() => {
-    console.log(sales);
     const groupSalesByDate = () => {
       const grouped = {};
       sales.forEach((sale) => {
@@ -321,7 +320,7 @@ const SaleHistory = () => {
                     {/* Delete Button */}
                     <button
                       onClick={() => {
-                        handleOpenDeleteModal(sale.code);
+                        handleOpenDeleteModal(sale._id);
                       }}
                       className="w-full mt-6 py-2 px-4 rounded focus:outline-none bg-red-500 text-white"
                     >
@@ -438,7 +437,7 @@ const SaleHistory = () => {
                           {/* Delete Button */}
                           <button
                             onClick={() => {
-                              handleOpenDeleteModal(sale.code);
+                              handleOpenDeleteModal(sale._id);
                             }}
                             className="w-full mt-6 py-2 px-4 rounded focus:outline-none bg-red-500 text-white"
                           >
