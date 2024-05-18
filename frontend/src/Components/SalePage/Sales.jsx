@@ -45,7 +45,7 @@ const Sale = () => {
   // Fetch available quantity
   const fetchAvailableQuantity = async () => {
     try {
-      if (productDetails.code) {
+      if (productDetails.code.length === 7) {
         setFetchingQuantity(true);
         const response = await fetch(
           `/api/availablequantity?code=${productDetails.code}`,
