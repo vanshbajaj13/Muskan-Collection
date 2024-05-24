@@ -387,10 +387,10 @@ const SaleHistory = () => {
                         </p>
                         <p className="text-black">Brand : {sale.brand}</p>
                       </div>
-                      <div>
+                      <div className="flex">
                         {new Date(sale.soldAt).toLocaleString()}
                         <svg
-                          className={`h-6 w-6 ${
+                          className={`h-6 w-6 ml-2 ${
                             expandedSaleId === sale._id
                               ? "transform rotate-180"
                               : ""

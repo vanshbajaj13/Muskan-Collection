@@ -18,6 +18,7 @@ import { useUserRole } from "../auth/UserRoleContext";
 import PrintTag from "./AddFeatures/PrintTag";
 import ExpenseHistory from "./HistoryPage/ExpenseHistory";
 import Repurchase from "./RepurchasePage/Repurchase";
+import CustomerPurchase from "./SalePage/CustomerPurchase";
 
 const Home = () => {
   const [userRole] = useUserRole();
@@ -31,6 +32,7 @@ const Home = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/menu" element={<SideBar />} />
         <Route path="/sale" element={<Sale />} />
+        <Route path="/customer-purchase" element={<CustomerPurchase />} />
         <Route path="/purchase" element={<Purchase />} />
         <Route path="/print-tag" element={<PrintTag />} />
         {(isAdmin || isDev) && (

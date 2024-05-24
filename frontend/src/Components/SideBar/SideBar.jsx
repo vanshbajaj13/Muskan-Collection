@@ -63,6 +63,12 @@ const SideBar = () => {
           >
             Purchase
           </a>
+          <a
+            href="/customer-purchase"
+            className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+          >
+            Customer Purchase
+          </a>
           {(isAdmin || isDev) && (
             <a
               href="/repurchase"

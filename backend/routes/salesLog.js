@@ -4,6 +4,7 @@ const { SaleLog } = require("../Models/salesLog");
 const protect = require("../middlewares/authMiddleWare");
 const { Item } = require("../Models/item");
 const { RecentlyDeletedSaleLog } = require("../Models/recentlyDeletedSaleslog");
+const { Customer } = require("../Models/customer");
 
 router.get("/", protect, async (req, res) => {
   await SaleLog.find()
@@ -25,12 +26,47 @@ router.delete("/:_id", protect, async (req, res) => {
     if (!saleLog) {
       return res.status(404).json({ message: "Sale log not found" });
     }
-    // Update the item with the given code to decrease the quantity sold by one
-    await Item.updateOne({ code : saleLog.code }, { $inc: { quantitySold: -1 } });
+    
+    if (saleLog.customerPhoneNo) {
+      // Find the customer associated with the sale log
+      const customer = await Customer.findOne({
+        phoneNo: saleLog.customerPhoneNo,
+      });
 
+      if (!customer) {
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      // Remove the sale log from the customer's purchase list using $pull operator
+      await Customer.updateOne(
+        { phoneNo: saleLog.customerPhoneNo },
+        { $pull: { purchaseList: { salesLogId: saleLog._id } } }
+      );
+      
+      // Add the sale log to the customer's returned item list
+      await Customer.updateOne(
+        { phoneNo: saleLog.customerPhoneNo },
+        {
+          $push: {
+            returnItemList: {
+              purchasedAt: saleLog.soldAt,
+              returnedAt: Date.now(),
+              salesLogId: saleLog._id
+            }
+          }
+        }
+      );
+    }
+    
+    // Update the item with the given code to decrease the quantity sold by one
+    await Item.updateOne(
+      { code: saleLog.code },
+      { $inc: { quantitySold: -1 } }
+    );
+    
     // move to recyle bin
     const recycleBinSale = new RecentlyDeletedSaleLog({
-      _id : saleLog._id,
+      _id: saleLog._id,
       code: saleLog.code,
       brand: saleLog.brand,
       product: saleLog.product,
