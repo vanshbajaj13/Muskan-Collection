@@ -7,47 +7,55 @@ const { Customer } = require("../Models/customer");
 
 // Endpoint for adding a product to inventory
 router.post("/", protect, async (req, res) => {
-  const { code, quantitySold, sellingPrice, customerPhoneNo } = req.body;
+  const { code, quantitySold, sellingPrice, customerPhoneNo, customerName } = req.body;
 
   try {
-    await Item.findOneAndUpdate(
-      {
-        code: code,
-      },
+    const item = await Item.findOneAndUpdate(
+      { code: code },
       { $inc: { quantitySold: quantitySold } }
-    )
-      .then((result) => {
-        if (result) {
-          const newSaleLog = new SaleLog({
-            code: result.code,
-            brand: result.brand,
-            product: result.product,
-            category: result.category,
-            size: result.size,
-            mrp: result.mrp,
-            sellingPrice: sellingPrice,
-            customerPhoneNo: customerPhoneNo,
-            soldAt: Date.now(),
-          });
-          SaleLog.create(newSaleLog)
-            .then((doc) => {
-              if (doc) {
-                res.status(200).json({
-                  message:
-                    "Product sold from inventory successfully and log also saved",
-                });
-              }
-            })
-            .catch((err) => {
-              console.log(err);
-            });
-        } else {
-          res.send("No product found");
-        }
-      })
-      .catch((error) => {
-        console.log(error);
+    );
+
+    if (!item) {
+      return res.status(404).json({ message: "No product found" });
+    }
+
+    const newSaleLog = new SaleLog({
+      code: item.code,
+      brand: item.brand,
+      product: item.product,
+      category: item.category,
+      size: item.size,
+      mrp: item.mrp,
+      sellingPrice: sellingPrice,
+      customerPhoneNo: customerPhoneNo,
+      soldAt: Date.now(),
+    });
+
+    const saleLog = await newSaleLog.save();
+
+    if (customerPhoneNo) {
+      let customer = await Customer.findOne({ phoneNo: customerPhoneNo });
+
+      if (!customer) {
+        customer = new Customer({
+          phoneNo: customerPhoneNo,
+          name: customerName,
+          purchaseList: [],
+        });
+      }
+
+      customer.purchaseList.push({
+        purchasedAt: Date.now(),
+        salesLogId: saleLog._id,
       });
+
+      await customer.save();
+    }
+
+    res.status(200).json({
+      message: "Product sold from inventory successfully and log also saved",
+    });
+
   } catch (error) {
     console.error("Error selling product from inventory:", error);
     res.status(500).json({ error: "Internal Server Error" });

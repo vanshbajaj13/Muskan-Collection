@@ -14,6 +14,24 @@ router.get("/", protect, async (req, res) => {
   }
 });
 
+
+// Endpoint to fetch expense logs from the last 365 days
+router.get("/totalexpense/1year", protect, async (req, res) => {
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+  try {
+    const expenseLogs = await ExpenseLog.find(
+      {date: { $gte: oneYearAgo }},
+      { expenseAmount: 1, _id: 0, date: 1,goodsPayment : 1 }
+    );
+    res.json(expenseLogs);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
 // Get paginated expenses
 router.get("/paginate", protect, async (req, res) => {
   const page = parseInt(req.query.page) || 1;

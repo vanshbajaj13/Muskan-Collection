@@ -17,6 +17,23 @@ router.get("/", protect, async (req, res) => {
   // console.log(items);
 });
 
+// Endpoint to fetch sale logs from the last 365 days
+router.get("/1year", protect, async (req, res) => {
+  const oneYearAgo = new Date();
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+  try {
+    const saleLogs = await SaleLog.find({
+      soldAt: { $gte: oneYearAgo }
+    });
+
+    res.json(saleLogs);
+  } catch (err) {
+    console.error("Error fetching sale logs:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 router.delete("/:_id", protect, async (req, res) => {
   const { _id } = req.params;
   try {
@@ -57,7 +74,7 @@ router.delete("/:_id", protect, async (req, res) => {
         }
       );
     }
-    
+
     // Update the item with the given code to decrease the quantity sold by one
     await Item.updateOne(
       { code: saleLog.code },

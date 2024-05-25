@@ -20,10 +20,20 @@ const Dashboard = () => {
   const [initialized, setInitialized] = useState(false);
   const [showByDays, setShowByDays] = useState(true);
   const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
-  
+
   // auto navigate to login
   useEffect(() => {
     function isUserLogedIn() {
@@ -92,29 +102,20 @@ const Dashboard = () => {
 
     // Calculate profits for each brand
     const profits = lastSelectedDaysSales?.reduce((acc, sale) => {
-      const saleDate = new Date(sale.soldAt).toLocaleDateString();
       const brand = sale.brand;
       const profit = sale.sellingPrice - sale.mrp;
-      acc[saleDate] = acc[saleDate] || {};
-      acc[saleDate][brand] = (acc[saleDate][brand] || 0) + profit;
+      acc[brand] = (acc[brand] || 0) + profit;
       return acc;
     }, {});
 
-    const convertedProfits = convertToRegularData(profits || {});
-    setProfitData(convertedProfits);
-
+    setProfitData(profits || {});
     // calculate total profit in selected days
-    const totalProfits = profits
-      ? Object.values(profits).reduce((acc, dateProfits) => {
-          return (
-            acc +
-            Object.values(dateProfits).reduce((brandAcc, profit) => {
-              return brandAcc + profit;
-            }, 0)
-          );
-        }, 0)
-      : 0;
-
+    let totalProfits = 0;
+    for (let key in profits) {
+      if (profits.hasOwnProperty(key)) {
+        totalProfits += profits[key];
+      }
+    }
     setTotalProfit(totalProfits);
 
     // Fetch total expenses for the selected days
@@ -184,29 +185,21 @@ const Dashboard = () => {
 
     // Calculate profits for each brand
     const profits = lastSelectedMonthSales?.reduce((acc, sale) => {
-      const saleDate = new Date(sale.soldAt).toLocaleDateString();
       const brand = sale.brand;
       const profit = sale.sellingPrice - sale.mrp;
-      acc[saleDate] = acc[saleDate] || {};
-      acc[saleDate][brand] = (acc[saleDate][brand] || 0) + profit;
+      acc[brand] = (acc[brand] || 0) + profit;
       return acc;
     }, {});
 
-    const convertedProfits = convertToRegularData(profits || {});
-    setProfitData(convertedProfits);
+    setProfitData(profits || {});
 
     // calculate total profit in selected days
-    const totalProfits = profits
-      ? Object.values(profits).reduce((acc, dateProfits) => {
-          return (
-            acc +
-            Object.values(dateProfits).reduce((brandAcc, profit) => {
-              return brandAcc + profit;
-            }, 0)
-          );
-        }, 0)
-      : 0;
-
+    let totalProfits = 0;
+    for (let key in profits) {
+      if (profits.hasOwnProperty(key)) {
+        totalProfits += profits[key];
+      }
+    }
     setTotalProfit(totalProfits);
 
     // Fetch total expenses for the selected days
@@ -235,14 +228,14 @@ const Dashboard = () => {
       setIsCalculating(true);
       try {
         const [salesResponse, expensesResponse] = await Promise.all([
-          fetch("/api/saleslog", {
+          fetch("/api/saleslog/1year", {
             headers: {
               Authorization: `Bearer ${
                 JSON.parse(window.localStorage.getItem("userInfo")).token
               }`,
             },
           }),
-          fetch("/api/expenselog/totalexpense", {
+          fetch("/api/expenselog/totalexpense/1year", {
             headers: {
               Authorization: `Bearer ${
                 JSON.parse(window.localStorage.getItem("userInfo")).token
@@ -287,7 +280,7 @@ const Dashboard = () => {
     setSelectedDays(parseInt(e.target.value, 10));
     setShowByDays(true);
   };
-  
+
   useEffect(() => {
     if (selectedMonth !== null && initialized) {
       reCalculateForMonth();
@@ -298,6 +291,40 @@ const Dashboard = () => {
     setSelectedMonth(parseInt(e.target.value, 10));
     setInitialized(true); // Set initialized to true when a month is selected
     setShowByDays(false);
+  };
+
+  const generateRandomColors = (numColors) => {
+    const colors = [
+      "rgba(255, 99, 132, 0.7)",    // Soft Red
+      "rgba(54, 162, 235, 0.7)",    // Soft Blue
+      "rgba(255, 206, 86, 0.7)",    // Soft Yellow
+      "rgba(75, 192, 192, 0.7)",    // Soft Teal
+      "rgba(192, 192, 192, 0.7)",   // Soft Gray
+      "rgba(153, 102, 255, 0.7)",   // Soft Purple
+      "rgba(255, 159, 64, 0.7)",    // Soft Orange
+      "rgba(255, 99, 255, 0.7)",    // Soft Pink
+      "rgba(54, 235, 162, 0.7)",    // Soft Mint
+      "rgba(206, 86, 255, 0.7)",    // Soft Violet
+      "rgba(192, 75, 192, 0.7)",    // Soft Magenta
+      "rgba(99, 255, 132, 0.7)",    // Soft Green
+      "rgba(235, 54, 162, 0.7)",    // Soft Raspberry
+      "rgba(86, 255, 206, 0.7)",    // Soft Cyan
+      "rgba(255, 192, 75, 0.7)",    // Soft Amber
+      "rgba(99, 132, 255, 0.7)",    // Soft Periwinkle
+      "rgba(162, 54, 235, 0.7)"     // Soft Orchid
+    ];
+    // Generate additional colors if needed
+    for (let i = colors.length; i < numColors; i++) {
+      const randomColor = `rgba(${Math.floor(
+        Math.random() * 256
+      )}, ${Math.floor(Math.random() * 256)}, ${Math.floor(
+        Math.random() * 256
+      )}, 0.7)`;
+      colors.push(randomColor);
+    }
+
+    // Return exactly numColors
+    return colors.slice(0, numColors);
   };
 
   const lineChartData = {
@@ -319,27 +346,23 @@ const Dashboard = () => {
       {
         label: "Products Sold",
         data: Object.values(productsSold),
-        backgroundColor: "rgba(54, 162, 235, 0.5)",
-        borderColor: "rgba(54, 162, 235, 1)",
+        backgroundColor: generateRandomColors(Object.keys(productsSold).length),
+        // borderColor: "cyan",
         borderWidth: 1,
       },
     ],
   };
 
-  const profitLineData = {
+  const profitBarData = {
     labels: Object.keys(profitData),
-    datasets: Object.keys(profitData[Object.keys(profitData)[0]] || {}).map(
-      (brand, index) => ({
-        label: brand,
-        data: Object.keys(profitData).map(
-          (date) => profitData[date][brand] || 0
-        ),
-        fill: false,
-        borderColor: `rgba(${Math.floor(Math.random() * 256)}, ${Math.floor(
-          Math.random() * 256
-        )}, ${Math.floor(Math.random() * 256)}, 0.7)`,
-      })
-    ),
+    datasets: [
+      {
+        label: "Profit",
+        data: Object.values(profitData),
+        backgroundColor: generateRandomColors(Object.keys(profitData).length),
+        borderWidth: 1,
+      },
+    ],
   };
 
   return (
@@ -384,7 +407,8 @@ const Dashboard = () => {
 
       <div className="mb-8">
         <h3 className="text-lg font-semibold mb-2">
-          Total Sales in {showByDays ? (selectedDays + " days "): months[selectedMonth]} :
+          Total Sales in{" "}
+          {showByDays ? selectedDays + " days " : months[selectedMonth]} :
         </h3>
         <div className="text-xl font-bold">
           ₹
@@ -395,7 +419,8 @@ const Dashboard = () => {
       </div>
       <div className="mb-8">
         <h3 className="text-lg font-semibold mb-2">
-          Total Profit in {showByDays ? (selectedDays + " days "): months[selectedMonth]}:
+          Total Profit in{" "}
+          {showByDays ? selectedDays + " days " : months[selectedMonth]}:
         </h3>
         <div className="text-xl font-bold">
           ₹
@@ -407,7 +432,8 @@ const Dashboard = () => {
 
       <div>
         <h3 className="text-lg font-semibold mb-2">
-          Total Expenses in {showByDays ? (selectedDays + " days "): months[selectedMonth]}:
+          Total Expenses in{" "}
+          {showByDays ? selectedDays + " days " : months[selectedMonth]}:
         </h3>
         <div className="text-xl font-bold">
           ₹
@@ -417,7 +443,8 @@ const Dashboard = () => {
         </div>
         <div>
           <h3 className="text-lg font-semibold mb-2">
-            Total Payment in {showByDays ? (selectedDays + " days "): months[selectedMonth]}:
+            Total Payment in{" "}
+            {showByDays ? selectedDays + " days " : months[selectedMonth]}:
           </h3>
           <div className="text-xl font-bold">
             ₹
@@ -439,7 +466,7 @@ const Dashboard = () => {
 
       <div className="mb-8 w-full h-screen">
         <h3 className="text-lg font-semibold mb-2">Profits by Brand</h3>
-        <Line data={profitLineData} options={{ maintainAspectRatio: false }} />
+        <Bar data={profitBarData} options={{ maintainAspectRatio: false }} />
       </div>
     </div>
   );

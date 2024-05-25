@@ -157,11 +157,23 @@ const Inventory = () => {
 
   const generateRandomColors = (numColors) => {
     const colors = [
-      "rgba(255, 99, 132, 0.7)",
-      "rgba(54, 162, 235, 0.7)",
-      "rgba(255, 206, 86, 0.7)",
-      "rgba(75, 192, 192, 0.7)",
-      "rgba(192, 192, 192, 0.7)",
+      "rgba(255, 99, 132, 0.7)",    // Soft Red
+      "rgba(54, 162, 235, 0.7)",    // Soft Blue
+      "rgba(255, 206, 86, 0.7)",    // Soft Yellow
+      "rgba(75, 192, 192, 0.7)",    // Soft Teal
+      "rgba(192, 192, 192, 0.7)",   // Soft Gray
+      "rgba(153, 102, 255, 0.7)",   // Soft Purple
+      "rgba(255, 159, 64, 0.7)",    // Soft Orange
+      "rgba(255, 99, 255, 0.7)",    // Soft Pink
+      "rgba(54, 235, 162, 0.7)",    // Soft Mint
+      "rgba(206, 86, 255, 0.7)",    // Soft Violet
+      "rgba(192, 75, 192, 0.7)",    // Soft Magenta
+      "rgba(99, 255, 132, 0.7)",    // Soft Green
+      "rgba(235, 54, 162, 0.7)",    // Soft Raspberry
+      "rgba(86, 255, 206, 0.7)",    // Soft Cyan
+      "rgba(255, 192, 75, 0.7)",    // Soft Amber
+      "rgba(99, 132, 255, 0.7)",    // Soft Periwinkle
+      "rgba(162, 54, 235, 0.7)"     // Soft Orchid
     ];
     for (let i = 4; i < numColors; i++) {
       const randomColor = `rgba(${Math.floor(
@@ -171,7 +183,7 @@ const Inventory = () => {
       )}, 0.7)`;
       colors.push(randomColor);
     }
-    return colors;
+    return colors.slice(0, numColors);
   };
 
   const brandChartData = {
