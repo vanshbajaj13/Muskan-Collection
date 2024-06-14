@@ -44,24 +44,6 @@ const Dashboard = () => {
     isUserLogedIn();
   }, [naviagate]);
 
-  // Helper function to convert irregular profit data to regular data
-  const convertToRegularData = (irregularData) => {
-    const dates = Object.keys(irregularData);
-    const brands = Array.from(
-      new Set(dates.flatMap((date) => Object.keys(irregularData[date] || {})))
-    );
-
-    const regularData = dates.reduce((acc, date) => {
-      acc[date] = brands.reduce((brandAcc, brand) => {
-        brandAcc[brand] = irregularData[date]?.[brand] || 0;
-        return brandAcc;
-      }, {});
-      return acc;
-    }, {});
-
-    return regularData;
-  };
-
   // calculate things according to selectedDays
   const reCalculate = () => {
     // Calculate daily sales sum for the selected days
@@ -100,11 +82,13 @@ const Dashboard = () => {
 
     setProductsSold(productsSoldCount || {});
 
-    // Calculate profits for each brand
     const profits = lastSelectedDaysSales?.reduce((acc, sale) => {
       const brand = sale.brand;
-      const profit = sale.sellingPrice - sale.mrp;
-      acc[brand] = (acc[brand] || 0) + profit;
+      if (!acc[brand]) {
+        acc[brand] = { sellingPrice: 0, profit: 0 };
+      }
+      acc[brand].sellingPrice += sale.sellingPrice;
+      acc[brand].profit += sale.sellingPrice - sale.mrp;
       return acc;
     }, {});
 
@@ -113,7 +97,7 @@ const Dashboard = () => {
     let totalProfits = 0;
     for (let key in profits) {
       if (profits.hasOwnProperty(key)) {
-        totalProfits += profits[key];
+        totalProfits += profits[key].profit;
       }
     }
     setTotalProfit(totalProfits);
@@ -186,18 +170,21 @@ const Dashboard = () => {
     // Calculate profits for each brand
     const profits = lastSelectedMonthSales?.reduce((acc, sale) => {
       const brand = sale.brand;
-      const profit = sale.sellingPrice - sale.mrp;
-      acc[brand] = (acc[brand] || 0) + profit;
+      if (!acc[brand]) {
+        acc[brand] = { sellingPrice: 0, profit: 0 };
+      }
+      acc[brand].sellingPrice += sale.sellingPrice;
+      acc[brand].profit += sale.sellingPrice - sale.mrp;
       return acc;
     }, {});
-
+    
     setProfitData(profits || {});
 
     // calculate total profit in selected days
     let totalProfits = 0;
     for (let key in profits) {
       if (profits.hasOwnProperty(key)) {
-        totalProfits += profits[key];
+        totalProfits += profits[key].profit;
       }
     }
     setTotalProfit(totalProfits);
@@ -357,9 +344,17 @@ const Dashboard = () => {
     labels: Object.keys(profitData),
     datasets: [
       {
-        label: "Profit",
-        data: Object.values(profitData),
+        label: "Selling Price",
+        data: Object.keys(profitData).map(brand => profitData[brand].sellingPrice),
         backgroundColor: generateRandomColors(Object.keys(profitData).length),
+        borderWidth: 1,
+      },
+      {
+        label: "Profit",
+        data: Object.keys(profitData).map(brand => profitData[brand].profit),
+        backgroundColor: generateRandomColors(Object.keys(profitData).length).map((color) =>
+          color.replace("0.7", "0.3")
+        ),
         borderWidth: 1,
       },
     ],
