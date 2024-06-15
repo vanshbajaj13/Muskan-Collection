@@ -14,8 +14,8 @@ const PrintTag = () => {
   function calculateMRP(mrp) {
     // Round the number to the nearest multiple of 100
     mrp -= 100;
-    var roundedNumber = roundedNumber * 2;
-     roundedNumber = Math.ceil(mrp / 100) * 100;
+    var roundedNumber = mrp * 2;
+    roundedNumber = Math.ceil(roundedNumber / 100) * 100;
     return roundedNumber + 100 - 4;
   }
 
@@ -72,7 +72,6 @@ const PrintTag = () => {
 
   // Function to handle printing selected items
   const handlePrintButton = () => {
-    console.log(selectedItems);
     setIsModalOpen(true);
   };
 
