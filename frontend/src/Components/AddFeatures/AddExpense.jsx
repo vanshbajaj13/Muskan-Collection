@@ -48,7 +48,7 @@ const AddExpense = () => {
         setExpense({
           expenseType: "",
           expenseAmount: "",
-          goodsPayment: "No", // Reset goodsPayment to default value after success
+          goodsPayment: false, // Reset goodsPayment to default value after success
         });
         // Show the tooltip
         setShowTooltip(true);

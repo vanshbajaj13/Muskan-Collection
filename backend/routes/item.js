@@ -243,7 +243,6 @@ router.patch("/:code", protect, async (req, res) => {
     );
 
     if (updatedItem) {
-
       // Create a new item history entry with just the updated fields
       const itemHistoryEntry = new ItemHistory({
         code: code,
@@ -259,6 +258,36 @@ router.patch("/:code", protect, async (req, res) => {
     }
   } catch (error) {
     console.error("Error updating item:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+router.get("/sum-mrp-quantity", async (req, res) => {
+  try {
+    const oneDayAgo = new Date();
+    oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+
+    const items = await Item.find({
+      brand: "SILLU",
+      createdAt: { $gte: oneDayAgo },
+    });
+
+    if (!items || items.length === 0) {
+      return res.status(404).json({ message: "No items found" });
+    }
+
+    const results = items.reduce(
+      (acc, item) => {
+        acc.sumMrpQuantity += item.mrp * item.quantityBuy;
+        acc.sumQuantity += item.quantityBuy;
+        return acc;
+      },
+      { sumMrpQuantity: 0, sumQuantity: 0 }
+    );
+
+    res.json(results);
+  } catch (error) {
+    console.error("Error fetching items:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
