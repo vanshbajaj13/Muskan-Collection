@@ -262,13 +262,15 @@ router.patch("/:code", protect, async (req, res) => {
   }
 });
 
-router.get("/sum-mrp-quantity", async (req, res) => {
+router.get("/sum-mrp-quantity/:brand", async (req, res) => {
   try {
+    var { brand } = req.params;
+    brand = brand.toUpperCase();
     const oneDayAgo = new Date();
     oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
     const items = await Item.find({
-      brand: "SILLU",
+      brand: brand,
       createdAt: { $gte: oneDayAgo },
     });
 

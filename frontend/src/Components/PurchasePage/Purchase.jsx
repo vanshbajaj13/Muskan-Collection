@@ -28,6 +28,8 @@ const Purchase = () => {
   const [returnedCode, setReturnedCode] = useState([]);
   const [buttonActive, setButtonActive] = useState(false);
   const [isQRCodeView, setIsQRCodeView] = useState(false);
+  const [printMode, setPrintMode] = useState("single"); // 'single' or 'multiple'
+  const [printList, setPrintList] = useState([]); // Separate list for multiple prints
 
   const toggleView = () => {
     setIsQRCodeView((prevIsQRCodeView) => !prevIsQRCodeView);
@@ -47,6 +49,37 @@ const Purchase = () => {
       setButtonActive(true);
     } else {
       setButtonActive(false);
+    }
+  }, [returnedCode]);
+  useEffect(() => {
+    if (returnedCode.length > 1) {
+      let newList = [];
+      let n = 0;
+      let i = -1;
+      let returnedCodeCopy = [...returnedCode]; // Create a shallow copy of returnedCode
+
+      while (true) {
+        // Reset index if we reach the end of the list
+        if (i >= returnedCodeCopy.length - 1) {
+          n++;
+          i = 0;
+        } else {
+          i++;
+        }
+        if (n < returnedCodeCopy[i].quantityBuy) {
+          newList.push(returnedCodeCopy[i]); // Push a copy of the item
+        } else {
+          returnedCodeCopy.splice(i, 1); // Remove the item once its quantityBuy has been processed
+          i--;
+        }
+
+        // Exit loop if all items have been processed
+        if (returnedCodeCopy.length === 0) {
+          break;
+        }
+      }
+
+      setPrintList(newList);
     }
   }, [returnedCode]);
 
@@ -234,99 +267,128 @@ const Purchase = () => {
                 className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative w-full m-5"
                 role="alert"
               >
-                <strong className="font-bold">Items added to inventory:</strong>
-                <div className="flex justify-center m-4">
-                  <button
-                    onClick={toggleView}
-                    className="px-4 py-2 bg-indigo-500 text-white rounded-md focus:outline-none"
-                  >
-                    {isQRCodeView ? "Show Code and Size" : "Show QR Code"}
-                  </button>
-                </div>
-                <div className="flex justify-center">
-                  <div
-                    style={{ width: "106mm" }}
-                    ref={componentRef}
-                    className="flex flex-wrap"
-                  >
-                    {returnedCode.length % 2 !== 0 &&
-                      returnedCode.push({
-                        code: "",
-                        brand: "",
-                        product: "",
-                        category: "",
-                        size: "",
-                        quantityBuy: 0,
-                        quantitySold: 0,
-                        mrp: 100,
-                        secretCode: "",
-                      })}
-                    {returnedCode.map((item, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-evenly"
-                      >
-                        <div
-                          style={{
-                            width: "50mm",
-                            height: "25mm",
-                            // border: "1px solid black",
-                            padding: 0,
-                            marginLeft: "1.3mm",
-                            marginRight: "1.3mm",
-                          }}
-                          className="flex justify-evenly bg-white"
-                        >
-                          <div className="p-2 pr-0">
-                            <QRCode value={item.code} size={60} />
-                            <p className="text-black">{item.code}</p>
-                          </div>
-                          <div className="relative font-bold text-black pt-1">
-                            <div className="flex justify-center">
-                              <img
-                                src={`Images/Ganesha.jpg`}
-                                alt="project"
-                                width={"25mm"}
-                              />
-                            </div>
-                            <div>
-                              <p>MRP: {calculateMRP(item.mrp)}/-</p>
-                              <p>Size: {item.size}</p>
-                              <div>
-                                <p className="absolute right-1 bottom-1 text-sm font-normal">
-                                  {item.secretCode}
-                                </p>
+                <div className="max-h-[80vh] overflow-y-auto hide-scrollbar">
+                  <strong className="font-bold">
+                    Items added to inventory:
+                  </strong>
+                  <div className="flex justify-center m-4">
+                    <button
+                      onClick={() => setPrintMode("single")}
+                      className={`px-4 py-2 mx-2 ${
+                        printMode === "single"
+                          ? "bg-indigo-700"
+                          : "bg-indigo-300"
+                      } text-white rounded-md focus:outline-none`}
+                    >
+                      Print Single Tags
+                    </button>
+                    <button
+                      onClick={() => setPrintMode("multiple")}
+                      className={`px-4 py-2 mx-2 ${
+                        printMode === "multiple"
+                          ? "bg-indigo-700"
+                          : "bg-indigo-300"
+                      } text-white rounded-md focus:outline-none`}
+                    >
+                      Print Multiple Tags
+                    </button>
+                  </div>
+
+                  <div className="flex justify-center m-4">
+                    <button
+                      onClick={toggleView}
+                      className="px-4 py-2 bg-indigo-500 text-white rounded-md focus:outline-none"
+                    >
+                      {isQRCodeView ? "Show Code and Size" : "Show QR Code"}
+                    </button>
+                  </div>
+                  <div className="flex justify-center">
+                    <div
+                      style={{ width: "106mm" }}
+                      ref={componentRef}
+                      className="flex flex-wrap"
+                    >
+                      {returnedCode.length % 2 !== 0 &&
+                        returnedCode.push({
+                          code: "",
+                          brand: "",
+                          product: "",
+                          category: "",
+                          size: "",
+                          quantityBuy: 0,
+                          quantitySold: 0,
+                          mrp: 100,
+                          secretCode: "",
+                        })}
+                      {(printMode === "single" ? returnedCode : printList).map(
+                        (item, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center justify-evenly"
+                          >
+                            <div
+                              style={{
+                                width: "50mm",
+                                height: "25mm",
+                                // border: "1px solid black",
+                                padding: 0,
+                                marginLeft: "1.3mm",
+                                marginRight: "1.3mm",
+                              }}
+                              className="flex justify-evenly bg-white"
+                            >
+                              <div className="p-2 pr-0">
+                                <QRCode value={item.code} size={60} />
+                                <p className="text-black">{item.code}</p>
+                              </div>
+                              <div className="relative font-bold text-black pt-1">
+                                <div className="flex justify-center">
+                                  <img
+                                    src={`Images/Ganesha.jpg`}
+                                    alt="project"
+                                    width={"25mm"}
+                                  />
+                                </div>
+                                <div>
+                                  <p>MRP: {calculateMRP(item.mrp)}/-</p>
+                                  <p>Size: {item.size}</p>
+                                  <div>
+                                    <p className="absolute right-1 bottom-1 text-sm font-normal">
+                                      {item.secretCode}
+                                    </p>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    ))}
+                        )
+                      )}
+                    </div>
                   </div>
-                </div>
-                <button
-                  onClick={handlePrint}
-                  disabled={!buttonActive}
-                  className={`w-full py-2 px-4 rounded focus:outline-none focus:shadow-outline-indigo active:bg-indigo-800 ${
-                    buttonActive
-                      ? "bg-indigo-500 text-white"
-                      : "bg-gray-300 text-black opacity-50 cursor-not-allowed"
-                  }`}
-                >
-                  Print
-                </button>
-                <span className="absolute top-0 bottom-0 right-0 px-4 py-3">
-                  <svg
-                    className="fill-current h-6 w-6 text-green-500 cursor-pointer"
-                    role="button"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                    onClick={() => setIsModalOpen(false)}
+                  <button
+                    onClick={handlePrint}
+                    disabled={!buttonActive}
+                    className={`w-full py-2 px-4 rounded focus:outline-none focus:shadow-outline-indigo active:bg-indigo-800 ${
+                      buttonActive
+                        ? "bg-indigo-500 text-white"
+                        : "bg-gray-300 text-black opacity-50 cursor-not-allowed"
+                    }`}
                   >
-                    <title>Close</title>
-                    <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z" />
-                  </svg>
-                </span>
+                    Print
+                  </button>
+                  <span className="absolute top-0 bottom-0 right-0 px-4 py-3">
+                    <svg
+                      className="fill-current h-6 w-6 text-green-500 cursor-pointer"
+                      role="button"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      onClick={() => setIsModalOpen(false)}
+                    >
+                      <title>Close</title>
+                      <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z" />
+                    </svg>
+                  </span>
+                </div>
               </div>
             </div>
           </>

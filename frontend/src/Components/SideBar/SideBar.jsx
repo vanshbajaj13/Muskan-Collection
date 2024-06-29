@@ -25,7 +25,8 @@ const SideBar = () => {
   return (
     <>
       <div
-        className={`bg-gray-800 text-white h-full fixed top-0 w-full p-4 transition-all duration-300 ease-in-out z-50`}
+        className={`bg-gray-800 text-white h-full fixed top-0 w-full p-4 transition-all duration-300 ease-in-out z-50 max-h-screen overflow-y-auto hide-scrollbar`}
+
       >
         <div>
           <h2 className="text-2xl font-bold mb-8">Menu</h2>
