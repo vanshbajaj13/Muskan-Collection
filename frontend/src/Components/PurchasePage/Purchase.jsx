@@ -30,6 +30,7 @@ const Purchase = () => {
   const [isQRCodeView, setIsQRCodeView] = useState(false);
   const [printMode, setPrintMode] = useState("single"); // 'single' or 'multiple'
   const [printList, setPrintList] = useState([]); // Separate list for multiple prints
+  const [autoReset, setAutoReset] = useState(true);
 
   const toggleView = () => {
     setIsQRCodeView((prevIsQRCodeView) => !prevIsQRCodeView);
@@ -217,21 +218,26 @@ const Purchase = () => {
       });
 
       if (response.ok) {
-        // Reset the form after successful purchase
-        setProductDetails({
-          brand: "",
-          product: "",
-          category: "",
-          size: [],
-          quantityBuy: 1,
-          mrp: "",
-        });
-
         const { items } = await response.json();
         // Set the returned code and open the modal
         setReturnedCode(items);
+        if (autoReset) {
+          setProductDetails({
+            brand: "",
+            product: "",
+            category: "",
+            size: [],
+            quantityBuy: 1,
+            mrp: "",
+          });
+        } else {
+          setProductDetails((prevDetails) => ({
+            ...prevDetails,
+            mrp: "",
+            quantityBuy: 1,
+          }));
+        }
         setIsModalOpen(true);
-
         setShowTooltip(true);
         setTimeout(() => {
           setShowTooltip(false);
@@ -256,6 +262,28 @@ const Purchase = () => {
   return (
     <div className="bg-white p-6 shadow-md rounded-md">
       <h2 className="text-2xl font-semibold mb-6">Purchase</h2>
+      <div className="flex items-center mt-4">
+        <label className="mr-4">Auto Reset:</label>
+        <input
+          type="radio"
+          name="autoReset"
+          value="enabled"
+          checked={autoReset === true}
+          onChange={() => setAutoReset(true)}
+          className="mr-2"
+        />{" "}
+        Enabled
+        <input
+          type="radio"
+          name="autoReset"
+          value="disabled"
+          checked={autoReset === false}
+          onChange={() => setAutoReset(false)}
+          className="ml-4 mr-2"
+        />{" "}
+        Disabled
+      </div>
+
       {isModalOpen &&
         (isQRCodeView ? (
           <>
@@ -549,6 +577,21 @@ const Purchase = () => {
         }`}
       >
         {isLoading ? "Adding..." : "Add to Inventory"}
+      </button>
+      <button
+        onClick={() =>
+          setProductDetails({
+            brand: "",
+            product: "",
+            category: "",
+            size: [],
+            quantityBuy: 1,
+            mrp: "",
+          })
+        }
+        className="w-full mt-2 py-2 px-4 rounded bg-red-500 text-white"
+      >
+        Reset All Fields
       </button>
     </div>
   );

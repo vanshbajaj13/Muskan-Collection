@@ -90,8 +90,8 @@ function convertToCode(number) {
     9: "N",
   };
 
-  // add 35 to make round off mid value to 25
-  number += 35;
+  // // add 35 to make round off mid value to 25
+  // number += 35;
   // Round the number to the nearest multiple of 100
   var roundedNumber = Math.round(number / 100) * 100;
 
