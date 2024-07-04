@@ -19,6 +19,7 @@ import PrintTag from "./AddFeatures/PrintTag";
 import ExpenseHistory from "./HistoryPage/ExpenseHistory";
 import Repurchase from "./RepurchasePage/Repurchase";
 import CustomerPurchase from "./SalePage/CustomerPurchase";
+import EditSelectedItems from "./AddFeatures/EditSelectedItems";
 
 const Home = () => {
   const [userRole] = useUserRole();
@@ -52,6 +53,9 @@ const Home = () => {
         )}
         {(isDev) && (
           <Route path="/sale-history/:code" element={<SaleHistory />} />
+        )}
+        {(isDev) && (
+          <Route path="/edit-selected-items" element={<EditSelectedItems />} />
         )}
           <Route path="/expense-history" element={<ExpenseHistory />} />
         {isDev && <Route path="/edit-item/:code" element={<EditItem />} />}

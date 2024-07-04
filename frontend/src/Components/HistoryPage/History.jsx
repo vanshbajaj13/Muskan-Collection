@@ -13,6 +13,7 @@ const History = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOption, setSearchOption] = useState("Code"); // Default search option is Code
   const [exactMatch, setExactMatch] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]);
 
   const toggleExpand = (itemId) => {
     setExpandedItemId((prevId) => (prevId === itemId ? null : itemId));
@@ -143,6 +144,18 @@ const History = () => {
     setExactMatch((prevExactMatch) => !prevExactMatch); // Toggle exact match state
   };
 
+  const handleSelectItem = (item) => {
+    setSelectedItems((prevSelectedItems) =>
+      prevSelectedItems.includes(item)
+        ? prevSelectedItems.filter((i) => i !== item)
+        : [...prevSelectedItems, item]
+    );
+  };
+
+  const handleEditSelectedItems = () => {
+    navigate("/edit-selected-items", { state: { selectedItems } });
+  };
+
   return (
     <div>
       <h1 className="text-2xl font-semibold mb-4">Purchase History</h1>
@@ -190,6 +203,17 @@ const History = () => {
       {searching && (
         <p className="text-green-500 text-center font-semibold"> Searching</p>
       )}
+      {selectedItems.length > 0 && (
+        <div className="flex justify-center mt-4">
+          <button
+            onClick={handleEditSelectedItems}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Edit Selected Items
+          </button>
+        </div>
+      )}
+
       {searchedItems ? (
         <div>
           <h2 className="text-xl font-semibold mb-2">Searched Item</h2>
@@ -207,6 +231,13 @@ const History = () => {
                   <p className="font-semibold text-lg">Code: {item.code}</p>
                   <p className="text-black">Brand: {item.brand}</p>
                 </div>
+                <div>
+                <input
+                  type="checkbox"
+                  checked={selectedItems.includes(item)}
+                  onChange={() => handleSelectItem(item)}
+                  className="mr-2"
+                />
                 <svg
                   className={`h-6 w-6 ${
                     expandedItemId === item._id ? "transform rotate-180" : ""
@@ -222,6 +253,7 @@ const History = () => {
                     d="M19 9l-7 7-7-7"
                   />
                 </svg>
+              </div>
               </div>
               {expandedItemId === item._id && (
                 <div className="flex items-center justify-evenly border-t border-gray-300 mt-4 pt-4">
@@ -279,21 +311,29 @@ const History = () => {
                 <p className="font-semibold text-lg">Code: {item.code}</p>
                 <p className="text-black">Brand: {item.brand}</p>
               </div>
-              <svg
-                className={`h-6 w-6 ${
-                  expandedItemId === item._id ? "transform rotate-180" : ""
-                }`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
+              <div>
+                <input
+                  type="checkbox"
+                  checked={selectedItems.includes(item)}
+                  onChange={() => handleSelectItem(item)}
+                  className="mr-2"
                 />
-              </svg>
+                <svg
+                  className={`h-6 w-6 ${
+                    expandedItemId === item._id ? "transform rotate-180" : ""
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
             </div>
             {expandedItemId === item._id && (
               <div className="flex items-center justify-evenly border-t border-gray-300 mt-4 pt-4">

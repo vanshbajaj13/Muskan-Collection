@@ -216,6 +216,56 @@ router.get("/list", protect, async (req, res) => {
   }
 });
 
+router.patch("/updateAll", protect, async (req, res) => {
+  const updates = req.body; // Expecting an array of { code, updateFields }
+  try {
+    const updatePromises = updates.map(async ({ code, updateFields }) => {
+      // Find the item by code
+      const existingItem = await Item.findOne({ code });
+
+      if (!existingItem) {
+        return { code, success: false, message: "Item not found" };
+      }
+
+      // Store the previous values of the fields that are being updated
+      const previousValues = {};
+      for (const key in updateFields) {
+        if (existingItem[key] !== undefined) {
+          previousValues[key] = existingItem[key];
+        }
+      }
+
+      // Find the item by code and update the specified fields
+      const updatedItem = await Item.findOneAndUpdate(
+        { code },
+        { $set: updateFields },
+        { new: true }
+      );
+
+      if (updatedItem) {
+        // Create a new item history entry with just the updated fields
+        const itemHistoryEntry = new ItemHistory({
+          code: code,
+          ...previousValues,
+        });
+
+        // Save the item history entry
+        await itemHistoryEntry.save();
+
+        return { code, success: true, updatedItem };
+      } else {
+        return { code, success: false, message: "Failed to update item" };
+      }
+    });
+
+    const results = await Promise.all(updatePromises);
+    res.json(results);
+  } catch (error) {
+    console.error("Error updating items:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 router.patch("/:code", protect, async (req, res) => {
   const { code } = req.params;
   const updateFields = req.body;
@@ -262,7 +312,7 @@ router.patch("/:code", protect, async (req, res) => {
   }
 });
 
-router.get("/sum-mrp-quantity/:brand", async (req, res) => {
+router.get("/verify/:brand", async (req, res) => {
   try {
     var { brand } = req.params;
     brand = brand.toUpperCase();
