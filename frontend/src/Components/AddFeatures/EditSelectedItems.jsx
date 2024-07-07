@@ -163,7 +163,7 @@ const EditSelectedItems = () => {
       }));
       try {
         const response = await fetch(
-          "http://127.0.0.1:5000/api/item/updateAll",
+          "/api/item/updateAll",
           {
             method: "PATCH",
             headers: {
@@ -190,6 +190,14 @@ const EditSelectedItems = () => {
           }, 1000);
         } else {
           console.error("Failed to update items");
+          setShowTooltip({
+            status: true,
+            color: "red",
+            message: "Failed to update item",
+          });
+          setTimeout(() => {
+            setShowTooltip({ status: false, color: "", message: "" });
+          }, 3000);
         }
       } catch (error) {
         console.error("Error updating items:", error);
