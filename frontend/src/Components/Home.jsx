@@ -20,6 +20,7 @@ import ExpenseHistory from "./HistoryPage/ExpenseHistory";
 import Repurchase from "./RepurchasePage/Repurchase";
 import CustomerPurchase from "./SalePage/CustomerPurchase";
 import EditSelectedItems from "./AddFeatures/EditSelectedItems";
+import Search from "./SearchPage/Search";
 
 const Home = () => {
   const [userRole] = useUserRole();
@@ -48,6 +49,7 @@ const Home = () => {
         <Route path="/add-expense" element={<AddExpense />} />
         {(isAdmin || isDev) && <Route path="/history" element={<History />} />}
         {(isAdmin || isDev) && <Route path="/repurchase" element={<Repurchase />} />}
+        {(isAdmin || isDev) && <Route path="/search" element={<Search />} />}
         {(isAdmin || isDev) && (
           <Route path="/sale-history" element={<SaleHistory />} />
         )}

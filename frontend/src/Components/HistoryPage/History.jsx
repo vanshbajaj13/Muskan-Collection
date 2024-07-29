@@ -256,7 +256,7 @@ const History = () => {
               </div>
               </div>
               {expandedItemId === item._id && (
-                <div className={`flex items-center justify-evenly border-t border-gray-300 mt-4 pt-4 ${(item.quantityBuy - item.quantitySold) <= 0 ? 'bg-red-100 border border-red-400 text-red-700' : ''}`}>
+                <div className={`flex items-center justify-evenly border-t border-gray-500 mt-4 pt-4 ${(item.quantityBuy - item.quantitySold) <= 0 ? 'bg-red-100  text-red-700' : ''}`}>
                   <div className="text-black">
                     <p className="font-semibold py-1">
                       Product: {item.product}

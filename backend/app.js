@@ -54,18 +54,4 @@ if (process.env.NODE_ENV === "production") {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log("server started on \n http://localhost:5000");
-
-  // Self-ping logic
-  const selfPingInterval = 5 * 60 * 1000; // 5 minutes
-  const selfPingUrl = `http://localhost:${PORT}/`; // URL to ping
-
-  setInterval(async () => {
-    try {
-      const fetch = await import('node-fetch');
-      const response = await fetch.default(selfPingUrl);
-      // const data = await response.text();
-    } catch (err) {
-      console.error(`Self-ping failed: ${err.message}`);
-    }
-  }, selfPingInterval);
 });

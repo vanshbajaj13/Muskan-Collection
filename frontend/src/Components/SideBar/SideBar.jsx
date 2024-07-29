@@ -26,10 +26,28 @@ const SideBar = () => {
     <>
       <div
         className={`bg-gray-800 text-white h-full fixed top-0 w-full p-4 transition-all duration-300 ease-in-out z-50 max-h-screen overflow-y-auto hide-scrollbar`}
-
       >
         <div>
           <h2 className="text-2xl font-bold mb-8">Menu</h2>
+          <a
+            href="/search"
+            className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+          >
+          <div className="flex">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              fill="currentColor"
+              viewBox="0 0 16 16"
+            >
+              <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+            </svg>
+            <p className="ml-1">
+              Search
+            </p>
+          </div>
+          </a>
           {(isAdmin || isDev) && (
             <a
               href="/dashboard"
