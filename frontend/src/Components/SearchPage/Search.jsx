@@ -170,6 +170,7 @@ const Search = () => {
               >
                 <div>
                   <p className="font-semibold text-lg">Code: {item.code}</p>
+                  <p className="font-semibold text-lg">Size: {item.size}</p>
                   <p className="text-black">Brand: {item.brand}</p>
                 </div>
               </div>
@@ -188,7 +189,6 @@ const Search = () => {
                     <p className="font-semibold py-1">
                       Category: {item.category}
                     </p>
-                    <p className="font-semibold py-1">Size: {item.size}</p>
                     <p className={`font-semibold py-1 ${
                     item.quantityBuy - item.quantitySold <= 0
                       ? "text-red-700"
