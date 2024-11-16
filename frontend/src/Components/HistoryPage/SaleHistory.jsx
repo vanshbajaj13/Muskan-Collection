@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Spinner from "../Loader/Spinner";
 
 const SaleHistory = () => {
   const [sales, setSales] = useState([]);
@@ -18,6 +19,7 @@ const SaleHistory = () => {
   const [searchedSaleDeleted, setSearchedSaleDeleted] = useState(false);
   const [groupedSales, setGroupedSales] = useState({});
   const [showTooltip, setShowTooltip] = useState(false);
+  const [returnInProcess, setReturnInProcess] = useState(false);
 
   const toggleExpand = (saleId) => {
     setExpandedSaleId((prevId) => (prevId === saleId ? null : saleId));
@@ -166,6 +168,7 @@ const SaleHistory = () => {
   const handleSaleDelete = async () => {
     if (confirmText === "CONFIRM") {
       try {
+        setReturnInProcess(true);
         const response = await fetch(`/api/saleslog/${deleteCode}`, {
           method: "DELETE",
           headers: {
@@ -194,6 +197,8 @@ const SaleHistory = () => {
         }
       } catch (error) {
         console.error("Error:", error);
+      } finally{
+        setReturnInProcess(false);
       }
     } else {
     }
@@ -217,6 +222,15 @@ const SaleHistory = () => {
   }, [sales]);
   return (
     <div>
+       {returnInProcess && <>
+          <div
+            className="fixed inset-0 flex items-center justify-center"
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 999 }}
+          >
+            <Spinner></Spinner>
+              
+          </div>
+        </>}
       <h1 className="text-2xl font-semibold mb-4">Sale History</h1>
 
       <form onSubmit={handleSubmit} className="mb-4 flex items-center">

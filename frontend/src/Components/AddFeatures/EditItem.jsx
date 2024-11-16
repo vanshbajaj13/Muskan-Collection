@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import Spinner from "../Loader/Spinner";
 
 const EditItem = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ const EditItem = () => {
   const [confirmBox, setConfirmBox] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
+  const [processInProgress, setProcessInProgress] = useState(false);
 
   useEffect(() => {
     function isUserLoggedIn() {
@@ -135,6 +137,7 @@ const EditItem = () => {
     setIsLoading(true);
 
     try {
+      setProcessInProgress(true);
       // Filter out fields that have been changed compared to the original product details
       const changedFields = Object.entries(productDetails).reduce(
         (acc, [key, value]) => {
@@ -168,6 +171,7 @@ const EditItem = () => {
       console.error("Error:", error);
     } finally {
       setIsLoading(false);
+      setProcessInProgress(false);
     }
   };
 
@@ -187,6 +191,7 @@ const EditItem = () => {
   const handleItemDelete = async () => {
     if (confirmText === "CONFIRM") {
       try {
+        setProcessInProgress(true)
         const response = await fetch(`/api/item/${code}`, {
           method: "DELETE",
           headers: {
@@ -207,6 +212,8 @@ const EditItem = () => {
         }
       } catch (error) {
         console.error("Error:", error);
+      } finally{
+        setProcessInProgress(false);
       }
     } else {
     }
@@ -214,6 +221,15 @@ const EditItem = () => {
 
   return (
     <div className="bg-white p-6 shadow-md rounded-md">
+    {processInProgress && <>
+          <div
+            className="fixed inset-0 flex items-center justify-center"
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 999 }}
+          >
+            <Spinner></Spinner>
+              
+          </div>
+        </>}
       <h2 className="text-2xl font-semibold mb-6">Edit Page</h2>
 
       {confirmBox && (

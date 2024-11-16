@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Line, Bar } from "react-chartjs-2";
 import "chart.js/auto";
 import { useNavigate } from "react-router-dom";
+import Spinner from "../Loader/Spinner";
 
 const Dashboard = () => {
   const naviagate = useNavigate();
@@ -33,6 +34,7 @@ const Dashboard = () => {
     "November",
     "December",
   ];
+  const [processInProgress, setProcessInProgress] = useState(true);
 
   // auto navigate to login
   useEffect(() => {
@@ -177,7 +179,7 @@ const Dashboard = () => {
       acc[brand].profit += sale.sellingPrice - sale.mrp;
       return acc;
     }, {});
-    
+
     setProfitData(profits || {});
 
     // calculate total profit in selected days
@@ -214,6 +216,7 @@ const Dashboard = () => {
     if (window.localStorage.getItem("userInfo")) {
       setIsCalculating(true);
       try {
+        setProcessInProgress(true);
         const [salesResponse, expensesResponse] = await Promise.all([
           fetch("/api/saleslog/1year", {
             headers: {
@@ -250,6 +253,9 @@ const Dashboard = () => {
       } catch (error) {
         console.log(error);
       }
+      finally{
+        setProcessInProgress(false);
+      }
     }
   };
 
@@ -282,23 +288,23 @@ const Dashboard = () => {
 
   const generateRandomColors = (numColors) => {
     const colors = [
-      "rgba(255, 99, 132, 0.7)",    // Soft Red
-      "rgba(54, 162, 235, 0.7)",    // Soft Blue
-      "rgba(255, 206, 86, 0.7)",    // Soft Yellow
-      "rgba(75, 192, 192, 0.7)",    // Soft Teal
-      "rgba(192, 192, 192, 0.7)",   // Soft Gray
-      "rgba(153, 102, 255, 0.7)",   // Soft Purple
-      "rgba(255, 159, 64, 0.7)",    // Soft Orange
-      "rgba(255, 99, 255, 0.7)",    // Soft Pink
-      "rgba(54, 235, 162, 0.7)",    // Soft Mint
-      "rgba(206, 86, 255, 0.7)",    // Soft Violet
-      "rgba(192, 75, 192, 0.7)",    // Soft Magenta
-      "rgba(99, 255, 132, 0.7)",    // Soft Green
-      "rgba(235, 54, 162, 0.7)",    // Soft Raspberry
-      "rgba(86, 255, 206, 0.7)",    // Soft Cyan
-      "rgba(255, 192, 75, 0.7)",    // Soft Amber
-      "rgba(99, 132, 255, 0.7)",    // Soft Periwinkle
-      "rgba(162, 54, 235, 0.7)"     // Soft Orchid
+      "rgba(255, 99, 132, 0.7)", // Soft Red
+      "rgba(54, 162, 235, 0.7)", // Soft Blue
+      "rgba(255, 206, 86, 0.7)", // Soft Yellow
+      "rgba(75, 192, 192, 0.7)", // Soft Teal
+      "rgba(192, 192, 192, 0.7)", // Soft Gray
+      "rgba(153, 102, 255, 0.7)", // Soft Purple
+      "rgba(255, 159, 64, 0.7)", // Soft Orange
+      "rgba(255, 99, 255, 0.7)", // Soft Pink
+      "rgba(54, 235, 162, 0.7)", // Soft Mint
+      "rgba(206, 86, 255, 0.7)", // Soft Violet
+      "rgba(192, 75, 192, 0.7)", // Soft Magenta
+      "rgba(99, 255, 132, 0.7)", // Soft Green
+      "rgba(235, 54, 162, 0.7)", // Soft Raspberry
+      "rgba(86, 255, 206, 0.7)", // Soft Cyan
+      "rgba(255, 192, 75, 0.7)", // Soft Amber
+      "rgba(99, 132, 255, 0.7)", // Soft Periwinkle
+      "rgba(162, 54, 235, 0.7)", // Soft Orchid
     ];
     // Generate additional colors if needed
     for (let i = colors.length; i < numColors; i++) {
@@ -345,16 +351,18 @@ const Dashboard = () => {
     datasets: [
       {
         label: "Selling Price",
-        data: Object.keys(profitData).map(brand => profitData[brand].sellingPrice),
+        data: Object.keys(profitData).map(
+          (brand) => profitData[brand].sellingPrice
+        ),
         backgroundColor: generateRandomColors(Object.keys(profitData).length),
         borderWidth: 1,
       },
       {
         label: "Profit",
-        data: Object.keys(profitData).map(brand => profitData[brand].profit),
-        backgroundColor: generateRandomColors(Object.keys(profitData).length).map((color) =>
-          color.replace("0.7", "0.3")
-        ),
+        data: Object.keys(profitData).map((brand) => profitData[brand].profit),
+        backgroundColor: generateRandomColors(
+          Object.keys(profitData).length
+        ).map((color) => color.replace("0.7", "0.3")),
         borderWidth: 1,
       },
     ],
@@ -362,6 +370,15 @@ const Dashboard = () => {
 
   return (
     <div className="p-4 bg-gray-100 rounded-md shadow-md">
+    {processInProgress && <>
+          <div
+            className="fixed inset-0 flex items-center justify-center"
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 999 }}
+          >
+            <Spinner></Spinner>
+              
+          </div>
+        </>}
       <h2 className="text-3xl font-bold mb-4">Sales Dashboard</h2>
 
       <div className="mb-4">
@@ -371,7 +388,9 @@ const Dashboard = () => {
           onChange={handleDaysChange}
           className="border p-2 rounded-md"
         >
-          {[1, 2, 3, 4, 5, 6, 7, 15, 20, 25, 30, 60, 180, 365].map((days) => (
+          {[
+            1, 2, 3, 4, 5, 6, 7, 15, 20, 25, 30, 60, 90, 120, 150, 180, 365,
+          ].map((days) => (
             <option key={days} value={days}>
               {`${days} Day${days > 1 ? "s" : ""}`}
             </option>
@@ -414,7 +433,7 @@ const Dashboard = () => {
       </div>
       <div className="mb-8">
         <h3 className="text-lg font-semibold mb-2">
-          Total Profit in{" "}
+          Gross Profit in{" "}
           {showByDays ? selectedDays + " days " : months[selectedMonth]}:
         </h3>
         <div className="text-xl font-bold">
@@ -430,23 +449,53 @@ const Dashboard = () => {
           {showByDays ? selectedDays + " days " : months[selectedMonth]}:
         </h3>
         <div className="text-xl font-bold">
-          ₹
           {isCalculating
             ? " Calculating....."
-            : Math.round(((totalProfit / totalSales)*100)*100)/100 + "%"}
+            : (totalProfit && totalSales
+                ? Math.round((totalProfit / totalSales) * 100 * 100) / 100
+                : 0) + "%"}
         </div>
-      </div>
-
-      <div className="mb-8">
         <h3 className="text-lg font-semibold mb-2">
-          ROI in{" "}
+          Gross ROI in{" "}
+          {showByDays ? selectedDays + " days " : months[selectedMonth]}:
+        </h3>
+        <div className="text-xl font-bold">
+          {isCalculating
+            ? " Calculating....."
+            : (totalProfit && totalSales
+                ? Math.round(
+                    (totalProfit / (totalSales - totalProfit)) * 100 * 100
+                  ) / 100
+                : 0) + "%"}
+        </div>
+        <h3 className="text-lg font-semibold mb-2">
+          NET ROI in{" "}
+          {showByDays ? selectedDays + " days " : months[selectedMonth]}:
+        </h3>
+        <div className="text-xl font-bold">
+          {isCalculating
+            ? " Calculating....."
+            : (totalProfit && totalSales
+                ? Math.round(
+                    ((totalProfit - (totalExpenses - totalGoodsPayment)) /
+                      (totalSales - totalProfit)) *
+                      100 *
+                      100
+                  ) / 100
+                : 0) + "%"}
+        </div>
+        <h3 className="text-lg font-semibold mb-2">
+          Net Profit in{" "}
           {showByDays ? selectedDays + " days " : months[selectedMonth]}:
         </h3>
         <div className="text-xl font-bold">
           ₹
           {isCalculating
             ? " Calculating....."
-            : Math.round(((totalProfit / (totalSales-totalProfit))*100)*100)/100 + "%"}
+            : (
+                totalProfit -
+                (totalExpenses - totalGoodsPayment)
+              ).toLocaleString("hi")}
         </div>
       </div>
       <div>
@@ -460,6 +509,23 @@ const Dashboard = () => {
             ? " Calculating....."
             : (totalExpenses - totalGoodsPayment).toLocaleString("hi")}
         </div>
+        {showByDays && selectedDays ? (
+          <>
+            <h3 className="text-lg font-semibold mb-2">
+              Avg Expenses per day over {selectedDays} days
+            </h3>
+            <div className="text-xl font-bold">
+              ₹
+              {isCalculating
+                ? "Calculating....."
+                : (
+                    (totalExpenses - totalGoodsPayment) /
+                    selectedDays
+                  ).toLocaleString("hi")}
+            </div>
+          </>
+        ) : null}
+
         <div>
           <h3 className="text-lg font-semibold mb-2">
             Total Payment in{" "}

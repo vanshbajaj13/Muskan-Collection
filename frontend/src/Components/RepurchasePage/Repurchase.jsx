@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import Spinner from "../Loader/Spinner";
 
 const Repurchase = () => {
   const navigate = useNavigate();
@@ -9,6 +10,7 @@ const Repurchase = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [error, setError] = useState("");
+  const [processInProgress, setProcessInProgress] = useState(false);
 
   useEffect(() => {
     function isUserLoggedIn() {
@@ -48,6 +50,7 @@ const Repurchase = () => {
 
     setIsLoading(true);
     try {
+      setProcessInProgress(true);
       const updatedQuantity =
         parseInt(productDetails.quantityBuy, 10) + parseInt(newQuantity.value, 10);
       const response = await fetch(`/api/item/${code}`, {
@@ -74,6 +77,7 @@ const Repurchase = () => {
       setError("Error updating quantity");
     } finally {
       setIsLoading(false);
+      setProcessInProgress(false);
     }
   };
 
@@ -89,6 +93,15 @@ const Repurchase = () => {
 
   return (
     <div className="bg-white p-6 shadow-md rounded-md">
+      {processInProgress && <>
+          <div
+            className="fixed inset-0 flex items-center justify-center"
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 999 }}
+          >
+            <Spinner></Spinner>
+              
+          </div>
+        </>}
       <h2 className="text-2xl font-semibold mb-6">Increase Quantity to Buy</h2>
 
       <div className="flex mb-4">
