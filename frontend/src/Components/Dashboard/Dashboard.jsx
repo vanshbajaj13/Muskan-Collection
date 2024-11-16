@@ -424,7 +424,31 @@ const Dashboard = () => {
             : totalProfit.toLocaleString("hi")}
         </div>
       </div>
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold mb-2">
+          Avg Profit % in{" "}
+          {showByDays ? selectedDays + " days " : months[selectedMonth]}:
+        </h3>
+        <div className="text-xl font-bold">
+          ₹
+          {isCalculating
+            ? " Calculating....."
+            : Math.round(((totalProfit / totalSales)*100)*100)/100 + "%"}
+        </div>
+      </div>
 
+      <div className="mb-8">
+        <h3 className="text-lg font-semibold mb-2">
+          ROI in{" "}
+          {showByDays ? selectedDays + " days " : months[selectedMonth]}:
+        </h3>
+        <div className="text-xl font-bold">
+          ₹
+          {isCalculating
+            ? " Calculating....."
+            : Math.round(((totalProfit / (totalSales-totalProfit))*100)*100)/100 + "%"}
+        </div>
+      </div>
       <div>
         <h3 className="text-lg font-semibold mb-2">
           Total Expenses in{" "}
