@@ -47,10 +47,9 @@ const PrintTag = () => {
 
   function calculateMRP(mrp) {
     // Round the number to the nearest multiple of 100
-    mrp -= 100;
-    var roundedNumber = mrp * 2;
-    roundedNumber = Math.ceil(roundedNumber / 100) * 100;
-    return roundedNumber + 100 - 4;
+    var roundedNumber = (mrp * 2)+10 ;
+    roundedNumber = Math.round(roundedNumber / 100) * 100;
+    return roundedNumber - 4;
   }
 
   // Fetch items function similar to History component

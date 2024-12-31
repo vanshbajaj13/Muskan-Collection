@@ -26,6 +26,8 @@ const Inventory = () => {
         existingBrand.quantitySold += item.quantitySold;
         existingBrand.totalValue +=
           (item.quantityBuy - item.quantitySold) * item.mrp;
+        existingBrand.totalValueBuy += item.quantityBuy * item.mrp;
+        existingBrand.totalValueSold += item.quantitySold * item.mrp;
       } else {
         // If the brand doesn't exist, add it to the accumulator array
         acc.push({
@@ -33,6 +35,8 @@ const Inventory = () => {
           quantityBuy: item.quantityBuy,
           quantitySold: item.quantitySold,
           totalValue: (item.quantityBuy - item.quantitySold) * item.mrp,
+          totalValueBuy: item.quantityBuy * item.mrp,
+          totalValueSold: item.quantitySold * item.mrp,
         });
       }
 
@@ -186,14 +190,31 @@ const Inventory = () => {
     return colors.slice(0, numColors);
   };
 
+  const baseColors = generateRandomColors(doughnutChartData.length);
   const brandChartData = {
     labels: doughnutChartData.map((item) => item.brand),
     datasets: [
       {
         data: doughnutChartData.map((item) => item.totalValue),
-        backgroundColor: generateRandomColors(doughnutChartData.length),
+        backgroundColor: baseColors,
         borderWidth: 1,
         label: "Worth",
+      },
+      {
+        data: doughnutChartData.map((item) => item.totalValueSold),
+        backgroundColor: baseColors.map(
+          (color) => color.replace("0.7", "0.3")
+        ), // Use lighter color for Amount Sold,
+        borderWidth: 1,
+        label: "Total Value Sold",
+      },
+      {
+        data: doughnutChartData.map((item) => item.totalValueBuy),
+        backgroundColor: baseColors.map(
+          (color) => color.replace("0.3", "1")
+        ), // Use lighter color for quantitySold,
+        borderWidth: 1,
+        label: "Total Buy",
       },
     ],
   };

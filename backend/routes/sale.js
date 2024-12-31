@@ -5,7 +5,7 @@ const { SaleLog } = require("../Models/salesLog");
 const protect = require("../middlewares/authMiddleWare");
 const { Customer } = require("../Models/customer");
 
-// Endpoint for adding a product to inventory
+// Endpoint for selling a product from inventory
 router.post("/", protect, async (req, res) => {
   const { code, quantitySold, sellingPrice, customerPhoneNo, customerName } = req.body;
 
