@@ -137,6 +137,12 @@ const SideBar = () => {
             Add Category
           </a>
           <a
+            href="/add-expense-type"
+            className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+          >
+            Add Expense Type
+          </a>
+          <a
             href="/print-tag"
             className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
           >

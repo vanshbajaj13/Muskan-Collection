@@ -21,6 +21,8 @@ import Repurchase from "./RepurchasePage/Repurchase";
 import CustomerPurchase from "./SalePage/CustomerPurchase";
 import EditSelectedItems from "./AddFeatures/EditSelectedItems";
 import Search from "./SearchPage/Search";
+import AddExpenseType from "./AddFeatures/AddExpenseType";
+import EditExpense from "./AddFeatures/EditExpense";
 
 const Home = () => {
   const [userRole] = useUserRole();
@@ -43,6 +45,7 @@ const Home = () => {
         <Route path="/add-brand-product" element={<AddBrandProduct />} />
         <Route path="/add-category" element={<AddCategory />} />
         <Route path="/add-size" element={<AddSize />} />
+        <Route path="/add-expense-type" element={<AddExpenseType />} />
         {(isAdmin || isDev) && (
           <Route path="/inventory" element={<Inventory />} />
         )}
@@ -61,6 +64,7 @@ const Home = () => {
         )}
           <Route path="/expense-history" element={<ExpenseHistory />} />
         {isDev && <Route path="/edit-item/:code" element={<EditItem />} />}
+        {isDev && <Route path="/edit-expense/:id" element={<EditExpense />} />}
         <Route path="*" element={<SideBar />} />
       </Routes>
     </>
