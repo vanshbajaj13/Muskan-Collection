@@ -7,13 +7,23 @@ const { Customer } = require("../Models/customer");
 
 // Endpoint for selling a product from inventory
 router.post("/", protect, async (req, res) => {
-  const { code, quantitySold, sellingPrice, customerPhoneNo, customerName } = req.body;
+  const { code, quantitySold, sellingPrice, customerPhoneNo, customerName } =
+    req.body;
 
   try {
     const item = await Item.findOneAndUpdate(
       { code: code },
       { $inc: { quantitySold: quantitySold } }
     );
+
+    var dt = Date.now();
+    // Update the item's sales array
+    const saleEntry = {
+      sellingPrice: sellingPrice,
+      soldAt: dt,
+    };
+    item.sales.push(saleEntry);
+    await item.save();
 
     if (!item) {
       return res.status(404).json({ message: "No product found" });
@@ -28,7 +38,7 @@ router.post("/", protect, async (req, res) => {
       mrp: item.mrp,
       sellingPrice: sellingPrice,
       customerPhoneNo: customerPhoneNo,
-      soldAt: Date.now(),
+      soldAt: dt,
     });
 
     const saleLog = await newSaleLog.save();
@@ -45,7 +55,7 @@ router.post("/", protect, async (req, res) => {
       }
 
       customer.purchaseList.push({
-        purchasedAt: Date.now(),
+        purchasedAt: dt,
         salesLogId: saleLog._id,
       });
 
@@ -55,7 +65,6 @@ router.post("/", protect, async (req, res) => {
     res.status(200).json({
       message: "Product sold from inventory successfully and log also saved",
     });
-
   } catch (error) {
     console.error("Error selling product from inventory:", error);
     res.status(500).json({ error: "Internal Server Error" });
@@ -64,7 +73,25 @@ router.post("/", protect, async (req, res) => {
 
 // Endpoint for customer purchases
 router.post("/customerpurchase", protect, async (req, res) => {
-  const { phoneNo, name, purchaseList } = req.body;
+  let { phoneNo, name, purchaseList } = req.body;
+
+  if (!phoneNo) {
+    let uniquePhoneNo;
+    let isUnique = false;
+
+    while (!isUnique) {
+      uniquePhoneNo =
+        1000000000 + Math.floor(100000000 + Math.random() * 900000000);
+      const existingCustomer = await Customer.findOne({
+        phoneNo: uniquePhoneNo,
+      });
+      if (!existingCustomer) {
+        isUnique = true;
+      }
+    }
+
+    phoneNo = uniquePhoneNo;
+  }
 
   try {
     let customer = await Customer.findOne({ phoneNo: phoneNo });
@@ -83,11 +110,18 @@ router.post("/customerpurchase", protect, async (req, res) => {
         { code: code },
         { $inc: { quantitySold: quantitySold } }
       );
+      var dt = Date.now();
+      // Update the item's sales array
+      const saleEntry = {
+        sellingPrice: sellingPrice,
+        soldAt: dt,
+      };
+      item.sales.push(saleEntry);
+      await item.save();
 
       if (!item) {
         throw new Error(`Item with code ${code} not found`);
       }
-      var dt = Date.now()
       const newSaleLog = new SaleLog({
         code: item.code,
         brand: item.brand,

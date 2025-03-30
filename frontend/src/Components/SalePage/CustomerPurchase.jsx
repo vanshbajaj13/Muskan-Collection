@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import QrScanner from "react-qr-scanner";
+import Spinner from "../Loader/Spinner";
 
 const CustomerPurchase = () => {
   const navigate = useNavigate();
@@ -21,8 +22,7 @@ const CustomerPurchase = () => {
   const [fetchingQuantity, setFetchingQuantity] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [showInvalidPhoneTooltip, setShowInvalidPhoneTooltip] = useState(false);
-  const [addItemtoListButtonDisabled, setAddItemtoListButtonDisabled] =
-    useState(true);
+  const [addItemtoListButtonDisabled, setAddItemtoListButtonDisabled] = useState(true);
 
   useEffect(() => {
     function isUserLoggedIn() {
@@ -77,7 +77,7 @@ const CustomerPurchase = () => {
       availableQuantity > 0 &&
       newItem.sellingPrice !== "" &&
       parseFloat(newItem.sellingPrice) > 0 &&
-      customerDetails.phoneNo.length === 10
+      (customerDetails.phoneNo.length === 10 || customerDetails.phoneNo.length === 0)
     ) {
       setAddItemtoListButtonDisabled(false);
     } else {
@@ -198,8 +198,16 @@ const CustomerPurchase = () => {
 
   return (
     <div className="bg-white p-6 rounded shadow-lg">
+      {isLoading && <>
+          <div
+            className="fixed inset-0 flex items-center justify-center"
+            style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 999 }}
+          >
+            <Spinner></Spinner>
+              
+          </div>
+        </>}
       <h2 className="text-2xl font-bold mb-6">Customer Purchase</h2>
-
       <div className="mb-4">
         <label
           htmlFor="phoneNo"

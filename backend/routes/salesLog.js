@@ -24,7 +24,7 @@ router.get("/1year", protect, async (req, res) => {
 
   try {
     const saleLogs = await SaleLog.find({
-      soldAt: { $gte: oneYearAgo }
+      soldAt: { $gte: oneYearAgo },
     });
 
     res.json(saleLogs);
@@ -43,7 +43,8 @@ router.delete("/:_id", protect, async (req, res) => {
     if (!saleLog) {
       return res.status(404).json({ message: "Sale log not found" });
     }
-    
+
+    var dt = Date.now();
     if (saleLog.customerPhoneNo) {
       // Find the customer associated with the sale log
       const customer = await Customer.findOne({
@@ -59,7 +60,7 @@ router.delete("/:_id", protect, async (req, res) => {
         { phoneNo: saleLog.customerPhoneNo },
         { $pull: { purchaseList: { salesLogId: saleLog._id } } }
       );
-      
+
       // Add the sale log to the customer's returned item list
       await Customer.updateOne(
         { phoneNo: saleLog.customerPhoneNo },
@@ -67,20 +68,34 @@ router.delete("/:_id", protect, async (req, res) => {
           $push: {
             returnItemList: {
               purchasedAt: saleLog.soldAt,
-              returnedAt: Date.now(),
-              salesLogId: saleLog._id
-            }
-          }
+              returnedAt: dt,
+              salesLogId: saleLog._id,
+            },
+          },
         }
       );
     }
 
-    // Update the item with the given code to decrease the quantity sold by one
-    await Item.updateOne(
-      { code: saleLog.code },
-      { $inc: { quantitySold: -1 } }
+    // Find the item with the given code
+    const item = await Item.findOne({ code: saleLog.code });
+
+    if (!item) {
+      throw new Error("Item not found");
+    }
+
+    // Decrease the quantity sold by one
+    item.quantitySold -= 1;
+
+    // Update the sale entry by adding returnedAt instead of removing it
+    item.sales = item.sales.map((sale) =>
+      sale.soldAt === saleLog.soldAt
+        ? { ...sale, returnedAt: dt }
+        : sale
     );
-    
+
+    // Save the updated item document
+    await item.save();
+
     // move to recyle bin
     const recycleBinSale = new RecentlyDeletedSaleLog({
       _id: saleLog._id,

@@ -1,5 +1,21 @@
 const mongoose = require("mongoose");
 
+const saleSchema = new mongoose.Schema(
+  {
+    sellingPrice: {
+      type: Number,
+      required: true,
+    },
+    soldAt : {
+        type : Number
+    },
+    returnedAt : {
+        type : Number
+    },
+  },
+  { _id: false }
+);
+
 const itemSchema = new mongoose.Schema(
   {
     code: {
@@ -31,6 +47,7 @@ const itemSchema = new mongoose.Schema(
       type: Number,
       default: 0, // Set default value to 0
     },
+    sales: [saleSchema], // Array to store multiple sales records
     mrp: {
       type: Number,
       required: true,

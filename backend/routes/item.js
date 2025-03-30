@@ -344,4 +344,5 @@ router.get("/verify/:brand", async (req, res) => {
   }
 });
 
+
 module.exports = router;

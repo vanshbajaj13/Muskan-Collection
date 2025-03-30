@@ -12,13 +12,19 @@ const PrintTag = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [printMode, setPrintMode] = useState("single"); // 'single' or 'multiple'
   const [printList, setPrintList] = useState([]); // Separate list for multiple prints
+  const [searchOption, setSearchOption] = useState("Code"); // Default search option is Code
+  const [exactMatch, setExactMatch] = useState(false);
+  const [searchedItems, setSearchedItem] = useState(null);
+  const [itemNotFound, setItemNotFound] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (selectedItems.length > 1) {
       let newList = [];
       let n = 0;
       let i = -1;
-      let selectedItemsCopy = [...selectedItems]; // Create a shallow copy 
+      let selectedItemsCopy = [...selectedItems]; // Create a shallow copy
 
       while (true) {
         // Reset index if we reach the end of the list
@@ -47,10 +53,48 @@ const PrintTag = () => {
 
   function calculateMRP(mrp) {
     // Round the number to the nearest multiple of 100
-    var roundedNumber = (mrp * 2)+10 ;
+    var roundedNumber = mrp * 2 + 10;
     roundedNumber = Math.round(roundedNumber / 100) * 100;
     return roundedNumber - 4;
   }
+
+  const fetchItemWithOption = async (option, query) => {
+    setSearching(true);
+    try {
+      const response = await fetch(
+        `/api/item/${
+          exactMatch ? "exact-search" : "search"
+        }/${option}/${query}`,
+        {
+          headers: {
+            Authorization: `Bearer ${
+              JSON.parse(window.localStorage.getItem("userInfo")).token
+            }`,
+          },
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setSearchedItem(data); // Clear searchedItem state
+        setItemNotFound(false); // Reset itemNotFound state
+      } else if (response.status === 401) {
+        window.localStorage.clear();
+        setSearchedItem(null); // Clear searchedItem state
+        setItemNotFound(true); // Set itemNotFound state to true
+        setSearching(false);
+        // naviagate("/login");
+      } else {
+        setSearchedItem(null); // Clear searchedItem state
+        setItemNotFound(true); // Set itemNotFound state to true
+        setSearching(false);
+        // console.error("Failed to fetch items");
+      }
+    } catch (error) {
+      // console.log(error);
+    } finally {
+      setSearching(false);
+    }
+  };
 
   // Fetch items function similar to History component
   const fetchItems = async () => {
@@ -119,9 +163,172 @@ const PrintTag = () => {
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
   });
+
+  const handleSearch = (e) => {
+      const inputValue = e.target.value;
+      const alphanumericRegex = /^[a-zA-Z0-9\s]*$/;
+  
+      if (!alphanumericRegex.test(inputValue)) {
+        // If the input contains special characters, do nothing
+        return;
+      }
+  
+      setSearchQuery(inputValue.toUpperCase());
+  
+      if (inputValue === "") {
+        setSearchedItem(null);
+        setItemNotFound(false);
+      } else {
+        fetchItemWithOption(searchOption, inputValue);
+      }
+    };
+  
+    useEffect(() => {
+      fetchItemWithOption(searchOption, searchQuery);
+      // eslint-disable-next-line
+    }, [searchOption, exactMatch]);
+  
+    const handleSearchOptionChange = (e) => {
+      setSearchOption(e.target.value);
+    };
+  
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      if (searchQuery.trim() === "") {
+        setSearchedItem(null);
+        setItemNotFound(false);
+      } else {
+        fetchItemWithOption(searchOption, searchQuery);
+      }
+      setSearchQuery("");
+    };
+
+    const handleToggleExactMatch = (e) => {
+      e.preventDefault();
+      setExactMatch((prevExactMatch) => !prevExactMatch); // Toggle exact match state
+    };
+
+
   return (
     <div>
       <h1 className="text-2xl font-semibold mb-4">Print Tags</h1>
+      <form onSubmit={handleSubmit} className="mb-4 flex items-center">
+        <select
+          value={searchOption}
+          onChange={handleSearchOptionChange}
+          className="border border-gray-300 rounded-l px-4 py-2 w-1/4"
+        >
+          <option value="Code">Code</option>
+          <option value="Brand">Brand</option>
+          <option value="Product">Product</option>
+          <option value="Category">Category</option>
+          <option value="Size">Size</option>
+          <option value="mrp>=">MRP Gt</option>
+          <option value="mrp<=">MRP Ls</option>
+        </select>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={handleSearch}
+          placeholder="Search by code"
+          className="border border-gray-300 rounded-l px-4 py-2 w-2/4"
+        />
+        <button
+          type="submit"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r w-1/4"
+        >
+          {searching ? "Serahcing" : "Search"}
+        </button>
+        {/* Toggle button for exact match search */}
+      </form>
+      <div className="flex justify-center">
+        <button
+          onClick={handleToggleExactMatch}
+          className={`bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded ${
+            exactMatch ? "bg-blue-500 hover:bg-blue-700 text-white" : ""
+          }`}
+        >
+          {exactMatch ? "Exact Match Search On" : "Exact Match Search Off"}
+        </button>
+      </div>
+
+      {searching && (
+        <p className="text-green-500 text-center font-semibold"> Searching</p>
+      )}
+
+      {searchedItems ? (
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Searched Item</h2>
+          <p>Number of result = {searchedItems.length}</p>
+          {searchedItems.map((item) => (
+            <div
+              key={item._id}
+              className={`bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative ${(item.quantityBuy - item.quantitySold) <= 0 ? 'bg-red-100 border border-red-400 text-red-700' : ''}`}
+            >
+              <div
+                className="flex justify-between items-center cursor-pointer"
+                onClick={() => toggleExpand(item._id)}
+              >
+                <div>
+                  <p className="font-semibold text-lg">Code: {item.code}</p>
+                  <p className="text-black">Brand: {item.brand}</p>
+                </div>
+                <div>
+                <input
+                  type="checkbox"
+                  checked={selectedItems.includes(item)}
+                  onChange={() => handleSelectItem(item)}
+                  className="mr-2"
+                />
+                <svg
+                  className={`h-6 w-6 ${
+                    expandedItemId === item._id ? "transform rotate-180" : ""
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+              </div>
+              {expandedItemId === item._id && (
+                <div className={`flex items-center justify-evenly border-t border-gray-500 mt-4 pt-4 ${(item.quantityBuy - item.quantitySold) <= 0 ? 'bg-red-100  text-red-700' : ''}`}>
+                  <div className="text-black">
+                    <p className="font-semibold py-1">
+                      Product: {item.product}
+                    </p>
+                    <p className="font-semibold py-1">
+                      Category: {item.category}
+                    </p>
+                    <p className="font-semibold py-1">Size: {item.size}</p>
+                    <p className="font-semibold py-1">
+                      Quantity Available: {item.quantityBuy - item.quantitySold}
+                    </p>
+                    <p className="font-semibold py-1">
+                      Quantity Sold: {item.quantitySold}
+                    </p>
+                    <p className="font-semibold py-1">MRP: {item.mrp}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        itemNotFound && (
+          <div className="mt-2 p-2 bg-red-500 text-white text-center rounded-md">
+            No product found with this code.
+          </div>
+        )
+      )}
+
+      <hr className="my-8 border-t border-gray-300" />
       <div className="flex justify-center">
         <button
           onClick={handlePrintButton}
@@ -176,48 +383,49 @@ const PrintTag = () => {
                       selectedItems.push(
                         selectedItems[selectedItems.length - 1]
                       )}
-                      {(printMode === "single" ? selectedItems : printList).map(
+                    {(printMode === "single" ? selectedItems : printList).map(
                       (item, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-evenly"
-                      >
                         <div
-                          style={{
-                            width: "50mm",
-                            height: "25mm",
-                            // border: "1px solid black",
-                            padding: 0,
-                            marginLeft: "1.3mm",
-                            marginRight: "1.3mm",
-                          }}
-                          className="flex justify-evenly bg-white"
+                          key={index}
+                          className="flex items-center justify-evenly"
                         >
-                          <div className="p-2 pr-0">
-                            <QRCode value={item.code} size={60} />
-                            <p className="text-black">{item.code}</p>
-                          </div>
-                          <div className="relative font-bold text-black pt-1">
-                            <div className="flex justify-center">
-                              <img
-                                src={`Images/Ganesha.jpg`}
-                                alt="project"
-                                width={"25mm"}
-                              />
+                          <div
+                            style={{
+                              width: "50mm",
+                              height: "25mm",
+                              // border: "1px solid black",
+                              padding: 0,
+                              marginLeft: "1.3mm",
+                              marginRight: "1.3mm",
+                            }}
+                            className="flex justify-evenly bg-white"
+                          >
+                            <div className="p-2 pr-0">
+                              <QRCode value={item.code} size={60} />
+                              <p className="text-black">{item.code}</p>
                             </div>
-                            <div>
-                              <p>MRP: {calculateMRP(item.mrp)}/-</p>
-                              <p>Size: {item.size}</p>
+                            <div className="relative font-bold text-black pt-1">
+                              <div className="flex justify-center">
+                                <img
+                                  src={`Images/Ganesha.jpg`}
+                                  alt="project"
+                                  width={"25mm"}
+                                />
+                              </div>
                               <div>
-                                <p className="absolute right-1 bottom-1 text-sm font-normal">
-                                  {item.secretCode}
-                                </p>
+                                <p>MRP: {calculateMRP(item.mrp)}/-</p>
+                                <p>Size: {item.size}</p>
+                                <div>
+                                  <p className="absolute right-1 bottom-1 text-sm font-normal">
+                                    {item.secretCode}
+                                  </p>
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    )}
                   </div>
                 </div>
                 <button

@@ -47,15 +47,6 @@ router.get("/", protect, async (req, res) => {
 //   }
 // };
 
-// // // updateExpenseType("NONA ", "NONA SALARY");
-// myarray = [ "LUCNH",
-//     "LUNCH",
-//     "LUNCH  TEA ",
-//     "LUNCH + MIRCH",
-//     "LUNCH 3000+150/TOTAL. 450",]
-// myarray.forEach(element => {
-//   // updateExpenseType(element,"LUNCH")
-// });
 
 
 
