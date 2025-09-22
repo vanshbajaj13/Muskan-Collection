@@ -112,6 +112,14 @@ const SideBar = () => {
               Sale History / Return
             </a>
           )}
+          {(isDev) && (
+            <a
+              href="/verification"
+              className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+            >
+              Stock Verification
+            </a>
+          )}
           <a
             href="/expense-history"
             className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"

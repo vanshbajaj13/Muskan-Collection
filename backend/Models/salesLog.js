@@ -33,6 +33,9 @@ const saleLogSchema = new mongoose.Schema(
     },
     customerPhoneNo : {
       type : Number
+    },
+    soldBy: {
+      type : String
     }
   },
   { timestamps: true }

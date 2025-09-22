@@ -14,6 +14,7 @@ const login = require("./routes/login");
 const signup = require("./routes/signUp");
 const role = require("./routes/role");
 const path = require("path");
+const verification = require("./routes/verification");
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use("/api/expensetypes", expensetype);
 app.use("/login", login);
 app.use("/signup", signup);
 app.use("/api/role", role);
+app.use("/api/verification", verification);
 
 __dirname = path.resolve();
 

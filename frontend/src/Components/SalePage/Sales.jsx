@@ -10,6 +10,7 @@ const Sale = () => {
     sellingPrice: "",
     quantitySold: 1,
     customerPhoneNo: "",
+    sellerEmail: "",
   });
 
   const [buttonActive, setButtonActive] = useState(false);
@@ -22,13 +23,21 @@ const Sale = () => {
   const [showInvalidPhoneTooltip, setShowInvalidPhoneTooltip] = useState(false);
 
   useEffect(() => {
-    function isUserLoggedIn() {
-      if (!window.localStorage.getItem("userInfo")) {
-        naviagate("/login");
-      }
+  function isUserLoggedIn() {
+    const userInfo = window.localStorage.getItem("userInfo");
+    if (!userInfo) {
+      naviagate("/login");
+    } else {
+      const parsedUser = JSON.parse(userInfo);
+      setProductDetails((prev) => ({
+        ...prev,
+        sellerEmail: parsedUser.email || "", // set sellerEmail from userInfo
+      }));
     }
-    isUserLoggedIn();
-  }, [naviagate]);
+  }
+  isUserLoggedIn();
+}, [naviagate]);
+
 
   useEffect(() => {
     if (
@@ -151,6 +160,7 @@ const Sale = () => {
           sellingPrice: "",
           quantitySold: 1,
           customerPhoneNo: "",
+          sellerEmail: window.localStorage.getItem("userInfo").email ||"",
         });
         console.log("Product sold from inventory successfully!");
         setShowTooltip(true);

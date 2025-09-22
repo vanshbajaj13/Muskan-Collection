@@ -7,7 +7,7 @@ const { Customer } = require("../Models/customer");
 
 // Endpoint for selling a product from inventory
 router.post("/", protect, async (req, res) => {
-  const { code, quantitySold, sellingPrice, customerPhoneNo, customerName } =
+  const { code, quantitySold, sellingPrice, customerPhoneNo, customerName,sellerEmail } =
     req.body;
 
   try {
@@ -39,6 +39,7 @@ router.post("/", protect, async (req, res) => {
       sellingPrice: sellingPrice,
       customerPhoneNo: customerPhoneNo,
       soldAt: dt,
+      soldBy: sellerEmail,
     });
 
     const saleLog = await newSaleLog.save();
@@ -73,7 +74,7 @@ router.post("/", protect, async (req, res) => {
 
 // Endpoint for customer purchases
 router.post("/customerpurchase", protect, async (req, res) => {
-  let { phoneNo, name, purchaseList } = req.body;
+  let { phoneNo, name, purchaseList,sellerEmail } = req.body;
 
   if (!phoneNo) {
     let uniquePhoneNo;
@@ -132,6 +133,7 @@ router.post("/customerpurchase", protect, async (req, res) => {
         sellingPrice: sellingPrice,
         customerPhoneNo: phoneNo,
         soldAt: dt,
+        soldBy: sellerEmail,
       });
 
       const saleLog = await newSaleLog.save();

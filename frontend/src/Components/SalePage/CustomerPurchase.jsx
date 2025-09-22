@@ -23,15 +23,21 @@ const CustomerPurchase = () => {
   const [showScanner, setShowScanner] = useState(false);
   const [showInvalidPhoneTooltip, setShowInvalidPhoneTooltip] = useState(false);
   const [addItemtoListButtonDisabled, setAddItemtoListButtonDisabled] = useState(true);
+  const [sellerEmail, setSellerEmail] = useState("")
 
   useEffect(() => {
-    function isUserLoggedIn() {
-      if (!window.localStorage.getItem("userInfo")) {
-        navigate("/login");
-      }
+  function isUserLoggedIn() {
+    const userInfo = window.localStorage.getItem("userInfo");
+    if (!userInfo) {
+      navigate("/login");
+    } else {
+      const parsed = JSON.parse(userInfo);
+      setSellerEmail(parsed.email); // correctly extract email
     }
-    isUserLoggedIn();
-  }, [navigate]);
+  }
+  isUserLoggedIn();
+}, [navigate]);
+
 
   useEffect(() => {
     fetchAvailableQuantity();
@@ -173,6 +179,7 @@ const CustomerPurchase = () => {
         body: JSON.stringify({
           ...customerDetails,
           purchaseList,
+          sellerEmail : sellerEmail,
         }),
       });
 

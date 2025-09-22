@@ -23,6 +23,8 @@ import EditSelectedItems from "./AddFeatures/EditSelectedItems";
 import Search from "./SearchPage/Search";
 import AddExpenseType from "./AddFeatures/AddExpenseType";
 import EditExpense from "./AddFeatures/EditExpense";
+import VerificationDashboard from "./Verification/VerificationDashboard";
+import VerificationSession from "./Verification/VerificationSession";
 
 const Home = () => {
   const [userRole] = useUserRole();
@@ -51,18 +53,30 @@ const Home = () => {
         )}
         <Route path="/add-expense" element={<AddExpense />} />
         {(isAdmin || isDev) && <Route path="/history" element={<History />} />}
-        {(isAdmin || isDev) && <Route path="/repurchase" element={<Repurchase />} />}
+        {(isAdmin || isDev) && (
+          <Route path="/repurchase" element={<Repurchase />} />
+        )}
         {(isAdmin || isDev) && <Route path="/search" element={<Search />} />}
         {(isAdmin || isDev) && (
           <Route path="/sale-history" element={<SaleHistory />} />
         )}
-        {(isDev) && (
+        {isDev && (
           <Route path="/sale-history/:code" element={<SaleHistory />} />
         )}
-        {(isDev) && (
+        {isDev && (
           <Route path="/edit-selected-items" element={<EditSelectedItems />} />
         )}
-          <Route path="/expense-history" element={<ExpenseHistory />} />
+        {isDev && (
+          <Route path="/verification" element={<VerificationDashboard />} />
+        )}
+        {isDev && (
+          <Route
+            path="/verification/:sessionId"
+            element={<VerificationSession />}
+          />
+        )}
+
+        <Route path="/expense-history" element={<ExpenseHistory />} />
         {isDev && <Route path="/edit-item/:code" element={<EditItem />} />}
         {isDev && <Route path="/edit-expense/:id" element={<EditExpense />} />}
         <Route path="*" element={<SideBar />} />

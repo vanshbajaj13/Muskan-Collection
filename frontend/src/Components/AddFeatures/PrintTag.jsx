@@ -18,6 +18,7 @@ const PrintTag = () => {
   const [itemNotFound, setItemNotFound] = useState(false);
   const [searching, setSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [margin, setMargin] = useState(2); // default is 2
 
   useEffect(() => {
     if (selectedItems.length > 1) {
@@ -53,7 +54,7 @@ const PrintTag = () => {
 
   function calculateMRP(mrp) {
     // Round the number to the nearest multiple of 100
-    var roundedNumber = mrp * 2 + 10;
+    var roundedNumber = mrp * margin + 10;
     roundedNumber = Math.round(roundedNumber / 100) * 100;
     return roundedNumber - 4;
   }
@@ -165,49 +166,48 @@ const PrintTag = () => {
   });
 
   const handleSearch = (e) => {
-      const inputValue = e.target.value;
-      const alphanumericRegex = /^[a-zA-Z0-9\s]*$/;
-  
-      if (!alphanumericRegex.test(inputValue)) {
-        // If the input contains special characters, do nothing
-        return;
-      }
-  
-      setSearchQuery(inputValue.toUpperCase());
-  
-      if (inputValue === "") {
-        setSearchedItem(null);
-        setItemNotFound(false);
-      } else {
-        fetchItemWithOption(searchOption, inputValue);
-      }
-    };
-  
-    useEffect(() => {
+    const inputValue = e.target.value;
+    const alphanumericRegex = /^[a-zA-Z0-9\s]*$/;
+
+    if (!alphanumericRegex.test(inputValue)) {
+      // If the input contains special characters, do nothing
+      return;
+    }
+
+    setSearchQuery(inputValue.toUpperCase());
+
+    if (inputValue === "") {
+      setSearchedItem(null);
+      setItemNotFound(false);
+    } else {
+      fetchItemWithOption(searchOption, inputValue);
+    }
+  };
+
+  useEffect(() => {
+    fetchItemWithOption(searchOption, searchQuery);
+    // eslint-disable-next-line
+  }, [searchOption, exactMatch]);
+
+  const handleSearchOptionChange = (e) => {
+    setSearchOption(e.target.value);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim() === "") {
+      setSearchedItem(null);
+      setItemNotFound(false);
+    } else {
       fetchItemWithOption(searchOption, searchQuery);
-      // eslint-disable-next-line
-    }, [searchOption, exactMatch]);
-  
-    const handleSearchOptionChange = (e) => {
-      setSearchOption(e.target.value);
-    };
-  
-    const handleSubmit = (e) => {
-      e.preventDefault();
-      if (searchQuery.trim() === "") {
-        setSearchedItem(null);
-        setItemNotFound(false);
-      } else {
-        fetchItemWithOption(searchOption, searchQuery);
-      }
-      setSearchQuery("");
-    };
+    }
+    setSearchQuery("");
+  };
 
-    const handleToggleExactMatch = (e) => {
-      e.preventDefault();
-      setExactMatch((prevExactMatch) => !prevExactMatch); // Toggle exact match state
-    };
-
+  const handleToggleExactMatch = (e) => {
+    e.preventDefault();
+    setExactMatch((prevExactMatch) => !prevExactMatch); // Toggle exact match state
+  };
 
   return (
     <div>
@@ -250,6 +250,15 @@ const PrintTag = () => {
         >
           {exactMatch ? "Exact Match Search On" : "Exact Match Search Off"}
         </button>
+        <input
+          type="number"
+          step="0.1"
+          placeholder="Enter Margin (e.g. 1.8)"
+          value={margin}
+          onChange={(e) => setMargin(parseFloat(e.target.value) || 1)}
+          onWheel={(e) => e.target.blur()}
+          className="w-full mt-4 p-2 border rounded-md"
+        />
       </div>
 
       {searching && (
@@ -263,7 +272,11 @@ const PrintTag = () => {
           {searchedItems.map((item) => (
             <div
               key={item._id}
-              className={`bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative ${(item.quantityBuy - item.quantitySold) <= 0 ? 'bg-red-100 border border-red-400 text-red-700' : ''}`}
+              className={`bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative ${
+                item.quantityBuy - item.quantitySold <= 0
+                  ? "bg-red-100 border border-red-400 text-red-700"
+                  : ""
+              }`}
             >
               <div
                 className="flex justify-between items-center cursor-pointer"
@@ -274,31 +287,37 @@ const PrintTag = () => {
                   <p className="text-black">Brand: {item.brand}</p>
                 </div>
                 <div>
-                <input
-                  type="checkbox"
-                  checked={selectedItems.includes(item)}
-                  onChange={() => handleSelectItem(item)}
-                  className="mr-2"
-                />
-                <svg
-                  className={`h-6 w-6 ${
-                    expandedItemId === item._id ? "transform rotate-180" : ""
-                  }`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.includes(item)}
+                    onChange={() => handleSelectItem(item)}
+                    className="mr-2"
                   />
-                </svg>
-              </div>
+                  <svg
+                    className={`h-6 w-6 ${
+                      expandedItemId === item._id ? "transform rotate-180" : ""
+                    }`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </div>
               </div>
               {expandedItemId === item._id && (
-                <div className={`flex items-center justify-evenly border-t border-gray-500 mt-4 pt-4 ${(item.quantityBuy - item.quantitySold) <= 0 ? 'bg-red-100  text-red-700' : ''}`}>
+                <div
+                  className={`flex items-center justify-evenly border-t border-gray-500 mt-4 pt-4 ${
+                    item.quantityBuy - item.quantitySold <= 0
+                      ? "bg-red-100  text-red-700"
+                      : ""
+                  }`}
+                >
                   <div className="text-black">
                     <p className="font-semibold py-1">
                       Product: {item.product}

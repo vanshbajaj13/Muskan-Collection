@@ -31,6 +31,7 @@ const Purchase = () => {
   const [printMode, setPrintMode] = useState("single"); // 'single' or 'multiple'
   const [printList, setPrintList] = useState([]); // Separate list for multiple prints
   const [autoReset, setAutoReset] = useState(true);
+  const [margin, setMargin] = useState(2); // default is 2
 
   const toggleView = () => {
     setIsQRCodeView((prevIsQRCodeView) => !prevIsQRCodeView);
@@ -193,7 +194,7 @@ const Purchase = () => {
     // Round the number to the nearest multiple of 100
     // mrp -= 100;
     // adding 10 to round off to 40
-    var roundedNumber = (mrp * 2)+10;
+    var roundedNumber = mrp * margin + 10;
     roundedNumber = Math.round(roundedNumber / 100) * 100;
     return roundedNumber - 4;
   }
@@ -559,6 +560,15 @@ const Purchase = () => {
         name="quantityBuy"
         value={productDetails.quantityBuy}
         onChange={handleInputChange}
+        className="w-full mt-4 p-2 border rounded-md"
+      />
+      <input
+        type="number"
+        step="0.1"
+        placeholder="Enter Margin (e.g. 1.8)"
+        value={margin}
+        onChange={(e) => setMargin(parseFloat(e.target.value) || 1)}
+        onWheel={(e) => e.target.blur()}
         className="w-full mt-4 p-2 border rounded-md"
       />
 

@@ -197,7 +197,7 @@ const SaleHistory = () => {
         }
       } catch (error) {
         console.error("Error:", error);
-      } finally{
+      } finally {
         setReturnInProcess(false);
       }
     } else {
@@ -222,15 +222,16 @@ const SaleHistory = () => {
   }, [sales]);
   return (
     <div>
-       {returnInProcess && <>
+      {returnInProcess && (
+        <>
           <div
             className="fixed inset-0 flex items-center justify-center"
             style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 999 }}
           >
             <Spinner></Spinner>
-              
           </div>
-        </>}
+        </>
+      )}
       <h1 className="text-2xl font-semibold mb-4">Sale History</h1>
 
       <form onSubmit={handleSubmit} className="mb-4 flex items-center">
@@ -331,6 +332,7 @@ const SaleHistory = () => {
                         Loss : {sale.sellingPrice - sale.mrp}
                       </p>
                     )}
+                    <p className="font-semibold py-1">Sold by: {sale.soldBy}</p>
                     {showDeleteTooltip && (
                       <div className="text-red-500 text-center text-sm mt-2">
                         Error while Deleting try again..
@@ -448,6 +450,9 @@ const SaleHistory = () => {
                               Loss : {sale.sellingPrice - sale.mrp}
                             </p>
                           )}
+                          <p className="font-semibold py-1">
+                            Sold by: {sale.soldBy}
+                          </p>
                           {showDeleteTooltip && (
                             <div className="text-red-500 text-center text-sm mt-2">
                               Error while Deleting try again..
