@@ -4,6 +4,7 @@ import QrScanner from "react-qr-scanner";
 import LogManagement from "./LogManagement";
 import Spinner from "../Loader/Spinner";
 import Toast from "../Toast/Toast";
+import { useMemo } from "react";
 
 // Debounce utility function
 const debounce = (func, delay) => {
@@ -36,8 +37,6 @@ const VerificationSession = () => {
   const [showDeletionPreview, setShowDeletionPreview] = useState(false);
   const [deletionPreview, setDeletionPreview] = useState(null);
   const [pendingLogDeletion, setPendingLogDeletion] = useState(null);
-  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
-  const [bulkDeleteReason, setBulkDeleteReason] = useState("");
   const [toasts, setToasts] = useState([]);
   const [apiLoading, setApiLoading] = useState({
     verify: false,
@@ -71,6 +70,7 @@ const VerificationSession = () => {
     checkAuth();
     fetchSessionData();
     fetchItems(1, false);
+    // eslint-disable-next-line
   }, [sessionId]);
 
   const checkAuth = () => {
@@ -191,12 +191,14 @@ const VerificationSession = () => {
   };
 
   // Debounced search handler
-  const debouncedSearch = useCallback(
+  const debouncedSearch = useMemo(
+  () =>
     debounce((term) => {
       handleSearch(term);
     }, 500),
-    [sessionId]
-  );
+    // eslint-disable-next-line
+  [sessionId] // re-create only when sessionId changes
+);
 
   const handleSearchChange = (e) => {
     const value = e.target.value;
@@ -233,64 +235,7 @@ const VerificationSession = () => {
     } finally {
       setApiLoading(prev => ({...prev, logs: false}));
     }
-  };
-
-  const canDeleteLog = (log) => {
-    const protectedActions = ["session_start", "session_complete"];
-    return !protectedActions.includes(log.action);
-  };
-
-  const getLogActionColor = (action) => {
-    switch (action) {
-      case "scan":
-        return "bg-green-100 text-green-800";
-      case "manual_entry":
-        return "bg-blue-100 text-blue-800";
-      case "correction":
-        return "bg-yellow-100 text-yellow-800";
-      case "deletion":
-        return "bg-red-100 text-red-800";
-      case "session_start":
-        return "bg-purple-100 text-purple-800";
-      case "session_complete":
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const handlePreviewLogDeletion = async (logId) => {
-    try {
-      setApiLoading(prev => ({...prev, delete: true}));
-      const response = await fetch(
-        `/api/verification/log/${logId}/preview-deletion`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${
-              JSON.parse(window.localStorage.getItem("userInfo")).token
-            }`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        const preview = await response.json();
-        setDeletionPreview(preview);
-        setPendingLogDeletion(logId);
-        setShowDeletionPreview(true);
-      } else {
-        const error = await response.json();
-        addToast(error.message || "Error previewing deletion", "error");
-      }
-    } catch (error) {
-      console.error("Error previewing deletion:", error);
-      addToast("Error previewing deletion", "error");
-    } finally {
-      setApiLoading(prev => ({...prev, delete: false}));
-    }
-  };
+  };;
 
   const handleDeleteLog = async (logId, logData) => {
     try {
@@ -305,7 +250,6 @@ const VerificationSession = () => {
       });
 
       if (response.ok) {
-        const result = await response.json();
         addToast("Log deleted successfully!", "success");
 
         // Refresh both logs and session data
@@ -492,7 +436,7 @@ const VerificationSession = () => {
       )}
 
       <div className="bg-white p-6 shadow-md rounded-md">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center m-6">
           <div>
             <h2 className="text-2xl font-semibold">{session?.sessionName}</h2>
             <p className="text-gray-600">Session ID: {session?.sessionId}</p>
@@ -814,7 +758,7 @@ const VerificationSession = () => {
 
         {/* Complete Session Confirmation Modal */}
         {showCompleteModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
             <div className="relative top-32 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
               <div className="mt-3">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
@@ -836,8 +780,8 @@ const VerificationSession = () => {
                     <input
                       type="text"
                       value={confirmText}
-                      onChange={(e) => setConfirmText(e.target.value)}
-                      className="w-full p-2 border rounded-md"
+                      onChange={(e) => setConfirmText(e.target.value.toUpperCase())}
+                      className="w-full p-2 border rounded-md text-center"
                       placeholder="Type 'confirm' here"
                     />
                   </div>
@@ -848,13 +792,13 @@ const VerificationSession = () => {
                         setShowCompleteModal(false);
                         setConfirmText("");
                       }}
-                      className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+                      className="w-1/3 px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleCompleteSession}
-                      className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-green-300"
+                      className="w-2/3 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-green-300"
                       disabled={apiLoading.complete || confirmText.toLowerCase() !== "confirm"}
                     >
                       {apiLoading.complete ? "Completing..." : "Confirm Complete"}
@@ -868,7 +812,7 @@ const VerificationSession = () => {
 
         {/* Log Deletion Preview Modal */}
         {showDeletionPreview && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-60">
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
             <div className="relative top-32 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
               <div className="mt-3">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">

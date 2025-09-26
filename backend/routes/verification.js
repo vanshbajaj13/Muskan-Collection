@@ -995,4 +995,48 @@ async function updateSessionStatistics(sessionId) {
   }
 }
 
+// Delete verification session and all associated data
+router.delete("/session/:sessionId", protect, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const userId = req.user?.id || "system";
+
+    // Check if session exists
+    const session = await VerificationSession.findOne({ sessionId });
+    if (!session) {
+      return res.status(404).json({ message: "Session not found" });
+    }
+
+    // Optional: Check if user has permission to delete (creator or admin)
+    if (session.startedBy !== userId) {
+      return res.status(403).json({
+        message: "You can only delete sessions that you started",
+      });
+    }
+
+    // Optional: Prevent deletion of completed sessions if needed
+    // if (session.status === "completed") {
+    //   return res.status(400).json({
+    //     message: "Cannot delete completed sessions",
+    //   });
+    // }
+
+    // Delete all associated data in parallel for better performance
+    await Promise.all([
+      VerificationSession.deleteOne({ sessionId }),
+      VerificationItem.deleteMany({ sessionId }),
+      VerificationLog.deleteMany({ sessionId }),
+      InventorySnapshot.deleteMany({ sessionId }),
+    ]);
+
+    res.json({
+      success: true,
+      message: "Session and all associated data deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting session:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 module.exports = router;
