@@ -281,7 +281,7 @@ const VerificationSession = () => {
   };
 
   const handleScan = (data) => {
-    const regex = /^[A-Z]{3}\d{4}$/;
+    const regex = /^[A-Z]{3,4}\d{4}$/;
     if (data && regex.test(data.text)) {
       setCurrentItem({ ...currentItem, code: data.text, verifiedQuantity: 1 });
       setShowScanner(false);

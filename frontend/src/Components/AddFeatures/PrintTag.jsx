@@ -19,6 +19,7 @@ const PrintTag = () => {
   const [searching, setSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [margin, setMargin] = useState(2); // default is 2
+  const [customCharges, setCustomCharges] = useState(0);
 
   useEffect(() => {
     if (selectedItems.length > 1) {
@@ -54,7 +55,7 @@ const PrintTag = () => {
 
   function calculateMRP(mrp) {
     // Round the number to the nearest multiple of 100
-    var roundedNumber = mrp * margin + 10;
+    var roundedNumber = mrp * margin + 10 + Number(customCharges);
     roundedNumber = Math.round(roundedNumber / 100) * 100;
     return roundedNumber - 4;
   }
@@ -250,15 +251,33 @@ const PrintTag = () => {
         >
           {exactMatch ? "Exact Match Search On" : "Exact Match Search Off"}
         </button>
-        <input
-          type="number"
-          step="0.1"
-          placeholder="Enter Margin (e.g. 1.8)"
-          value={margin}
-          onChange={(e) => setMargin(parseFloat(e.target.value) || 1)}
-          onWheel={(e) => e.target.blur()}
-          className="w-full mt-4 p-2 border rounded-md"
-        />
+        <div>
+          <p>Margin :</p>
+          <input
+            type="number"
+            step="0.1"
+            placeholder="Enter Margin (e.g. 1.8)"
+            value={margin}
+            onChange={(e) => setMargin(parseFloat(e.target.value) || 1)}
+            onWheel={(e) => e.target.blur()}
+            className="w-full mt-4 p-2 border rounded-md"
+          />
+        </div>
+        <div>
+          <p>Custom Charges :</p>
+          <input
+            type="number"
+            placeholder="Custom Charges (added to MRP display, default 0)"
+            value={customCharges}
+            onChange={(e) =>
+              setCustomCharges(
+                e.target.value === "" ? 0 : Number(e.target.value)
+              )
+            }
+            onWheel={(e) => e.target.blur()}
+            className="w-full mt-4 p-2 border rounded-md"
+          />
+        </div>
       </div>
 
       {searching && (

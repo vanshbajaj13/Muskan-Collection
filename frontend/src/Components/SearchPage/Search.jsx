@@ -74,7 +74,7 @@ const Search = () => {
   // Handle QR code scan
   const handleScan = (data) => {
     // Check if the scanned code matches the specified format (3 uppercase letters followed by 4 numbers)
-    const regex = /^[A-Z]{3}\d{4}$/;
+    const regex = /^[A-Z]{3,4}\d{4}$/;
     if (data && regex.test(data.text)) {
       setSearchQuery(data.text.substring(0,4));
       setQrCodeScanned(data.text);

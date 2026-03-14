@@ -46,7 +46,7 @@ const CustomerPurchase = () => {
 
   const fetchAvailableQuantity = async () => {
     try {
-      if (newItem.code.length === 7) {
+      if (newItem.code.length === 7 || newItem.code.length === 8) {
         setFetchingQuantity(true);
         const response = await fetch(
           `/api/availablequantity?code=${newItem.code}`,
@@ -151,7 +151,7 @@ const CustomerPurchase = () => {
   };
 
   const handleScan = (data) => {
-    const regex = /^[A-Z]{3}\d{4}$/;
+    const regex = /^[A-Z]{3,4}\d{4}$/;
     if (data && regex.test(data.text)) {
       setNewItem((prevItem) => ({
         ...prevItem,

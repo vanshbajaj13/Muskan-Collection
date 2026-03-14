@@ -32,9 +32,96 @@ const Purchase = () => {
   const [printList, setPrintList] = useState([]); // Separate list for multiple prints
   const [autoReset, setAutoReset] = useState(true);
   const [margin, setMargin] = useState(2); // default is 2
+  const [customCharges, setCustomCharges] = useState(0);
+  const [isMultiSet, setIsMultiSet] = useState(false);
+  const [sets, setSets] = useState([{ sizes: [] }, { sizes: [] }]);
+  const [multiSetLoading, setMultiSetLoading] = useState(false);
 
   const toggleView = () => {
     setIsQRCodeView((prevIsQRCodeView) => !prevIsQRCodeView);
+  };
+
+  const handleSetSizeChange = (setIdx, size) => {
+    setSets(prev =>
+      prev.map((s, i) => {
+        if (i !== setIdx) return s;
+        const newSizes = s.sizes.includes(size)
+          ? s.sizes.filter(sz => sz !== size)
+          : [...s.sizes, size].sort((a, b) => {
+              const indexA = dropdownOptions.sizes[0].size.indexOf(a);
+              const indexB = dropdownOptions.sizes[0].size.indexOf(b);
+              return indexA - indexB;
+            });
+        return { ...s, sizes: newSizes };
+      })
+    );
+  };
+
+  const addSet = () => {
+    if (sets.length < 26) {
+      const lastSet = sets[sets.length - 1];
+      setSets(prev => [...prev, { sizes: [...lastSet.sizes] }]);
+    }
+  };
+
+  const removeSet = (idx) => {
+    if (sets.length > 2) setSets(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const isMultiSetFormValid = () => {
+    return (
+      productDetails.brand &&
+      productDetails.product &&
+      productDetails.category &&
+      productDetails.mrp &&
+      productDetails.quantityBuy &&
+      sets.every(s => s.sizes.length > 0)
+    );
+  };
+
+  const handleMultiSetPurchase = async () => {
+    if (!isMultiSetFormValid()) return;
+    setMultiSetLoading(true);
+    try {
+      const response = await fetch("/api/purchase/multiset", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${
+            JSON.parse(window.localStorage.getItem("userInfo")).token
+          }`,
+        },
+        body: JSON.stringify({
+          brand: productDetails.brand,
+          product: productDetails.product,
+          category: productDetails.category,
+          quantityBuy: productDetails.quantityBuy,
+          mrp: productDetails.mrp,
+          sets,
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setReturnedCode(data.items);
+        setIsModalOpen(true);
+        setShowTooltip(true);
+        setTimeout(() => setShowTooltip(false), 3000);
+        if (autoReset) {
+          setProductDetails({ brand: "", product: "", category: "", size: [], quantityBuy: 1, mrp: "" });
+          setCustomCharges(0);
+        } else {
+          setProductDetails(prev => ({ ...prev, mrp: "", quantityBuy: 1 }));
+          // customCharges intentionally preserved when autoReset is off
+        }
+        setSets([{ sizes: [] }, { sizes: [] }]);
+      } else {
+        console.error("Multi-set purchase failed");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setMultiSetLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -194,7 +281,7 @@ const Purchase = () => {
     // Round the number to the nearest multiple of 100
     // mrp -= 100;
     // adding 10 to round off to 40
-    var roundedNumber = mrp * margin + 10;
+    var roundedNumber = mrp * margin + 10 + Number(customCharges);
     roundedNumber = Math.round(roundedNumber / 100) * 100;
     return roundedNumber - 4;
   }
@@ -232,12 +319,14 @@ const Purchase = () => {
             quantityBuy: 1,
             mrp: "",
           });
+          setCustomCharges(0);
         } else {
           setProductDetails((prevDetails) => ({
             ...prevDetails,
             mrp: "",
             quantityBuy: 1,
           }));
+          // customCharges intentionally preserved when autoReset is off
         }
         setIsModalOpen(true);
         setShowTooltip(true);
@@ -261,6 +350,24 @@ const Purchase = () => {
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
   });
+
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (buttonActive) {
+          handlePrint();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isModalOpen, buttonActive, handlePrint]);
+
+
   return (
     <div className="bg-white p-6 shadow-md rounded-md">
       <h2 className="text-2xl font-semibold mb-6">Purchase</h2>
@@ -546,22 +653,118 @@ const Purchase = () => {
           ))}
         </div>
       </div>
+      {/* Multi-Set Purchase Section */}
+      <div className="mt-6 border-t pt-4">
+        <div className="flex items-center mb-4">
+          <input
+            type="checkbox"
+            id="multiSetToggle"
+            checked={isMultiSet}
+            onChange={() => setIsMultiSet(!isMultiSet)}
+            className="mr-2 w-4 h-4"
+          />
+          <label htmlFor="multiSetToggle" className="font-semibold text-base cursor-pointer">
+            Multi-Set Purchase{" "}
+            <span className="text-sm font-normal text-gray-500">
+              (same style, different colors/variants — generates 8-char codes)
+            </span>
+          </label>
+        </div>
+
+        {isMultiSet && (
+          <div className="bg-orange-50 border border-yellow-300 rounded-md p-4">
+            
+
+            {sets.map((set, setIdx) => (
+              <div key={setIdx} className="mb-4 p-3 bg-orange-50 border border-yellow-300 rounded-md">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-semibold text-sm">
+                    Set {String.fromCharCode(65 + setIdx)}
+                    <span className="text-xs text-gray-400 ml-2 font-normal">
+                      code suffix: <code>{String.fromCharCode(65 + setIdx)}</code>
+                    </span>
+                  </h4>
+                  {sets.length > 2 && (
+                    <button
+                      onClick={() => removeSet(setIdx)}
+                      className="text-red-500 text-xs hover:text-red-700"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-wrap ">
+                  {dropdownOptions.sizes[0]?.size.map((size) => (
+                    <div key={size} className="flex items-center mr-4 mb-2">
+                      <input
+                        type="checkbox"
+                        id={`set-${setIdx}-${size}`}
+                        value={size}
+                        checked={set.sizes.includes(size)}
+                        onChange={() => handleSetSizeChange(setIdx, size)}
+                        className="mr-1"
+                      />
+                      <label htmlFor={`set-${setIdx}-${size}`} className="text-sm">{size}</label>
+                    </div>
+                  ))}
+                </div>
+                {set.sizes.length > 0 && (
+                  <p className="text-xs text-green-600 mt-1">
+                    Selected: {set.sizes.join(", ")}
+                  </p>
+                )}
+              </div>
+            ))}
+
+            <div className="flex gap-2 flex-wrap">
+              {sets.length < 26 && (
+                <button
+                  onClick={addSet}
+                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 px-4 rounded text-sm"
+                >
+                  + Add Another Set
+                </button>
+              )}
+              <button
+                onClick={handleMultiSetPurchase}
+                disabled={!isMultiSetFormValid() || multiSetLoading}
+                className={`py-2 px-4 rounded text-white text-sm ${
+                  isMultiSetFormValid() && !multiSetLoading
+                    ? "bg-indigo-500 hover:bg-indigo-700"
+                    : "bg-gray-400 cursor-not-allowed"
+                }`}
+              >
+                {multiSetLoading ? "Adding Sets..." : "Add Sets to Inventory"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      <p className="text-sm text-gray-500 mt-4">
+        MRP (Price in DB):
+      </p>
       <input
         type="number"
         placeholder="MRP"
         name="mrp"
         value={productDetails.mrp}
         onChange={handleInputChange}
-        className="w-full mt-4 p-2 border rounded-md"
+        className="w-full p-2 border rounded-md"
       />
+      <p className="text-sm text-gray-500 mt-4">
+        Quantity of Product:
+      </p>
       <input
         type="number"
         placeholder="Quantity to Purchase"
         name="quantityBuy"
         value={productDetails.quantityBuy}
         onChange={handleInputChange}
-        className="w-full mt-4 p-2 border rounded-md"
+        className="w-full p-2 border rounded-md"
       />
+      <p className="text-sm text-gray-500 mt-4">
+        Margin:
+      </p>
       <input
         type="number"
         step="0.1"
@@ -569,7 +772,18 @@ const Purchase = () => {
         value={margin}
         onChange={(e) => setMargin(parseFloat(e.target.value) || 1)}
         onWheel={(e) => e.target.blur()}
-        className="w-full mt-4 p-2 border rounded-md"
+        className="w-full p-2 border rounded-md"
+      />
+      <p className="text-sm text-gray-500 mt-4">
+        Custom Charges:
+      </p>
+      <input
+        type="number"
+        placeholder="Custom Charges (added to MRP display, default 0)"
+        value={customCharges}
+        onChange={(e) => setCustomCharges(e.target.value === "" ? 0 : Number(e.target.value))}
+        onWheel={(e) => e.target.blur()}
+        className="w-full p-2 border rounded-md"
       />
 
       {showTooltip && (
