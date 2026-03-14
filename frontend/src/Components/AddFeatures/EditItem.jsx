@@ -76,16 +76,11 @@ const EditItem = () => {
         throw new Error("Failed to fetch dropdown options");
       }
       const options = await dropdownResponse.json();
-      // Filter products based on the brand
-      const filteredProducts = options.products.filter(
-        (product) => product.brand === item.brand
-      );
-      // Sort products within each brand
-      filteredProducts.forEach((brand) => {
-        brand.products.sort();
-      });
       options.categories[0].category.sort((a, b) => a.localeCompare(b));
-      setDropdownOptions({ ...options, products: filteredProducts });
+        const productNames = options.productList
+          ? options.productList.map(p => p.name).sort()
+          : [];
+        setDropdownOptions({ ...options, flatProducts: productNames });
     } catch (error) {
       console.error("Error fetching dropdown options and item details:", error);
       // Handle error here, for example, redirect to login page or display error message
@@ -297,13 +292,11 @@ const EditItem = () => {
             <option value="" disabled>
               Select Product
             </option>
-            {dropdownOptions.products.map((productObj) =>
-              productObj.products.map((product) => (
-                <option key={product} value={product}>
-                  {product}
-                </option>
-              ))
-            )}
+            {(dropdownOptions.flatProducts || []).map((product) => (
+              <option key={product} value={product}>
+                {product}
+              </option>
+            ))}
           </select>
 
           <select

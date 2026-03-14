@@ -20,6 +20,7 @@ const PrintTag = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [margin, setMargin] = useState(2); // default is 2
   const [customCharges, setCustomCharges] = useState(0);
+  const [pressedKey, setPressedKey] = useState(null);
 
   useEffect(() => {
     if (selectedItems.length > 1) {
@@ -52,6 +53,21 @@ const PrintTag = () => {
       setPrintList(newList);
     }
   }, [selectedItems]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) return;
+      setPressedKey(e.key.toLowerCase());
+    };
+    const handleKeyUp = () => setPressedKey(null);
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
 
   function calculateMRP(mrp) {
     // Round the number to the nearest multiple of 100
@@ -296,6 +312,15 @@ const PrintTag = () => {
                   ? "bg-red-100 border border-red-400 text-red-700"
                   : ""
               }`}
+              onMouseEnter={() => {
+                if (pressedKey === "s") {
+                  const alreadySelected = selectedItems.findIndex(s => s._id === item._id) !== -1;
+                  if (!alreadySelected) handleSelectItem(item);
+                } else if (pressedKey === "d") {
+                  const alreadySelected = selectedItems.findIndex(s => s._id === item._id) !== -1;
+                  if (alreadySelected) handleSelectItem(item);
+                }
+              }}
             >
               <div
                 className="flex justify-between items-center cursor-pointer"
@@ -500,6 +525,15 @@ const PrintTag = () => {
             <div
               key={item._id}
               className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative"
+              onMouseEnter={() => {
+                if (pressedKey === "s") {
+                  const alreadySelected = selectedItems.findIndex(s => s._id === item._id) !== -1;
+                  if (!alreadySelected) handleSelectItem(item);
+                } else if (pressedKey === "d") {
+                  const alreadySelected = selectedItems.findIndex(s => s._id === item._id) !== -1;
+                  if (alreadySelected) handleSelectItem(item);
+                }
+              }}
             >
               <div
                 className="flex justify-between items-center cursor-pointer"

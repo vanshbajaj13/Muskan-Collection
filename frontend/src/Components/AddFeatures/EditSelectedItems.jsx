@@ -23,6 +23,7 @@ const EditSelectedItems = () => {
     sizes: [{ size: [] }],
   });
 
+  // eslint-disable-next-line
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [isUpdateDisabled, setIsUpdateDisabled] = useState(true);
   const [showTooltip, setShowTooltip] = useState({
@@ -48,12 +49,11 @@ const EditSelectedItems = () => {
           const options = await response.json();
           // Sort dropdown options alphabetically
           options.products.sort((a, b) => a.brand.localeCompare(b.brand));
-          // Sort products within each brand
-          options.products.forEach((brand) => {
-            brand.products.sort();
-          });
           options.categories[0].category.sort((a, b) => a.localeCompare(b));
-          setDropdownOptions(options);
+          const productNames = options.productList
+            ? options.productList.map((p) => p.name).sort()
+            : [];
+          setDropdownOptions({ ...options, flatProducts: productNames });
         } else {
           console.error("Failed to fetch dropdown options");
           window.localStorage.clear();
@@ -162,21 +162,19 @@ const EditSelectedItems = () => {
         updateFields: changedFields,
       }));
       try {
-        const response = await fetch(
-          "/api/item/updateAll",
-          {
-            method: "PATCH",
-            headers: {
-              Authorization: `Bearer ${
-                JSON.parse(window.localStorage.getItem("userInfo")).token
-              }`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(updatePromises),
-          }
-        );
+        const response = await fetch("/api/item/updateAll", {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${
+              JSON.parse(window.localStorage.getItem("userInfo")).token
+            }`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(updatePromises),
+        });
 
         if (response.ok) {
+          // eslint-disable-next-line
           const results = await response.json();
           // Optionally, navigate or show a success message
           setShowTooltip({
@@ -302,12 +300,11 @@ const EditSelectedItems = () => {
               value={commonDetails.product}
               onChange={handleInputChange}
               className="w-full mt-4 p-2 border rounded-md"
-              disabled={!commonDetails.brand}
             >
               <option value="" disabled>
                 Select Product
               </option>
-              {filteredProducts.map((product) => (
+              {(dropdownOptions.flatProducts || []).map((product) => (
                 <option key={product} value={product}>
                   {product}
                 </option>

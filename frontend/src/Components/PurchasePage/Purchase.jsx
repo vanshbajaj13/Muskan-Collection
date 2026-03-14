@@ -20,7 +20,9 @@ const Purchase = () => {
     categories: [],
     sizes: [{ size: [] }],
   });
+  // eslint-disable-next-line
   const [productOfSelectedBrand, setProductOfSelectedBrand] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
   const [isFormValid, setIsFormValid] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -42,11 +44,11 @@ const Purchase = () => {
   };
 
   const handleSetSizeChange = (setIdx, size) => {
-    setSets(prev =>
+    setSets((prev) =>
       prev.map((s, i) => {
         if (i !== setIdx) return s;
         const newSizes = s.sizes.includes(size)
-          ? s.sizes.filter(sz => sz !== size)
+          ? s.sizes.filter((sz) => sz !== size)
           : [...s.sizes, size].sort((a, b) => {
               const indexA = dropdownOptions.sizes[0].size.indexOf(a);
               const indexB = dropdownOptions.sizes[0].size.indexOf(b);
@@ -60,12 +62,12 @@ const Purchase = () => {
   const addSet = () => {
     if (sets.length < 26) {
       const lastSet = sets[sets.length - 1];
-      setSets(prev => [...prev, { sizes: [...lastSet.sizes] }]);
+      setSets((prev) => [...prev, { sizes: [...lastSet.sizes] }]);
     }
   };
 
   const removeSet = (idx) => {
-    if (sets.length > 2) setSets(prev => prev.filter((_, i) => i !== idx));
+    if (sets.length > 2) setSets((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const isMultiSetFormValid = () => {
@@ -75,7 +77,7 @@ const Purchase = () => {
       productDetails.category &&
       productDetails.mrp &&
       productDetails.quantityBuy &&
-      sets.every(s => s.sizes.length > 0)
+      sets.every((s) => s.sizes.length > 0)
     );
   };
 
@@ -107,10 +109,17 @@ const Purchase = () => {
         setShowTooltip(true);
         setTimeout(() => setShowTooltip(false), 3000);
         if (autoReset) {
-          setProductDetails({ brand: "", product: "", category: "", size: [], quantityBuy: 1, mrp: "" });
+          setProductDetails({
+            brand: "",
+            product: "",
+            category: "",
+            size: [],
+            quantityBuy: 1,
+            mrp: "",
+          });
           setCustomCharges(0);
         } else {
-          setProductDetails(prev => ({ ...prev, mrp: "", quantityBuy: 1 }));
+          setProductDetails((prev) => ({ ...prev, mrp: "", quantityBuy: 1 }));
           // customCharges intentionally preserved when autoReset is off
         }
         setSets([{ sizes: [] }, { sizes: [] }]);
@@ -193,6 +202,9 @@ const Purchase = () => {
           });
           options.categories[0].category.sort((a, b) => a.localeCompare(b));
           setDropdownOptions(options);
+          if (options.productList) {
+            setAllProducts(options.productList.map((p) => p.name));
+          }
         } else {
           console.error("Failed to fetch dropdown options");
           window.localStorage.clear();
@@ -366,7 +378,6 @@ const Purchase = () => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isModalOpen, buttonActive, handlePrint]);
-
 
   return (
     <div className="bg-white p-6 shadow-md rounded-md">
@@ -609,7 +620,7 @@ const Purchase = () => {
         <option value="" disabled>
           Select Product
         </option>
-        {productOfSelectedBrand.map((product) => (
+        {allProducts.map((product) => (
           <option key={product} value={product}>
             {product}
           </option>
@@ -663,7 +674,10 @@ const Purchase = () => {
             onChange={() => setIsMultiSet(!isMultiSet)}
             className="mr-2 w-4 h-4"
           />
-          <label htmlFor="multiSetToggle" className="font-semibold text-base cursor-pointer">
+          <label
+            htmlFor="multiSetToggle"
+            className="font-semibold text-base cursor-pointer"
+          >
             Multi-Set Purchase{" "}
             <span className="text-sm font-normal text-gray-500">
               (same style, different colors/variants — generates 8-char codes)
@@ -673,15 +687,17 @@ const Purchase = () => {
 
         {isMultiSet && (
           <div className="bg-orange-50 border border-yellow-300 rounded-md p-4">
-            
-
             {sets.map((set, setIdx) => (
-              <div key={setIdx} className="mb-4 p-3 bg-orange-50 border border-yellow-300 rounded-md">
+              <div
+                key={setIdx}
+                className="mb-4 p-3 bg-orange-50 border border-yellow-300 rounded-md"
+              >
                 <div className="flex justify-between items-center mb-2">
                   <h4 className="font-semibold text-sm">
                     Set {String.fromCharCode(65 + setIdx)}
                     <span className="text-xs text-gray-400 ml-2 font-normal">
-                      code suffix: <code>{String.fromCharCode(65 + setIdx)}</code>
+                      code suffix:{" "}
+                      <code>{String.fromCharCode(65 + setIdx)}</code>
                     </span>
                   </h4>
                   {sets.length > 2 && (
@@ -704,7 +720,12 @@ const Purchase = () => {
                         onChange={() => handleSetSizeChange(setIdx, size)}
                         className="mr-1"
                       />
-                      <label htmlFor={`set-${setIdx}-${size}`} className="text-sm">{size}</label>
+                      <label
+                        htmlFor={`set-${setIdx}-${size}`}
+                        className="text-sm"
+                      >
+                        {size}
+                      </label>
                     </div>
                   ))}
                 </div>
@@ -740,9 +761,7 @@ const Purchase = () => {
           </div>
         )}
       </div>
-      <p className="text-sm text-gray-500 mt-4">
-        MRP (Price in DB):
-      </p>
+      <p className="text-sm text-gray-500 mt-4">MRP (Price in DB):</p>
       <input
         type="number"
         placeholder="MRP"
@@ -751,9 +770,7 @@ const Purchase = () => {
         onChange={handleInputChange}
         className="w-full p-2 border rounded-md"
       />
-      <p className="text-sm text-gray-500 mt-4">
-        Quantity of Product:
-      </p>
+      <p className="text-sm text-gray-500 mt-4">Quantity of Product:</p>
       <input
         type="number"
         placeholder="Quantity to Purchase"
@@ -762,9 +779,7 @@ const Purchase = () => {
         onChange={handleInputChange}
         className="w-full p-2 border rounded-md"
       />
-      <p className="text-sm text-gray-500 mt-4">
-        Margin:
-      </p>
+      <p className="text-sm text-gray-500 mt-4">Margin:</p>
       <input
         type="number"
         step="0.1"
@@ -774,14 +789,14 @@ const Purchase = () => {
         onWheel={(e) => e.target.blur()}
         className="w-full p-2 border rounded-md"
       />
-      <p className="text-sm text-gray-500 mt-4">
-        Custom Charges:
-      </p>
+      <p className="text-sm text-gray-500 mt-4">Custom Charges:</p>
       <input
         type="number"
         placeholder="Custom Charges (added to MRP display, default 0)"
         value={customCharges}
-        onChange={(e) => setCustomCharges(e.target.value === "" ? 0 : Number(e.target.value))}
+        onChange={(e) =>
+          setCustomCharges(e.target.value === "" ? 0 : Number(e.target.value))
+        }
         onWheel={(e) => e.target.blur()}
         className="w-full p-2 border rounded-md"
       />

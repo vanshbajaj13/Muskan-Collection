@@ -33,20 +33,18 @@ const SideBar = () => {
             href="/search"
             className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
           >
-          <div className="flex">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              fill="currentColor"
-              viewBox="0 0 16 16"
-            >
-              <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
-            </svg>
-            <p className="ml-1">
-              Search
-            </p>
-          </div>
+            <div className="flex">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                fill="currentColor"
+                viewBox="0 0 16 16"
+              >
+                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+              </svg>
+              <p className="ml-1">Search</p>
+            </div>
           </a>
           {(isAdmin || isDev) && (
             <a
@@ -112,7 +110,7 @@ const SideBar = () => {
               Sale History / Return
             </a>
           )}
-          {(isDev) && (
+          {isDev && (
             <a
               href="/verification"
               className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
@@ -130,7 +128,13 @@ const SideBar = () => {
             href="/add-brand-product"
             className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
           >
-            Add Brand and Product
+            Add Brand
+          </a>
+          <a
+            href="/add-product"
+            className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+          >
+            Add Product
           </a>
           <a
             href="/add-size"

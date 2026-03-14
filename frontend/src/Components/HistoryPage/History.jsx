@@ -14,6 +14,7 @@ const History = () => {
   const [searchOption, setSearchOption] = useState("Code"); // Default search option is Code
   const [exactMatch, setExactMatch] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
+  const [pressedKey, setPressedKey] = useState(null);
 
   const toggleExpand = (itemId) => {
     setExpandedItemId((prevId) => (prevId === itemId ? null : itemId));
@@ -23,6 +24,22 @@ const History = () => {
     fetchItems();
     // eslint-disable-next-line
   }, [page]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Don't activate if user is typing in an input/select
+      if (["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) return;
+      setPressedKey(e.key.toLowerCase());
+    };
+    const handleKeyUp = () => setPressedKey(null);
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
 
   const fetchItemWithOption = async (option, query) => {
     setSearching(true);
@@ -222,6 +239,13 @@ const History = () => {
             <div
               key={item._id}
               className={`bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative ${(item.quantityBuy - item.quantitySold) <= 0 ? 'bg-red-100 border border-red-400 text-red-700' : ''}`}
+              onMouseEnter={() => {
+                if (pressedKey === "s") {
+                  if (!selectedItems.includes(item)) handleSelectItem(item);
+                } else if (pressedKey === "d") {
+                  if (selectedItems.includes(item)) handleSelectItem(item);
+                }
+              }}
             >
               <div
                 className="flex justify-between items-center cursor-pointer"
@@ -302,6 +326,13 @@ const History = () => {
           <div
             key={item._id}
             className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative"
+            onMouseEnter={() => {
+              if (pressedKey === "s") {
+                if (!selectedItems.includes(item)) handleSelectItem(item);
+              } else if (pressedKey === "d") {
+                if (selectedItems.includes(item)) handleSelectItem(item);
+              }
+            }}
           >
             <div
               className="flex justify-between items-center cursor-pointer"

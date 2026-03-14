@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Product = require("../Models/product");
+const { ProductList } = require("../Models/productList");
 const Size = require("../Models/size");
 const Category = require("../Models/category");
 const protect = require("../middlewares/authMiddleWare");
@@ -35,6 +36,46 @@ router.post("/brands", protect, async (req, res) => {
       });
   } catch (error) {
     console.error("Error adding brand:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// GET all independent products
+router.get("/productlist", protect, async (req, res) => {
+  try {
+    const products = await ProductList.find().sort({ name: 1 });
+    res.json(products);
+  } catch (error) {
+    console.error("Error fetching product list:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// POST a new independent product
+router.post("/productlist", protect, async (req, res) => {
+  try {
+    var { name } = req.body;
+    if (!name) return res.status(400).json({ error: "Product name is required" });
+    name = name.toLowerCase().trim();
+
+    const existing = await ProductList.findOne({ name });
+    if (existing) return res.status(400).json({ error: "Product already exists" });
+
+    const newProduct = await ProductList.create({ name });
+    res.status(201).json(newProduct);
+  } catch (error) {
+    console.error("Error adding product:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// DELETE a product from independent list
+router.delete("/productlist/:id", protect, async (req, res) => {
+  try {
+    await ProductList.findByIdAndDelete(req.params.id);
+    res.json({ message: "Product deleted" });
+  } catch (error) {
+    console.error("Error deleting product:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -166,11 +207,13 @@ router.get("/dropdownoptions", protect, async (req, res) => {
     const products = await Product.find({});
     const categories = await Category.find({});
     const sizes = await Size.find({});
+    const productList = await ProductList.find().sort({ name: 1 });
 
     const dropdownOptions = {
       products: products,
       categories: categories,
       sizes: sizes,
+      productList: productList,
     };
 
     res.json(dropdownOptions);
