@@ -359,6 +359,7 @@ const EditSelectedItems = () => {
               name="mrp"
               value={commonDetails.mrp}
               onChange={handleInputChange}
+              onWheel={(e) => e.target.blur()}
               className="w-full mt-4 p-2 border rounded-md"
             />
           )}
@@ -370,6 +371,7 @@ const EditSelectedItems = () => {
               name="quantityBuy"
               value={commonDetails.quantityBuy}
               onChange={handleInputChange}
+              onWheel={(e) => e.target.blur()}
               className="w-full mt-4 p-2 border rounded-md"
             />
           )}

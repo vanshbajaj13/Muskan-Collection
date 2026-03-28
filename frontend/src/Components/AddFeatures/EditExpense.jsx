@@ -294,6 +294,7 @@ const EditExpense = () => {
             placeholder="Amount"
             value={expenseDetails.expenseAmount}
             onChange={handleInputChange}
+            onWheel={(e) => e.target.blur()}
             className="w-full mt-4 p-2 border rounded-md"
           />
 

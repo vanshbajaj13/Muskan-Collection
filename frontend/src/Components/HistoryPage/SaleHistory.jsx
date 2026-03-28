@@ -44,7 +44,7 @@ const SaleHistory = () => {
                 JSON.parse(window.localStorage.getItem("userInfo")).token
               }`,
             },
-          }
+          },
         );
         if (response.ok) {
           const data = await response.json();
@@ -83,7 +83,7 @@ const SaleHistory = () => {
               JSON.parse(window.localStorage.getItem("userInfo")).token
             }`,
           },
-        }
+        },
       );
       if (response.ok) {
         const data = await response.json();
@@ -325,11 +325,13 @@ const SaleHistory = () => {
                     </p>
                     {sale.sellingPrice - sale.mrp >= 0 ? (
                       <p className="font-semibold py-1 text-green-500">
-                        Profit : {sale.sellingPrice - sale.mrp}
+                        Profit :{" "}
+                        {Math.round((sale.sellingPrice - sale.mrp) * 100) / 100}
                       </p>
                     ) : (
                       <p className="font-semibold py-1 text-red-500">
-                        Loss : {sale.sellingPrice - sale.mrp}
+                        Loss :{" "}
+                        {Math.round((sale.sellingPrice - sale.mrp) * 100) / 100}
                       </p>
                     )}
                     <p className="font-semibold py-1">Sold by: {sale.soldBy}</p>
@@ -372,12 +374,15 @@ const SaleHistory = () => {
             // Calculate total sale and profit for the current date
             const totalSale = salesForDate.reduce(
               (acc, sale) => acc + sale.sellingPrice,
-              0
+              0,
             );
-            const totalProfit = salesForDate.reduce(
-              (acc, sale) => acc + (sale.sellingPrice - sale.mrp),
-              0
-            );
+            const totalProfit =
+              Math.round(
+                salesForDate.reduce(
+                  (acc, sale) => acc + (sale.sellingPrice - sale.mrp),
+                  0,
+                ) * 100,
+              ) / 100;
             return (
               <React.Fragment key={date}>
                 <div className="bg-green-200 border border-black text-black px-4 py-3 rounded relative flex justify-between items-center cursor-pointer font-semibold">
@@ -443,11 +448,17 @@ const SaleHistory = () => {
                           </p>
                           {sale.sellingPrice - sale.mrp >= 0 ? (
                             <p className="font-semibold py-1 text-green-500">
-                              Profit : {sale.sellingPrice - sale.mrp}
+                              Profit :{" "}
+                              {Math.round(
+                                (sale.sellingPrice - sale.mrp) * 100,
+                              ) / 100}
                             </p>
                           ) : (
                             <p className="font-semibold py-1 text-red-500">
-                              Loss : {sale.sellingPrice - sale.mrp}
+                              Loss :{" "}
+                              {Math.round(
+                                (sale.sellingPrice - sale.mrp) * 100,
+                              ) / 100}
                             </p>
                           )}
                           <p className="font-semibold py-1">

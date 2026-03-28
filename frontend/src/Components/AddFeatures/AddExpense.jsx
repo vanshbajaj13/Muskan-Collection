@@ -129,6 +129,7 @@ const AddExpense = () => {
           onChange={(e) =>
             setExpense({ ...expense, expenseAmount: Math.max(0, e.target.value) })
           }
+          onWheel={(e) => e.target.blur()}
           className="border p-2 w-full"
         />
       </div>

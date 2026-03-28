@@ -339,6 +339,7 @@ const EditItem = () => {
             name="mrp"
             value={productDetails.mrp}
             onChange={handleInputChange}
+            onWheel={(e) => e.target.blur()}
             className="w-full mt-4 p-2 border rounded-md"
           />
           <input
@@ -347,6 +348,7 @@ const EditItem = () => {
             name="quantityBuy"
             value={productDetails.quantityBuy}
             onChange={handleInputChange}
+            onWheel={(e) => e.target.blur()}
             className="w-full mt-4 p-2 border rounded-md"
           />
         </>

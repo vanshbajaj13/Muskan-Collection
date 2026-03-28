@@ -11,6 +11,7 @@ const Inventory = () => {
   const [productChartData, setProductChartData] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState("");
   const [productSizesChartData, setProductSizesChartData] = useState([]);
+  const [categoryChartData, setCategoryChartData] = useState([]);
 
   // Function to rearrange data and calculate total value for each brand
   const rearrangeBrandData = (data) => {
@@ -78,6 +79,26 @@ const Inventory = () => {
     return groupedData;
   };
 
+  const rearrangeCategoryData = (data) => {
+    const grouped = data.reduce((acc, item) => {
+      const category = item.category;
+      const available = item.quantityBuy - item.quantitySold;
+      const existing = acc.find((g) => g.category === category);
+      if (existing) {
+        existing.totalAvailable += available;
+        existing.totalValue += available * item.mrp;
+      } else {
+        acc.push({
+          category,
+          totalAvailable: available,
+          totalValue: available * item.mrp,
+        });
+      }
+      return acc;
+    }, []);
+    return grouped.sort((a, b) => b.totalValue - a.totalValue);
+  };
+
   // Function to generate sizes data for the selected product
   const generateSizesChartData = (data) => {
     const sizesData = data.reduce((acc, item) => {
@@ -127,12 +148,14 @@ const Inventory = () => {
       // Rearrange data for Doughnut charts
       const rearrangedBrandData = rearrangeBrandData(data);
       const rearrangedProductData = rearrangeProductData(data);
+      const rearrangedCategoryData = rearrangeCategoryData(data);
       setDoughnutChartData(rearrangedBrandData);
       setProductChartData(rearrangedProductData);
+      setCategoryChartData(rearrangedCategoryData);
       // Calculate total inventory value
       const totalValue = data.reduce(
         (sum, item) => sum + (item.quantityBuy - item.quantitySold) * item.mrp,
-        0
+        0,
       );
       setTotalInventoryValue(totalValue);
     } catch (error) {
@@ -151,7 +174,7 @@ const Inventory = () => {
 
     // Fetch sizes data for the selected product
     const selectedProductData = inventoryData.filter(
-      (item) => item.product === product
+      (item) => item.product === product,
     );
     const sizesChartData = generateSizesChartData(selectedProductData);
     setProductSizesChartData(sizesChartData);
@@ -161,29 +184,29 @@ const Inventory = () => {
 
   const generateRandomColors = (numColors) => {
     const colors = [
-      "rgba(255, 99, 132, 0.7)",    // Soft Red
-      "rgba(54, 162, 235, 0.7)",    // Soft Blue
-      "rgba(255, 206, 86, 0.7)",    // Soft Yellow
-      "rgba(75, 192, 192, 0.7)",    // Soft Teal
-      "rgba(192, 192, 192, 0.7)",   // Soft Gray
-      "rgba(153, 102, 255, 0.7)",   // Soft Purple
-      "rgba(255, 159, 64, 0.7)",    // Soft Orange
-      "rgba(255, 99, 255, 0.7)",    // Soft Pink
-      "rgba(54, 235, 162, 0.7)",    // Soft Mint
-      "rgba(206, 86, 255, 0.7)",    // Soft Violet
-      "rgba(192, 75, 192, 0.7)",    // Soft Magenta
-      "rgba(99, 255, 132, 0.7)",    // Soft Green
-      "rgba(235, 54, 162, 0.7)",    // Soft Raspberry
-      "rgba(86, 255, 206, 0.7)",    // Soft Cyan
-      "rgba(255, 192, 75, 0.7)",    // Soft Amber
-      "rgba(99, 132, 255, 0.7)",    // Soft Periwinkle
-      "rgba(162, 54, 235, 0.7)"     // Soft Orchid
+      "rgba(255, 99, 132, 0.7)", // Soft Red
+      "rgba(54, 162, 235, 0.7)", // Soft Blue
+      "rgba(255, 206, 86, 0.7)", // Soft Yellow
+      "rgba(75, 192, 192, 0.7)", // Soft Teal
+      "rgba(192, 192, 192, 0.7)", // Soft Gray
+      "rgba(153, 102, 255, 0.7)", // Soft Purple
+      "rgba(255, 159, 64, 0.7)", // Soft Orange
+      "rgba(255, 99, 255, 0.7)", // Soft Pink
+      "rgba(54, 235, 162, 0.7)", // Soft Mint
+      "rgba(206, 86, 255, 0.7)", // Soft Violet
+      "rgba(192, 75, 192, 0.7)", // Soft Magenta
+      "rgba(99, 255, 132, 0.7)", // Soft Green
+      "rgba(235, 54, 162, 0.7)", // Soft Raspberry
+      "rgba(86, 255, 206, 0.7)", // Soft Cyan
+      "rgba(255, 192, 75, 0.7)", // Soft Amber
+      "rgba(99, 132, 255, 0.7)", // Soft Periwinkle
+      "rgba(162, 54, 235, 0.7)", // Soft Orchid
     ];
     for (let i = 4; i < numColors; i++) {
       const randomColor = `rgba(${Math.floor(
-        Math.random() * 256
+        Math.random() * 256,
       )}, ${Math.floor(Math.random() * 256)}, ${Math.floor(
-        Math.random() * 256
+        Math.random() * 256,
       )}, 0.7)`;
       colors.push(randomColor);
     }
@@ -202,17 +225,13 @@ const Inventory = () => {
       },
       {
         data: doughnutChartData.map((item) => item.totalValueSold),
-        backgroundColor: baseColors.map(
-          (color) => color.replace("0.7", "0.3")
-        ), // Use lighter color for Amount Sold,
+        backgroundColor: baseColors.map((color) => color.replace("0.7", "0.3")), // Use lighter color for Amount Sold,
         borderWidth: 1,
         label: "Total Value Sold",
       },
       {
         data: doughnutChartData.map((item) => item.totalValueBuy),
-        backgroundColor: baseColors.map(
-          (color) => color.replace("0.3", "1")
-        ), // Use lighter color for quantitySold,
+        backgroundColor: baseColors.map((color) => color.replace("0.3", "1")), // Use lighter color for quantitySold,
         borderWidth: 1,
         label: "Total Buy",
       },
@@ -232,7 +251,7 @@ const Inventory = () => {
       {
         data: productChartData.map((item) => item.quantitySold),
         backgroundColor: generateRandomColors(productChartData.length).map(
-          (color) => color.replace("0.7", "0.3")
+          (color) => color.replace("0.7", "0.3"),
         ), // Use lighter color for quantitySold
         borderWidth: 1,
         label: "Quantity Sold",
@@ -269,10 +288,29 @@ const Inventory = () => {
       {
         data: doughnutChartData.map((item) => item.quantitySold),
         backgroundColor: brandColorList.map((color) =>
-          color.replace("0.7", "0.3")
+          color.replace("0.7", "0.3"),
         ), // Use lighter color for quantitySold
         borderWidth: 1,
         label: "Quantity Sold",
+      },
+    ],
+  };
+  const categoryChartDataset = {
+    labels: categoryChartData.map((item) => item.category),
+    datasets: [
+      {
+        label: "Available Quantity",
+        data: categoryChartData.map((item) => item.totalAvailable),
+        backgroundColor: generateRandomColors(categoryChartData.length),
+        borderWidth: 1,
+      },
+      {
+        label: "Inventory Value (₹)",
+        data: categoryChartData.map((item) => item.totalValue),
+        backgroundColor: generateRandomColors(categoryChartData.length).map(
+          (color) => color.replace("0.7", "0.3"),
+        ),
+        borderWidth: 1,
       },
     ],
   };
@@ -283,7 +321,10 @@ const Inventory = () => {
       <div className="mb-8">
         <h3 className="text-lg font-semibold mb-2">Total Inventory Value:</h3>
         <div className="text-xl font-bold">
-          ₹{totalInventoryValue ? (totalInventoryValue).toLocaleString('hi') : "  Calculating......."}
+          ₹
+          {totalInventoryValue
+            ? totalInventoryValue.toLocaleString("hi")
+            : "  Calculating......."}
         </div>
       </div>
       {/* Doughnut Chart for Brand */}
@@ -333,6 +374,28 @@ const Inventory = () => {
           </div>
         </div>
       )}
+      {/* Category — Available Quantity */}
+      <h3 className="text-lg font-semibold mb-2 mt-6">Inventory by Category</h3>
+      <div className="flex items-center justify-center">
+        <div className="w-screen h-screen">
+          <Doughnut
+            data={categoryChartDataset}
+            options={{
+              maintainAspectRatio: false,
+              plugins: {
+                tooltip: {
+                  callbacks: {
+                    label: (ctx) => {
+                      if (ctx.datasetIndex === 0) return ` Qty: ${ctx.parsed}`;
+                      return ` Value: ₹${ctx.parsed.toLocaleString("en-IN")}`;
+                    },
+                  },
+                },
+              },
+            }}
+          />
+        </div>
+      </div>
       <h3 className="text-lg font-semibold mb-2">
         Quantity Bought and Sold by Brand
       </h3>

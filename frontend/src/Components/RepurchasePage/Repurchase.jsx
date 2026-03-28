@@ -146,6 +146,7 @@ const Repurchase = () => {
             placeholder="Enter New Quantity"
             value={newQuantity.value}
             onChange={handleInputChange}
+            onWheel={(e) => e.target.blur()}
             className="w-full p-2 border rounded-md mb-4"
           />
 

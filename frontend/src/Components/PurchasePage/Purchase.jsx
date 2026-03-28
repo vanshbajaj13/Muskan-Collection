@@ -768,6 +768,7 @@ const Purchase = () => {
         name="mrp"
         value={productDetails.mrp}
         onChange={handleInputChange}
+        onWheel={(e) => e.target.blur()}
         className="w-full p-2 border rounded-md"
       />
       <p className="text-sm text-gray-500 mt-4">Quantity of Product:</p>
@@ -777,6 +778,7 @@ const Purchase = () => {
         name="quantityBuy"
         value={productDetails.quantityBuy}
         onChange={handleInputChange}
+        onWheel={(e) => e.target.blur()}
         className="w-full p-2 border rounded-md"
       />
       <p className="text-sm text-gray-500 mt-4">Margin:</p>
