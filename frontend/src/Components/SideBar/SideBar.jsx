@@ -118,6 +118,14 @@ const SideBar = () => {
               Stock Verification
             </a>
           )}
+          {(isAdmin || isDev) && (
+            <a
+              href="/sales-report"
+              className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+            >
+              Sales Report (CA/GST)
+            </a>
+          )}
           <a
             href="/expense-history"
             className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"

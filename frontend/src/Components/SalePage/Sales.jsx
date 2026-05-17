@@ -160,7 +160,7 @@ const Sale = () => {
           sellingPrice: "",
           quantitySold: 1,
           customerPhoneNo: "",
-          sellerEmail: window.localStorage.getItem("userInfo").email ||"",
+          sellerEmail: JSON.parse(window.localStorage.getItem("userInfo")).email || "",
         });
         console.log("Product sold from inventory successfully!");
         setShowTooltip(true);

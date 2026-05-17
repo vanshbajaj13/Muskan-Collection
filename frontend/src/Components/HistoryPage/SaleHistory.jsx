@@ -387,14 +387,14 @@ const SaleHistory = () => {
               <React.Fragment key={date}>
                 <div className="bg-green-200 border border-black text-black px-4 py-3 rounded relative flex justify-between items-center cursor-pointer font-semibold">
                   <p>{new Date(salesForDate[0].soldAt).toLocaleDateString()}</p>
-                  <p>Sale - {totalSale}</p>
+                  <p>Sale - {Math.round(totalSale * 100) / 100}</p>
                   {totalProfit >= 0 ? (
                     <p className="font-semibold py-1 text-black">
-                      Profit : {totalProfit}
+                      Profit :{Math.round(totalProfit * 100) / 100}
                     </p>
                   ) : (
                     <p className="font-semibold py-1 text-red-500">
-                      Loss : {totalProfit}
+                      Loss : {Math.round(totalProfit * 100) / 100}
                     </p>
                   )}
                 </div>

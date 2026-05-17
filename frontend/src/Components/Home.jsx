@@ -26,6 +26,7 @@ import AddExpenseType from "./AddFeatures/AddExpenseType";
 import EditExpense from "./AddFeatures/EditExpense";
 import VerificationDashboard from "./Verification/VerificationDashboard";
 import VerificationSession from "./Verification/VerificationSession";
+import SalesReport from "./SalesReport/SalesReport";
 
 const Home = () => {
   const [userRole] = useUserRole();
@@ -81,6 +82,9 @@ const Home = () => {
         <Route path="/expense-history" element={<ExpenseHistory />} />
         {isDev && <Route path="/edit-item/:code" element={<EditItem />} />}
         {isDev && <Route path="/edit-expense/:id" element={<EditExpense />} />}
+        {(isAdmin || isDev) && (
+          <Route path="/sales-report" element={<SalesReport />} />
+        )}
         <Route path="*" element={<SideBar />} />
       </Routes>
     </>
