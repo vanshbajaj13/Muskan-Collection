@@ -9,7 +9,7 @@ export const useUserRole = () => useContext(UserRoleContext);
 
 export const UserRoleProvider = ({ children }) => {
   const navigate = useNavigate(); // Fixed typo
-  const [userRole, setUserRole] = useState("user");
+  const [userRole, setUserRole] = useState("loading");
 
   useEffect(() => {
     const fetchUserRole = async () => {

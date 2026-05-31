@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUserRole } from "../../auth/UserRoleContext";
+import Spinner from "../Loader/Spinner";
 
 const SideBar = () => {
   const naviagate = useNavigate();
@@ -22,6 +23,20 @@ const SideBar = () => {
   }
   var isAdmin = userRole === "admin";
   var isDev = userRole === "dev";
+  var isLoading = userRole === "loading";
+  console.log(userRole);
+
+  if (isLoading) {
+    return (
+      <div
+        className="fixed inset-0 flex items-center justify-center"
+        style={{ backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 999 }}
+      >
+        <Spinner></Spinner>
+      </div>
+    );
+  }
+
   return (
     <>
       <div
@@ -52,6 +67,14 @@ const SideBar = () => {
               className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
             >
               Dashboard
+            </a>
+          )}
+          {(userRole === "vansh" || userRole === "dev") && (
+            <a
+              href="/vansh"
+              className="...same className as other menu items..."
+            >
+              📱 Vansh
             </a>
           )}
           {(isAdmin || isDev) && (

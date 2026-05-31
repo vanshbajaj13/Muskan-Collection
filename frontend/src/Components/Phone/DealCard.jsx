@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { usePhone } from "./PhoneContext";
-import { StatusBadge, ProfitChip, Btn, Input, Field, Modal, ConfirmModal } from "./PhoneUI";
+import { StatusBadge, ProfitChip, Btn, Input, Field, ConfirmModal } from "./PhoneUI";
 
 const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
   const { formatCurrency, formatDate, addPayment, removePayment, tsFromDate } = usePhone();
