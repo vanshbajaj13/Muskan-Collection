@@ -23,7 +23,7 @@ const phoneDealSchema = new mongoose.Schema(
     cashbackDate: { type: Number, default: null },
     charges: { type: Number, default: 0 },                 // EMI charges, platform fees
     chargesDescription: { type: String, default: "" },
-    onEmi: { type: Boolean, default: false },
+    withGST: { type: Boolean, default: false },
 
     // ── Commission ─────────────────────────────────────────────────
     commissionAmount: { type: Number, default: 0 },

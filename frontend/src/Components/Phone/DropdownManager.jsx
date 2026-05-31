@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { usePhone } from "./PhoneContext";
-import { Btn, Input, Toast, ConfirmModal,RenameConfirmModal, Spinner } from "./PhoneUI";
+import { Btn, Input, Toast, ConfirmModal, RenameConfirmModal, Spinner, FullScreenSpinner } from "./PhoneUI";
 
 const TYPES = [
   {
@@ -111,6 +111,11 @@ const DropdownManager = () => {
 
   return (
     <div className="relative">
+      {/* Block UI while rename/delete is in progress */}
+      {(savingEdit || deletingId) && (
+        <FullScreenSpinner message={savingEdit ? "Renaming & updating records…" : "Deactivating option…"} />
+      )}
+
       {confirmModal && (
         <ConfirmModal
           title="Deactivate Option"

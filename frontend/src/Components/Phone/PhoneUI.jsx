@@ -27,6 +27,19 @@ export const Spinner = ({ size = 18 }) => {
   );
 };
 
+// ── Full-screen blocking spinner overlay ─────────────────────────────────────
+export const FullScreenSpinner = ({ message = "Loading…" }) => (
+  <div
+    className="fixed inset-0 z-[999] flex flex-col items-center justify-center gap-4"
+    style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+  >
+    <Spinner size={48} />
+    {message && (
+      <p className="text-white text-sm font-medium tracking-wide">{message}</p>
+    )}
+  </div>
+);
+
 // ── Status badge ──────────────────────────────────────────────────────────────
 export const StatusBadge = ({ status }) => {
   const config = {

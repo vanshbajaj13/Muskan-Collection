@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Bar, Doughnut } from "react-chartjs-2";
 import "chart.js/auto";
 import { usePhone } from "./PhoneContext";
+import { FullScreenSpinner } from "./PhoneUI";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const INR = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
@@ -11,26 +12,32 @@ const PERIOD_OPTIONS = [
   { label: "This Month",    value: "month" },
   { label: "Last 3 Months", value: "3months" },
   { label: "This Year",     value: "year" },
+  { label: "Custom",        value: "custom" },
 ];
 
-const getPeriodRange = (period) => {
+const getPeriodRange = (period, customFrom, customTo) => {
   const now = new Date();
   if (period === "month")   return { from: new Date(now.getFullYear(), now.getMonth(), 1).getTime() };
   if (period === "3months") return { from: new Date(now.getFullYear(), now.getMonth() - 2, 1).getTime() };
   if (period === "year")    return { from: new Date(now.getFullYear(), 0, 1).getTime() };
+  if (period === "custom") {
+    const result = {};
+    if (customFrom) result.from = new Date(customFrom).getTime();
+    if (customTo)   result.to   = new Date(customTo).setHours(23, 59, 59, 999);
+    return result;
+  }
   return {};
 };
 
-// Same color palette style as your Inventory.jsx
 const COLORS = [
-  "rgba(99,  102, 241, 0.7)",  // indigo
-  "rgba(16,  185, 129, 0.7)",  // emerald
-  "rgba(245, 158, 11,  0.7)",  // amber
-  "rgba(244, 63,  94,  0.7)",  // rose
-  "rgba(6,   182, 212, 0.7)",  // cyan
-  "rgba(139, 92,  246, 0.7)",  // violet
-  "rgba(249, 115, 22,  0.7)",  // orange
-  "rgba(20,  184, 166, 0.7)",  // teal
+  "rgba(99,  102, 241, 0.7)",
+  "rgba(16,  185, 129, 0.7)",
+  "rgba(245, 158, 11,  0.7)",
+  "rgba(244, 63,  94,  0.7)",
+  "rgba(6,   182, 212, 0.7)",
+  "rgba(139, 92,  246, 0.7)",
+  "rgba(249, 115, 22,  0.7)",
+  "rgba(20,  184, 166, 0.7)",
 ];
 
 const getColors = (n) => Array.from({ length: n }, (_, i) => COLORS[i % COLORS.length]);
@@ -67,29 +74,37 @@ const Section = ({ title, children, height = "h-72" }) => (
 const PhoneDashboard = () => {
   const { getDealStats } = usePhone();
 
-  const [stats, setStats]   = useState(null);
+  const [stats, setStats]     = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState(null);
-  const [period, setPeriod] = useState("all");
+  const [error, setError]     = useState(null);
+  const [period, setPeriod]   = useState("all");
+
+  // Custom date range
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo]     = useState("");
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getDealStats(getPeriodRange(period));
+      const data = await getDealStats(getPeriodRange(period, customFrom, customTo));
       setStats(data);
     } catch {
       setError("Failed to load stats");
     } finally {
       setLoading(false);
     }
-  }, [getDealStats, period]);
+  }, [getDealStats, period, customFrom, customTo]);
 
-  useEffect(() => { fetchStats(); }, [fetchStats]);
+  // Auto-fetch when period changes; for custom, only fetch when both dates set or both cleared
+  useEffect(() => {
+    if (period === "custom" && !customFrom && !customTo) return;
+    fetchStats();
+    // eslint-disable-next-line
+  }, [fetchStats]);
 
   // ── Chart data builders ──────────────────────────────────────────────────
 
-  // 1. Profit by month — Grouped Bar (Gross vs Net)
   const profitByMonthChartData = stats ? (() => {
     const entries = Object.entries(stats.profitByMonth || {})
       .sort(([a], [b]) => a.localeCompare(b));
@@ -113,7 +128,6 @@ const PhoneDashboard = () => {
     };
   })() : null;
 
-  // 2. Net profit by product — Horizontal Bar
   const profitByProductChartData = stats ? (() => {
     const entries = Object.entries(stats.profitByProduct || {})
       .sort(([, a], [, b]) => b.net - a.net);
@@ -131,7 +145,6 @@ const PhoneDashboard = () => {
     };
   })() : null;
 
-  // 3. Deal status — Doughnut
   const statusChartData = stats ? {
     labels: ["Complete", "Payment Pending", "Unsold"],
     datasets: [{
@@ -141,15 +154,14 @@ const PhoneDashboard = () => {
         stats.summary.statusCounts.unsold,
       ],
       backgroundColor: [
-        "rgba(16,  185, 129, 0.7)",  // emerald — complete
-        "rgba(245, 158, 11,  0.7)",  // amber   — pending
-        "rgba(148, 163, 184, 0.7)",  // slate   — unsold
+        "rgba(16,  185, 129, 0.7)",
+        "rgba(245, 158, 11,  0.7)",
+        "rgba(148, 163, 184, 0.7)",
       ],
       borderWidth: 1,
     }],
   } : null;
 
-  // 4. Cashback by card — Bar
   const cashbackByCardChartData = stats ? (() => {
     const entries = Object.entries(stats.cashbackByCard || {});
     const colors = getColors(entries.length);
@@ -176,10 +188,7 @@ const PhoneDashboard = () => {
     },
     scales: {
       y: {
-        ticks: {
-          callback: (v) => `₹${(v / 1000).toFixed(0)}k`,
-          font: { size: 11 },
-        },
+        ticks: { callback: (v) => `₹${(v / 1000).toFixed(0)}k`, font: { size: 11 } },
         grid: { color: "rgba(0,0,0,0.05)" },
       },
       x: { ticks: { font: { size: 11 } } },
@@ -199,10 +208,7 @@ const PhoneDashboard = () => {
     },
     scales: {
       x: {
-        ticks: {
-          callback: (v) => `₹${(v / 1000).toFixed(0)}k`,
-          font: { size: 11 },
-        },
+        ticks: { callback: (v) => `₹${(v / 1000).toFixed(0)}k`, font: { size: 11 } },
         grid: { color: "rgba(0,0,0,0.05)" },
       },
       y: { ticks: { font: { size: 11 } } },
@@ -233,10 +239,7 @@ const PhoneDashboard = () => {
     },
     scales: {
       y: {
-        ticks: {
-          callback: (v) => `₹${(v / 1000).toFixed(1)}k`,
-          font: { size: 11 },
-        },
+        ticks: { callback: (v) => `₹${(v / 1000).toFixed(1)}k`, font: { size: 11 } },
         grid: { color: "rgba(0,0,0,0.05)" },
       },
       x: { ticks: { font: { size: 11 } } },
@@ -248,13 +251,15 @@ const PhoneDashboard = () => {
 
   return (
     <div>
+      {loading && <FullScreenSpinner message="Loading analytics…" />}
+
       {/* Header + period filter */}
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Dashboard</h2>
           <p className="text-sm text-slate-400">Business analytics at a glance</p>
         </div>
-        <div className="flex bg-slate-100 rounded-lg p-1 gap-1">
+        <div className="flex bg-slate-100 rounded-lg p-1 gap-1 flex-wrap">
           {PERIOD_OPTIONS.map((o) => (
             <button
               key={o.value}
@@ -270,18 +275,57 @@ const PhoneDashboard = () => {
         </div>
       </div>
 
-      {loading ? (
-        <div className="text-center py-24 text-slate-400">Loading analytics…</div>
-      ) : error ? (
+      {/* ── Custom date range picker ───────────────────────────────── */}
+      {period === "custom" && (
+        <div className="flex flex-wrap items-end gap-3 mb-5 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">From</label>
+            <input
+              type="date"
+              value={customFrom}
+              onChange={(e) => setCustomFrom(e.target.value)}
+              className="border border-indigo-200 rounded-lg px-3 py-1.5 text-sm bg-white
+                focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">To</label>
+            <input
+              type="date"
+              value={customTo}
+              onChange={(e) => setCustomTo(e.target.value)}
+              className="border border-indigo-200 rounded-lg px-3 py-1.5 text-sm bg-white
+                focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+          </div>
+          <button
+            onClick={fetchStats}
+            disabled={!customFrom && !customTo}
+            className="px-4 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 text-white
+              hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            Apply
+          </button>
+          <button
+            onClick={() => { setCustomFrom(""); setCustomTo(""); }}
+            className="text-xs text-rose-400 hover:text-rose-600 px-2 py-1.5 rounded hover:bg-rose-50 transition-colors"
+          >
+            ✕ Clear
+          </button>
+          <p className="text-xs text-indigo-400 self-end pb-1.5">Filters by purchase date</p>
+        </div>
+      )}
+
+      {error ? (
         <div className="text-center py-24 text-rose-400">{error}</div>
-      ) : !stats ? null : (
+      ) : !stats && !loading ? null : stats && (
         <div className="space-y-5">
 
           {/* ── Summary cards row 1 ──────────────────────────────── */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card label="Total Deals"      value={stats.summary.totalDeals}              accent="slate" />
-            <Card label="Total Invested"   value={INR(stats.summary.totalBuyingCost)}    accent="indigo" />
-            <Card label="Total Revenue"    value={INR(stats.summary.totalRevenue)}        accent="indigo" />
+            <Card label="Total Purchase"   value={INR(stats.summary.totalBuyingCost)}    accent="indigo" />
+            <Card label="Total Sales"    value={INR(stats.summary.totalRevenue)}        accent="indigo" />
             <Card label="Pending Collect"  value={INR(stats.summary.totalPending)}        accent="amber"
               sub={stats.summary.statusCounts.pending_payment + " deals pending"} />
           </div>
@@ -305,13 +349,11 @@ const PhoneDashboard = () => {
 
           {/* ── Profit by product + status side by side ──────────── */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
             {profitByProductChartData?.labels?.length > 0 && (
               <Section title="Net Profit by Product" height="h-64">
                 <Bar data={profitByProductChartData} options={horizontalBarOptions} />
               </Section>
             )}
-
             {statusChartData && stats.summary.totalDeals > 0 && (
               <Section title="Deal Status" height="h-64">
                 <Doughnut data={statusChartData} options={doughnutOptions} />
@@ -334,7 +376,6 @@ const PhoneDashboard = () => {
               <p className="text-sm mt-1">Charts will appear once you have sold deals</p>
             </div>
           )}
-
         </div>
       )}
     </div>

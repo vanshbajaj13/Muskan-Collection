@@ -5,10 +5,12 @@ import DropdownManager from "./DropdownManager";
 import ExpenseTracker from "./ExpenseTracker";
 import PhoneDashboard from "./PhoneDashboard";
 import MenuBtn from "../MenuBtn";
+import PhoneSalesReport from "./PhoneSalesReport";
 
 const TABS = [
   { key: "deals",     label: "📱 Deals",     component: <PhoneDeals /> },
   { key: "dashboard", label: "📊 Dashboard", component: <PhoneDashboard /> },
+  { key: "report", label: "📋 Report", component: <PhoneSalesReport /> },
   { key: "expenses",  label: "💳 Expenses",  component: <ExpenseTracker /> },
   { key: "dropdowns", label: "⚙️ Options",   component: <DropdownManager /> },
 ];

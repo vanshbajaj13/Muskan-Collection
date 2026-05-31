@@ -66,6 +66,7 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
       setConfirmDelete(false);
     }
   };
+  
 
   return (
     <>
@@ -150,7 +151,7 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-sm mb-4">
               {/* Purchase */}
               <Row label="Credit Card" value={deal.creditCard || "—"} />
-              <Row label="On EMI" value={deal.onEmi ? "Yes" : "No"} />
+              <Row label="With GST" value={deal.withGST ? "Yes" : "No"} />
               <Row
                 label="Cashback"
                 value={
@@ -339,7 +340,7 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
               </Btn>
               <Btn
                 variant="ghost"
-                className="text-xs py-1.5 text-rose-400 hover:bg-rose-50"
+                className="text-xs py-1.5 border border-slate-200 text-red-400 hover:text-white hover:bg-red-400"
                 onClick={() => setConfirmDelete(true)}
               >
                 Delete

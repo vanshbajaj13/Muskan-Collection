@@ -258,7 +258,7 @@ router.get("/meta/export", protect, protectVansh, async (req, res) => {
       d.cashbackDate ? new Date(d.cashbackDate).toLocaleDateString("en-IN") : "",
       d.charges || 0,
       d.chargesDescription || "",
-      d.onEmi ? "Yes" : "No",
+      d.withGST ? "Yes" : "No",
       d.commissionAmount || 0,
       d.commissionTo || "",
       d.soldTo || "",

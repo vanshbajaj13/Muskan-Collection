@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { usePhone } from "./PhoneContext";
 import DealCard from "./DealCard";
 import DealForm from "./DealForm";
-import { Modal, Btn, Toast } from "./PhoneUI";
+import { Modal, Btn, Toast, FullScreenSpinner } from "./PhoneUI";
 
 const STATUS_OPTS = [
   { value: "all",             label: "All Deals" },
@@ -23,6 +23,11 @@ const PhoneDeals = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
 
+  // Custom date range
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [showDateRange, setShowDateRange] = useState(false);
+
   // Modals
   const [showAdd, setShowAdd] = useState(false);
   const [editDeal, setEditDeal] = useState(null);
@@ -37,6 +42,8 @@ const PhoneDeals = () => {
     try {
       const params = {};
       if (statusFilter !== "all") params.status = statusFilter;
+      if (dateFrom) params.from = new Date(dateFrom).getTime();
+      if (dateTo)   params.to   = new Date(dateTo).setHours(23, 59, 59, 999);
       const data = await getDeals(params);
       setDeals(data.deals || []);
     } catch (e) {
@@ -44,7 +51,7 @@ const PhoneDeals = () => {
     } finally {
       setLoading(false);
     }
-  }, [getDeals, statusFilter]);
+  }, [getDeals, statusFilter, dateFrom, dateTo]);
 
   useEffect(() => { fetchDeals(); }, [fetchDeals]);
 
@@ -82,6 +89,11 @@ const PhoneDeals = () => {
     fetchDeals();
   };
 
+  const clearDateRange = () => {
+    setDateFrom("");
+    setDateTo("");
+  };
+
   // Client-side search filter
   const visible = deals.filter((d) => {
     if (!search) return true;
@@ -106,8 +118,13 @@ const PhoneDeals = () => {
     { buying: 0, net: 0, gross: 0, pending: 0 }
   );
 
+  const hasDateFilter = dateFrom || dateTo;
+
   return (
     <div className="relative">
+      {/* Full-screen spinner for save/delete ops */}
+      {saving && <FullScreenSpinner message="Saving deal…" />}
+
       {/* Toast */}
       {toast && (
         <div className="fixed top-4 right-4 z-50">
@@ -140,7 +157,7 @@ const PhoneDeals = () => {
       </div>
 
       {/* ── Filters ───────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-3 mb-4">
+      <div className="flex flex-wrap gap-3 mb-3">
         {/* Status tabs */}
         <div className="flex bg-slate-100 rounded-lg p-1 gap-1">
           {STATUS_OPTS.map((o) => (
@@ -166,6 +183,17 @@ const PhoneDeals = () => {
             focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
 
+        {/* Date range toggle */}
+        <button
+          onClick={() => setShowDateRange((v) => !v)}
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+            ${hasDateFilter
+              ? "bg-indigo-600 text-white border-indigo-600"
+              : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+        >
+          📅 {hasDateFilter ? "Date filter ON" : "Date Range"}
+        </button>
+
         {/* Export CSV */}
         <a
           href={`/api/phones/deals/meta/export`}
@@ -176,6 +204,43 @@ const PhoneDeals = () => {
           ↓ Export CSV
         </a>
       </div>
+
+      {/* ── Date range picker ─────────────────────────────────────── */}
+      {showDateRange && (
+        <div className="flex flex-wrap items-end gap-3 mb-4 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">From</label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="border border-indigo-200 rounded-lg px-3 py-1.5 text-sm bg-white
+                focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">To</label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="border border-indigo-200 rounded-lg px-3 py-1.5 text-sm bg-white
+                focus:outline-none focus:ring-2 focus:ring-indigo-400"
+            />
+          </div>
+          {hasDateFilter && (
+            <button
+              onClick={clearDateRange}
+              className="text-xs text-rose-400 hover:text-rose-600 px-2 py-1.5 rounded hover:bg-rose-50 transition-colors"
+            >
+              ✕ Clear
+            </button>
+          )}
+          <p className="text-xs text-indigo-400 self-end pb-1.5">
+            Filters by purchase date
+          </p>
+        </div>
+      )}
 
       {/* ── Summary strip ─────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
@@ -196,7 +261,9 @@ const PhoneDeals = () => {
           <p className="text-4xl mb-3">📱</p>
           <p className="font-medium text-slate-500">No deals found</p>
           <p className="text-sm mt-1">
-            {search ? "Try a different search term" : "Click '+ New Deal' to add your first deal"}
+            {search || hasDateFilter
+              ? "Try adjusting your filters"
+              : "Click '+ New Deal' to add your first deal"}
           </p>
         </div>
       ) : (
