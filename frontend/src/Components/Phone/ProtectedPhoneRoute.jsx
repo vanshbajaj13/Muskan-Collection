@@ -13,7 +13,7 @@ const ProtectedPhoneRoute = ({ children }) => {
   const [userRole] = useUserRole();
     console.log(userRole);
     
-  const allowed = ["vansh", "dev"];
+  const allowed = ["vansh"];
   const isLoading = userRole === "loading";
   if (isLoading) {
     return (

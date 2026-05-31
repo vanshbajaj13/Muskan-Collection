@@ -1,5 +1,32 @@
 import React from "react";
 
+// ── Spinner ──────────────────────────────────────────────────────────────
+export const Spinner = ({ size = 18 }) => {
+  const spinnerStyle = {
+    border: `${Math.max(2, size / 8)}px solid #e2e8f0`,
+    borderTop: `${Math.max(2, size / 8)}px solid #4f46e5`,
+    borderRadius: "50%",
+    width: `${size}px`,
+    height: `${size}px`,
+    animation: "spin 0.8s linear infinite",
+  };
+
+  return (
+    <>
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+
+      <div style={spinnerStyle} />
+    </>
+  );
+};
+
 // ── Status badge ──────────────────────────────────────────────────────────────
 export const StatusBadge = ({ status }) => {
   const config = {
@@ -156,21 +183,158 @@ export const Toast = ({ message, type = "success", onClose }) => {
 };
 
 // ── Confirm delete modal ──────────────────────────────────────────────────────
-export const ConfirmModal = ({ title, body, onConfirm, onCancel, loading }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
-    style={{ backgroundColor: "rgba(0,0,0,0.45)" }}>
-    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-      <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mx-auto mb-4">
-        <span className="text-rose-500 text-xl">⚠</span>
-      </div>
-      <h3 className="text-center font-semibold text-slate-800 mb-2">{title}</h3>
-      {body && <p className="text-center text-sm text-slate-500 mb-5">{body}</p>}
-      <div className="flex gap-3">
-        <Btn variant="secondary" className="flex-1" onClick={onCancel} disabled={loading}>Cancel</Btn>
-        <Btn variant="danger" className="flex-1" onClick={onConfirm} disabled={loading}>
-          {loading ? "Deleting…" : "Delete"}
-        </Btn>
+export const ConfirmModal = ({
+  title,
+  body,
+  onConfirm,
+  onCancel,
+  loading,
+  confirmTextRequired = false,
+}) => {
+  const [confirmText, setConfirmText] = React.useState("");
+
+  const canProceed = !confirmTextRequired || confirmText === "CONFIRM";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mx-auto mb-4">
+          <span className="text-rose-500 text-xl">⚠</span>
+        </div>
+
+        <h3 className="text-center font-semibold text-slate-800 mb-2">
+          {title}
+        </h3>
+
+        {body && (
+          <p className="text-center text-sm text-slate-500 mb-5">
+            {body}
+          </p>
+        )}
+
+        {confirmTextRequired && (
+          <div className="mb-5">
+
+            <Input
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value.toUpperCase())}
+              placeholder="CONFIRM"
+              className="text-center uppercase tracking-wide font-medium"
+            />
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <Btn
+            variant="secondary"
+            className="flex-1"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            Cancel
+          </Btn>
+
+          <Btn
+            variant="danger"
+            className="flex-1"
+            onClick={onConfirm}
+            disabled={loading || !canProceed}
+          >
+            {loading ? "Processing..." : "Confirm"}
+          </Btn>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
+
+// Confirm Rename Model
+export const RenameConfirmModal = ({
+  oldValue,
+  newValue,
+  onConfirm,
+  onCancel,
+  loading,
+}) => {
+  const [confirmation, setConfirmation] = React.useState("");
+
+  const canProceed =
+    confirmation.trim() === newValue.trim();
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+    >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+          <span className="text-amber-600 text-xl">
+            ✏️
+          </span>
+        </div>
+
+        <h3 className="text-center font-semibold text-slate-800 mb-2">
+          Confirm Rename
+        </h3>
+
+        <div className="text-sm text-slate-600 mb-4 text-center">
+
+          <p className="mt-2">
+            <span className="font-medium text-rose-500">
+              {oldValue}
+            </span>
+          </p>
+
+          <p className="text-center font-extrabold text-xl">↓</p>
+
+          <p>
+            <span className="font-medium text-emerald-600">
+              {newValue}
+            </span>
+          </p>
+        </div>
+
+        <div className="mb-5">
+          <p className="text-xs text-slate-500 mb-2">
+            Type the new value exactly to confirm:
+          </p>
+
+          <Input
+            value={confirmation}
+            onChange={(e) =>
+              setConfirmation(e.target.value)
+            }
+            placeholder={newValue}
+            autoFocus
+            className="text-center tracking-wide font-medium"
+          />
+        </div>
+
+        <div className="flex gap-3">
+          <Btn
+            variant="secondary"
+            className="flex-1"
+            onClick={onCancel}
+            disabled={loading}
+          >
+            Cancel
+          </Btn>
+
+          <Btn
+            variant="primary"
+            className="flex-1"
+            onClick={onConfirm}
+            disabled={!canProceed || loading}
+          >
+            {loading
+              ? "Renaming..."
+              : "Confirm Rename"}
+          </Btn>
+        </div>
+      </div>
+    </div>
+  );
+};

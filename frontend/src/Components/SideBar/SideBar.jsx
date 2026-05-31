@@ -69,12 +69,12 @@ const SideBar = () => {
               Dashboard
             </a>
           )}
-          {(userRole === "vansh" || userRole === "dev") && (
+          {(userRole === "vansh" ) && (
             <a
               href="/vansh"
-              className="...same className as other menu items..."
+              className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
             >
-              📱 Vansh
+              Vansh
             </a>
           )}
           {(isAdmin || isDev) && (

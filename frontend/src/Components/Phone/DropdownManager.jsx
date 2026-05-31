@@ -1,18 +1,49 @@
 import React, { useState } from "react";
 import { usePhone } from "./PhoneContext";
-import { Btn, Input, Toast } from "./PhoneUI";
+import { Btn, Input, Toast, ConfirmModal,RenameConfirmModal, Spinner } from "./PhoneUI";
 
 const TYPES = [
-  { key: "product",       label: "Products",         icon: "📱", hint: "Phone models you buy/sell" },
-  { key: "purchasedFrom", label: "Purchased From",   icon: "🏪", hint: "Shops / platforms (Amazon, Flipkart…)" },
-  { key: "account",       label: "Accounts",         icon: "👤", hint: "Whose account was used" },
-  { key: "soldTo",        label: "Sold To",          icon: "🤝", hint: "Buyers you sell to" },
-  { key: "commissionTo",  label: "Commission To",    icon: "💰", hint: "People you pay commission" },
-  { key: "card",          label: "Credit Cards",     icon: "💳", hint: "Cards used for purchases" },
+  {
+    key: "product",
+    label: "Products",
+    icon: "📱",
+    hint: "Phone models you buy/sell",
+  },
+  {
+    key: "purchasedFrom",
+    label: "Purchased From",
+    icon: "🏪",
+    hint: "Shops / platforms (Amazon, Flipkart…)",
+  },
+  {
+    key: "account",
+    label: "Accounts",
+    icon: "👤",
+    hint: "Whose account was used",
+  },
+  { key: "soldTo", label: "Sold To", icon: "🤝", hint: "Buyers you sell to" },
+  {
+    key: "commissionTo",
+    label: "Commission To",
+    icon: "💰",
+    hint: "People you pay commission",
+  },
+  {
+    key: "card",
+    label: "Credit Cards",
+    icon: "💳",
+    hint: "Cards used for purchases",
+  },
 ];
 
 const DropdownManager = () => {
-  const { dropdowns, loadingDropdowns, addDropdown, renameDropdown, deleteDropdown } = usePhone();
+  const {
+    dropdowns,
+    loadingDropdowns,
+    addDropdown,
+    renameDropdown,
+    deleteDropdown,
+  } = usePhone();
   const [activeType, setActiveType] = useState("product");
   const [newValue, setNewValue] = useState("");
   const [adding, setAdding] = useState(false);
@@ -21,6 +52,8 @@ const DropdownManager = () => {
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [toast, setToast] = useState(null);
+  const [confirmModal, setConfirmModal] = useState(null);
+  const [renameModal, setRenameModal] = useState(null);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -50,6 +83,14 @@ const DropdownManager = () => {
     setEditValue(opt.value);
   };
 
+  const confirmRename = (id, oldValue, newValue) => {
+    setRenameModal({
+      id,
+      oldValue,
+      newValue,
+    });
+  };
+
   const handleRename = async (id) => {
     if (!editValue.trim()) return;
     setSavingEdit(true);
@@ -64,31 +105,74 @@ const DropdownManager = () => {
     }
   };
 
-  const handleDelete = async (id, value) => {
-    if (!window.confirm(`Deactivate "${value}"? It won't appear in future forms but existing records are kept.`)) return;
-    setDeletingId(id);
-    try {
-      await deleteDropdown(id);
-      showToast(`"${value}" deactivated`);
-    } catch {
-      showToast("Failed to delete", "error");
-    } finally {
-      setDeletingId(null);
-    }
+  const handleDelete = (id, value) => {
+    setConfirmModal({ id, value });
   };
 
   return (
     <div className="relative">
+      {confirmModal && (
+        <ConfirmModal
+          title="Deactivate Option"
+          body={`Type CONFIRM to deactivate "${confirmModal.value}". Existing records will remain unchanged.`}
+          confirmTextRequired={true}
+          loading={deletingId === confirmModal.id}
+          onCancel={() => setConfirmModal(null)}
+          onConfirm={async () => {
+            setDeletingId(confirmModal.id);
+
+            try {
+              await deleteDropdown(confirmModal.id);
+              showToast(`"${confirmModal.value}" deactivated`);
+            } catch {
+              showToast("Failed to delete", "error");
+            } finally {
+              setDeletingId(null);
+              setConfirmModal(null);
+            }
+          }}
+        />
+      )}
+
+      {renameModal && (
+        <RenameConfirmModal
+          oldValue={renameModal.oldValue}
+          newValue={renameModal.newValue}
+          loading={savingEdit}
+          onCancel={() => setRenameModal(null)}
+          onConfirm={async () => {
+            setSavingEdit(true);
+
+            try {
+              await renameDropdown(renameModal.id, renameModal.newValue);
+
+              showToast("Renamed & updated in all records ✓");
+
+              setEditingId(null);
+              setRenameModal(null);
+            } catch {
+              showToast("Failed to rename", "error");
+            } finally {
+              setSavingEdit(false);
+            }
+          }}
+        />
+      )}
       {toast && (
         <div className="fixed top-4 right-4 z-50">
-          <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
         </div>
       )}
 
       <div className="mb-5">
         <h2 className="text-xl font-bold text-slate-800">Dropdown Options</h2>
         <p className="text-sm text-slate-400 mt-0.5">
-          Manage options for all dropdowns. Renaming updates every existing record automatically.
+          Manage options for all dropdowns. Renaming updates every existing
+          record automatically.
         </p>
       </div>
 
@@ -103,17 +187,22 @@ const DropdownManager = () => {
                   key={t.key}
                   onClick={() => setActiveType(t.key)}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-slate-100 last:border-0
-                    ${activeType === t.key
-                      ? "bg-indigo-50 border-l-2 border-l-indigo-500"
-                      : "hover:bg-slate-50"
+                    ${
+                      activeType === t.key
+                        ? "bg-indigo-50 border-l-2 border-l-indigo-500"
+                        : "hover:bg-slate-50"
                     }`}
                 >
                   <span className="text-lg">{t.icon}</span>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium truncate ${activeType === t.key ? "text-indigo-700" : "text-slate-700"}`}>
+                    <p
+                      className={`text-sm font-medium truncate ${activeType === t.key ? "text-indigo-700" : "text-slate-700"}`}
+                    >
                       {t.label}
                     </p>
-                    <p className="text-xs text-slate-400">{count} option{count !== 1 ? "s" : ""}</p>
+                    <p className="text-xs text-slate-400">
+                      {count} option{count !== 1 ? "s" : ""}
+                    </p>
                   </div>
                 </button>
               );
@@ -129,8 +218,12 @@ const DropdownManager = () => {
               <div className="flex items-center gap-2">
                 <span className="text-xl">{activeTypeMeta?.icon}</span>
                 <div>
-                  <h3 className="font-semibold text-slate-800">{activeTypeMeta?.label}</h3>
-                  <p className="text-xs text-slate-400">{activeTypeMeta?.hint}</p>
+                  <h3 className="font-semibold text-slate-800">
+                    {activeTypeMeta?.label}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {activeTypeMeta?.hint}
+                  </p>
                 </div>
               </div>
             </div>
@@ -145,25 +238,36 @@ const DropdownManager = () => {
                     onChange={(e) => setNewValue(e.target.value)}
                   />
                 </div>
-                <Btn type="submit" variant="primary" disabled={adding || !newValue.trim()}>
-                  {adding ? "Adding…" : "+ Add"}
+                <Btn
+                  type="submit"
+                  variant="primary"
+                  disabled={adding || !newValue.trim()}
+                >
+                  {adding ? <Spinner size={16} /> : "+ Add"}
                 </Btn>
               </form>
             </div>
 
             {/* Options list */}
             {loadingDropdowns ? (
-              <div className="text-center py-10 text-slate-400 text-sm">Loading…</div>
+              <div className="text-center py-10 text-slate-400 text-sm">
+                <Spinner size={16} />
+              </div>
             ) : activeOptions.length === 0 ? (
               <div className="text-center py-10 text-slate-400">
                 <p className="text-3xl mb-2">{activeTypeMeta?.icon}</p>
-                <p className="text-sm font-medium text-slate-500">No options yet</p>
+                <p className="text-sm font-medium text-slate-500">
+                  No options yet
+                </p>
                 <p className="text-xs mt-1">Add your first one above</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
                 {activeOptions.map((opt) => (
-                  <div key={opt._id} className="flex items-center gap-3 px-5 py-3">
+                  <div
+                    key={opt._id}
+                    className="flex items-center gap-3 px-5 py-3"
+                  >
                     {editingId === opt._id ? (
                       /* Edit mode */
                       <div className="flex-1 flex gap-2">
@@ -180,10 +284,16 @@ const DropdownManager = () => {
                         <Btn
                           variant="primary"
                           className="text-xs py-1.5 px-3"
-                          onClick={() => handleRename(opt._id)}
-                          disabled={savingEdit}
+                          onClick={() =>
+                            confirmRename(opt._id, opt.value, editValue.trim())
+                          }
+                          disabled={
+                            savingEdit ||
+                            !editValue.trim() ||
+                            editValue.trim() === opt.value
+                          }
                         >
-                          {savingEdit ? "Saving…" : "Save"}
+                          Save
                         </Btn>
                         <Btn
                           variant="secondary"
@@ -196,7 +306,9 @@ const DropdownManager = () => {
                     ) : (
                       /* View mode */
                       <>
-                        <span className="flex-1 text-sm text-slate-700 font-medium">{opt.value}</span>
+                        <span className="flex-1 text-sm text-slate-700 font-medium">
+                          {opt.value}
+                        </span>
                         <button
                           onClick={() => startEdit(opt)}
                           className="text-xs text-slate-400 hover:text-indigo-600 transition-colors px-2 py-1 rounded hover:bg-indigo-50"
@@ -210,7 +322,7 @@ const DropdownManager = () => {
                           className="text-xs text-slate-300 hover:text-rose-400 transition-colors px-2 py-1 rounded hover:bg-rose-50"
                           title="Deactivate"
                         >
-                          {deletingId === opt._id ? "…" : "✕"}
+                          {deletingId === opt._id ? <Spinner size={16} /> : "✕"}
                         </button>
                       </>
                     )}
@@ -222,9 +334,12 @@ const DropdownManager = () => {
 
           {/* Info box */}
           <div className="mt-3 bg-amber-50 border border-amber-100 rounded-lg px-4 py-3 text-xs text-amber-700">
-            <strong>Rename = auto-update:</strong> Renaming any option will automatically update it in every existing deal and expense record. No manual work needed.
+            <strong>Rename = auto-update:</strong> Renaming any option will
+            automatically update it in every existing deal and expense record.
+            No manual work needed.
             <br />
-            <strong>Deactivate:</strong> Removes from future dropdowns but keeps existing records intact.
+            <strong>Deactivate:</strong> Removes from future dropdowns but keeps
+            existing records intact.
           </div>
         </div>
       </div>

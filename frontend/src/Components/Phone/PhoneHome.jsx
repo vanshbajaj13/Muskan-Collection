@@ -4,6 +4,7 @@ import PhoneDeals from "./PhoneDeals";
 import DropdownManager from "./DropdownManager";
 import ExpenseTracker from "./ExpenseTracker";
 import PhoneDashboard from "./PhoneDashboard";
+import MenuBtn from "../MenuBtn";
 
 const TABS = [
   { key: "deals",     label: "📱 Deals",     component: <PhoneDeals /> },
@@ -25,11 +26,12 @@ const PhoneHome = () => {
           <div className="max-w-6xl mx-auto px-4">
             {/* Title row */}
             <div className="flex items-center gap-3 py-3 border-b border-slate-100">
-              <span className="text-2xl">📱</span>
+              <span className="text-2xl"></span>
               <div>
                 <h1 className="font-bold text-slate-800 text-base leading-tight">Vansh Phones</h1>
                 <p className="text-xs text-slate-400">Phone resale tracker</p>
               </div>
+              <MenuBtn></MenuBtn>
             </div>
 
             {/* Tabs */}
