@@ -17,6 +17,12 @@ const path = require("path");
 const verification = require("./routes/verification");
 const salesReport = require("./routes/salesReport");
 
+// phones
+const phoneDeals = require("./routes/phone/phoneDeals");
+const phoneExpenses = require("./routes/phone/personalExpenses");
+const phoneDropdowns = require("./routes/phone/phoneDropdowns");
+
+
 dotenv.config();
 
 const app = express();
@@ -42,6 +48,11 @@ app.use("/signup", signup);
 app.use("/api/role", role);
 app.use("/api/verification", verification);
 app.use("/api/salesreport", salesReport);
+
+// phones
+app.use("/api/phones/deals", phoneDeals);
+app.use("/api/phones/expenses", phoneExpenses);
+app.use("/api/phones/dropdowns", phoneDropdowns);
 
 __dirname = path.resolve();
 
