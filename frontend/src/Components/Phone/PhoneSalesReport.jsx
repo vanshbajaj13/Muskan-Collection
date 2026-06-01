@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import PhoneFilters from "./PhoneFilters";
 
 // Soft palette for "sold to" groups — cycles through by index
 const BUYER_COLORS = [
@@ -16,13 +17,32 @@ const DIRECT_STYLE = {
   bg: "bg-white", border: "border-l-gray-300", header: "bg-gray-50", label: "text-gray-500",
 };
 
+// Filter keys for the report tab (no search, no status — report shows all)
+const INITIAL_FILTERS = {
+  dateFrom: "",
+  dateTo: "",
+  product: "",
+  account: "",
+  purchasedFrom: "",
+  soldTo: "",
+  creditCard: "",
+  commissionTo: "",
+  withGST: "",
+  hasCashback: "",
+  hasCommission: "",
+};
+
 const PhoneSalesReport = () => {
   const today        = new Date();
   const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const toDateString = (d) => d.toISOString().split("T")[0];
 
-  const [fromDate, setFromDate] = useState(toDateString(firstOfMonth));
-  const [toDate,   setToDate]   = useState(toDateString(today));
+  // Seed dateFrom / dateTo from the filter object
+  const [filters, setFilters] = useState({
+    ...INITIAL_FILTERS,
+    dateFrom: toDateString(firstOfMonth),
+    dateTo: toDateString(today),
+  });
 
   // Column visibility toggles
   const [showAccount,    setShowAccount]    = useState(false);
@@ -33,31 +53,32 @@ const PhoneSalesReport = () => {
   const [showProfit,     setShowProfit]     = useState(false);
   const [showStatus,     setShowStatus]     = useState(false);
 
-  const [deals,   setDeals]   = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [fetched, setFetched] = useState(false);
-  const [error,   setError]   = useState("");
+  const [allDeals, setAllDeals] = useState([]);  // raw fetched deals
+  const [loading,  setLoading]  = useState(false);
+  const [fetched,  setFetched]  = useState(false);
+  const [error,    setError]    = useState("");
 
   const token = () =>
     JSON.parse(window.localStorage.getItem("userInfo")).token;
 
-  // ── Fetch ────────────────────────────────────────────────────────────────
+  // ── Fetch (date range only — server side) ────────────────────────────────
   const handleFetch = async () => {
-    if (!fromDate || !toDate) { setError("Please select both dates."); return; }
-    if (new Date(fromDate) > new Date(toDate)) {
+    const { dateFrom, dateTo } = filters;
+    if (!dateFrom || !dateTo) { setError("Please select both dates."); return; }
+    if (new Date(dateFrom) > new Date(dateTo)) {
       setError("From date cannot be after To date."); return;
     }
     setError("");
     setLoading(true);
     try {
-      const from = new Date(fromDate).setHours(0, 0, 0, 0);
-      const to   = new Date(toDate).setHours(23, 59, 59, 999);
+      const from = new Date(dateFrom).setHours(0, 0, 0, 0);
+      const to   = new Date(dateTo).setHours(23, 59, 59, 999);
       const res  = await fetch(`/api/phones/deals?from=${from}&to=${to}`, {
         headers: { Authorization: `Bearer ${token()}` },
       });
       if (!res.ok) throw new Error("Failed to fetch report");
       const data = await res.json();
-      setDeals(data.deals || []);
+      setAllDeals(data.deals || []);
       setFetched(true);
     } catch (err) {
       setError(err.message || "Something went wrong.");
@@ -68,22 +89,34 @@ const PhoneSalesReport = () => {
 
   const handlePrint = () => window.print();
 
-  // ── Aggregates ────────────────────────────────────────────────────────────
-  const totalBuying     = deals.reduce((s, d) => s + (d.buyingPrice || 0), 0);
-  const totalSelling    = deals.reduce((s, d) => s + (d.sellingPrice || d.effectiveSellingPrice || 0), 0);
-  const totalGrossProfit = deals.reduce((s, d) => s + (d.grossProfit || 0), 0);
-  const totalNetProfit  = deals.reduce((s, d) => s + (d.netProfit   || 0), 0);
-  const totalCashback   = deals.reduce((s, d) => s + (d.cashback    || 0), 0);
-  const totalCommission = deals.reduce((s, d) => s + (d.commissionAmount || 0), 0);
-  // eslint-disable-next-line
-  const totalCharges    = deals.reduce((s, d) => s + (d.charges     || 0), 0);
+  // ── Client-side filter application ───────────────────────────────────────
+  const deals = allDeals.filter((d) => {
+    if (filters.product && d.product !== filters.product) return false;
+    if (filters.account && d.purchaseAccount !== filters.account) return false;
+    if (filters.purchasedFrom && d.purchasedFrom !== filters.purchasedFrom) return false;
+    if (filters.soldTo && d.soldTo !== filters.soldTo) return false;
+    if (filters.creditCard && d.creditCard !== filters.creditCard) return false;
+    if (filters.commissionTo && d.commissionTo !== filters.commissionTo) return false;
+    if (filters.withGST === "true" && !d.withGST) return false;
+    if (filters.withGST === "false" && d.withGST) return false;
+    if (filters.hasCashback === "yes" && !(d.cashback > 0)) return false;
+    if (filters.hasCashback === "no" && d.cashback > 0) return false;
+    if (filters.hasCommission === "yes" && !(d.commissionAmount > 0)) return false;
+    if (filters.hasCommission === "no" && d.commissionAmount > 0) return false;
+    return true;
+  });
 
-  // ── Group by sale date (or purchase date for unsold), then by buyer ──────
-  //
-  // For sold deals we group by saleDate; for unsold we group by purchaseDate.
-  // Within a day, deals are grouped by soldTo (buyer).
-  // Deals with no buyer ("unsold" / empty soldTo) each become their own row.
-  //
+  // ── Aggregates ────────────────────────────────────────────────────────────
+  const totalBuying      = deals.reduce((s, d) => s + (d.buyingPrice || 0), 0);
+  const totalSelling     = deals.reduce((s, d) => s + (d.sellingPrice || d.effectiveSellingPrice || 0), 0);
+  const totalGrossProfit = deals.reduce((s, d) => s + (d.grossProfit || 0), 0);
+  const totalNetProfit   = deals.reduce((s, d) => s + (d.netProfit   || 0), 0);
+  const totalCashback    = deals.reduce((s, d) => s + (d.cashback    || 0), 0);
+  const totalCommission  = deals.reduce((s, d) => s + (d.commissionAmount || 0), 0);
+  // eslint-disable-next-line
+  const totalCharges     = deals.reduce((s, d) => s + (d.charges     || 0), 0);
+
+  // ── Group by sale/purchase date, then by buyer ────────────────────────────
   const getGroupDate = (deal) => {
     const ts = deal.saleDate || deal.purchaseDate;
     return ts ? new Date(ts).toLocaleDateString("en-IN") : "Unknown Date";
@@ -92,33 +125,22 @@ const PhoneSalesReport = () => {
   const buildDayGroups = (daySales) => {
     const buyerOrder = [];
     const buyerMap   = {};
-
     daySales.forEach((deal) => {
-      const key = deal.soldTo
-        ? String(deal.soldTo)
-        : `direct_${deal._id}`;
-
+      const key = deal.soldTo ? String(deal.soldTo) : `direct_${deal._id}`;
       if (!buyerMap[key]) {
         buyerMap[key] = { buyer: deal.soldTo || null, deals: [] };
         buyerOrder.push(key);
       }
       buyerMap[key].deals.push(deal);
     });
-
     let colorCounter = 0;
     return buyerOrder.map((key) => {
       const group   = buyerMap[key];
       const isDirect = !group.buyer;
-      return {
-        ...group,
-        key,
-        isDirect,
-        colorIdx: isDirect ? null : (colorCounter++) % BUYER_COLORS.length,
-      };
+      return { ...group, key, isDirect, colorIdx: isDirect ? null : (colorCounter++) % BUYER_COLORS.length };
     });
   };
 
-  // Group all deals by their display date
   const grouped = deals.reduce((acc, deal) => {
     const date = getGroupDate(deal);
     if (!acc[date]) acc[date] = [];
@@ -130,54 +152,28 @@ const PhoneSalesReport = () => {
   );
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  // eslint-disable-next-line
-  const fmt = (n) => (n === null || n === undefined || n === "") ? "—" : `₹${Number(n).toLocaleString("en-IN")}`;
-  // eslint-disable-next-line
-  const fmtProfit = (n) => {
-    if (n === null || n === undefined) return "—";
-    const sign = n >= 0 ? "+" : "";
-    return `${sign}₹${Math.abs(n).toLocaleString("en-IN")}`;
-  };
+  const statusLabel = (s) => ({ unsold: "Unsold", pending_payment: "Pending", complete: "Complete" })[s] || s;
+  const statusCls   = (s) => ({ unsold: "text-slate-500", pending_payment: "text-amber-600 font-medium", complete: "text-emerald-600 font-medium" })[s] || "";
 
-  const statusLabel = (s) => ({
-    unsold:          "Unsold",
-    pending_payment: "Pending",
-    complete:        "Complete",
-  })[s] || s;
-
-  const statusCls = (s) => ({
-    unsold:          "text-slate-500",
-    pending_payment: "text-amber-600 font-medium",
-    complete:        "text-emerald-600 font-medium",
-  })[s] || "";
-
-  // Column count for colspan calculations
   const colCount = () =>
-    1 + /* # */
-    1 + /* Product */
-    1 + /* Purchase From */
+    1 + 1 + 1 +
     (showAccount    ? 1 : 0) +
     (showCreditCard ? 1 : 0) +
-    1 + /* Buy Price */
+    1 +
     (showCashback   ? 1 : 0) +
     (showCharges    ? 1 : 0) +
     (showCommission ? 1 : 0) +
-    1 + /* Sell Price */
-    (showProfit     ? 2 : 0) + /* Gross + Net profit */
+    1 +
+    (showProfit     ? 2 : 0) +
     (showStatus     ? 1 : 0);
 
-  // ── Column toggle widget ──────────────────────────────────────────────────
   const ColToggle = ({ label, checked, onChange }) => (
     <label className="flex items-center gap-1.5 cursor-pointer select-none no-print">
       <div
         onClick={onChange}
         className={`w-8 h-4 rounded-full transition-colors relative ${checked ? "bg-indigo-500" : "bg-gray-300"}`}
       >
-        <div
-          className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${
-            checked ? "translate-x-4" : "translate-x-0.5"
-          }`}
-        />
+        <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${checked ? "translate-x-4" : "translate-x-0.5"}`} />
       </div>
       <span className="text-xs font-medium text-gray-600">{label}</span>
     </label>
@@ -193,7 +189,6 @@ const PhoneSalesReport = () => {
           body { font-size: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           table { page-break-inside: auto; }
           tr { page-break-inside: avoid; }
-          .buyer-block { page-break-inside: avoid; }
         }
         .print-show { display: none; }
       `}</style>
@@ -203,29 +198,21 @@ const PhoneSalesReport = () => {
         {/* ── Controls panel ── */}
         <div className="no-print">
           <h1 className="text-2xl font-bold mb-1">Phone Sales Report</h1>
-          <p className="text-sm text-gray-500 mb-5">
-            Date-range deals report. Grouped by sale date and buyer for easy review.
+          <p className="text-sm text-gray-500 mb-4">
+            Date-range deals report. Grouped by sale date and buyer.
           </p>
 
+          {/* ── Shared filter panel ── */}
+          <PhoneFilters
+            filters={filters}
+            onChange={setFilters}
+            showSearch={false}
+            compact={true}
+          />
+
+          {/* ── Action row ── */}
           <div className="bg-white border border-gray-200 rounded-lg p-4 mb-4 shadow-sm">
-            {/* Row 1: dates + generate */}
             <div className="flex flex-wrap gap-4 items-end mb-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">From</label>
-                <input
-                  type="date" value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">To</label>
-                <input
-                  type="date" value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="border border-gray-300 rounded px-3 py-2 text-sm"
-                />
-              </div>
               <button
                 onClick={handleFetch} disabled={loading}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-6 rounded disabled:opacity-50"
@@ -240,18 +227,23 @@ const PhoneSalesReport = () => {
                   🖨 Print / Save PDF
                 </button>
               )}
-              {fetched && deals.length > 0 && (
+              {fetched && allDeals.length > 0 && (
                 <a
-                  href={`/api/phones/deals/meta/export?from=${new Date(fromDate).getTime()}&to=${new Date(toDate).setHours(23,59,59,999)}`}
+                  href={`/api/phones/deals/meta/export?from=${new Date(filters.dateFrom).getTime()}&to=${new Date(filters.dateTo).setHours(23,59,59,999)}`}
                   className="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium py-2 px-6 rounded"
                   download
                 >
                   ↓ Export CSV
                 </a>
               )}
+              {fetched && allDeals.length !== deals.length && (
+                <span className="text-xs text-indigo-600 font-medium self-center">
+                  Showing {deals.length} of {allDeals.length} deals after filters
+                </span>
+              )}
             </div>
 
-            {/* Row 2: column toggles */}
+            {/* Column toggles */}
             <div className="flex flex-wrap gap-5 items-center pt-3 border-t border-gray-100">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Columns</span>
               <ColToggle label="Account"     checked={showAccount}    onChange={() => setShowAccount(!showAccount)} />
@@ -260,9 +252,7 @@ const PhoneSalesReport = () => {
               <ColToggle label="Charges"     checked={showCharges}    onChange={() => setShowCharges(!showCharges)} />
               <ColToggle label="Commission"  checked={showCommission} onChange={() => setShowCommission(!showCommission)} />
               <ColToggle label="Status"      checked={showStatus}     onChange={() => setShowStatus(!showStatus)} />
-
               <span className="mx-2 text-gray-300">|</span>
-
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox" checked={showProfit}
@@ -275,9 +265,7 @@ const PhoneSalesReport = () => {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-300 text-red-700 text-sm p-3 rounded mb-4">
-              {error}
-            </div>
+            <div className="bg-red-50 border border-red-300 text-red-700 text-sm p-3 rounded mb-4">{error}</div>
           )}
         </div>
 
@@ -288,37 +276,36 @@ const PhoneSalesReport = () => {
             <div className="print-show mb-4">
               <h2 className="text-lg font-bold">Phone Sales Report</h2>
               <p className="text-xs text-gray-600">
-                Period: {new Date(fromDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                Period: {new Date(filters.dateFrom).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" })}
                 {" – "}
-                {new Date(toDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                {new Date(filters.dateTo).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" })}
                 &emsp;|&emsp;Generated: {new Date().toLocaleString("en-IN")}
               </p>
             </div>
 
             {deals.length === 0 ? (
               <div className="text-center py-16 text-gray-400 text-sm">
-                No deals found for the selected period.
+                No deals found for the selected period and filters.
               </div>
             ) : (
               <>
-                {/* ── Summary cards (screen only) ── */}
+                {/* Summary cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 no-print">
-                  <SummaryCard label="Total Deals"    value={deals.length}                                                           color="blue"    />
-                  <SummaryCard label="Total Purchase" value={`₹${totalBuying.toLocaleString("en-IN")}`}                            color="amber"   />
-                  <SummaryCard label="Total Sales"   value={`₹${totalSelling.toLocaleString("en-IN")}`}                           color="green"   />
-                  {showProfit && (
+                  <SummaryCard label="Total Deals"    value={deals.length}                                           color="blue"    />
+                  <SummaryCard label="Total Purchase" value={`₹${totalBuying.toLocaleString("en-IN")}`}            color="amber"   />
+                  <SummaryCard label="Total Sales"    value={`₹${totalSelling.toLocaleString("en-IN")}`}           color="green"   />
+                  {showProfit ? (
                     <SummaryCard
                       label="Net Profit"
                       value={`${totalNetProfit >= 0 ? "+" : ""}₹${Math.abs(totalNetProfit).toLocaleString("en-IN")}`}
                       color={totalNetProfit >= 0 ? "emerald" : "red"}
                     />
-                  )}
-                  {!showProfit && (
+                  ) : (
                     <SummaryCard label="Total Cashback" value={`₹${totalCashback.toLocaleString("en-IN")}`} color="teal" />
                   )}
                 </div>
 
-                {/* ── Print-only summary row ── */}
+                {/* Print-only summary */}
                 <div className="print-show mb-3 text-xs border border-gray-300 rounded overflow-hidden">
                   <table className="w-full">
                     <tbody>
@@ -330,9 +317,9 @@ const PhoneSalesReport = () => {
                         <td className="px-3 py-1 border-r border-gray-300 font-medium">Revenue</td>
                         <td className="px-3 py-1 border-r border-gray-300">₹{totalSelling.toLocaleString("en-IN")}</td>
                         {showProfit && <>
-                          <td className="px-3 py-1 border-r border-gray-300 font-medium">Gross Profit</td>
+                          <td className="px-3 py-1 border-r border-gray-300 font-medium">Gross</td>
                           <td className="px-3 py-1 border-r border-gray-300">₹{totalGrossProfit.toLocaleString("en-IN")}</td>
-                          <td className="px-3 py-1 border-r border-gray-300 font-medium">Net Profit</td>
+                          <td className="px-3 py-1 border-r border-gray-300 font-medium">Net</td>
                           <td className="px-3 py-1">₹{totalNetProfit.toLocaleString("en-IN")}</td>
                         </>}
                       </tr>
@@ -340,7 +327,7 @@ const PhoneSalesReport = () => {
                   </table>
                 </div>
 
-                {/* ── Per-date sections ── */}
+                {/* Per-date sections */}
                 {sortedDates.map((date) => {
                   const daySales    = grouped[date];
                   const dayRevenue  = daySales.reduce((s, d) => s + (d.sellingPrice || d.effectiveSellingPrice || 0), 0);
@@ -365,7 +352,6 @@ const PhoneSalesReport = () => {
                         </span>
                       </div>
 
-                      {/* Table */}
                       <div className="overflow-x-auto border border-t-0 border-gray-300 rounded-b">
                         <table className="w-full border-collapse text-xs">
                           <thead>
@@ -390,27 +376,22 @@ const PhoneSalesReport = () => {
 
                           <tbody>
                             {dayGroups.map((group, gIdx) => {
-                              const style         = group.isDirect ? DIRECT_STYLE : BUYER_COLORS[group.colorIdx];
-                              const groupRevenue  = group.deals.reduce((s, d) => s + (d.sellingPrice || d.effectiveSellingPrice || 0), 0);
-                              const groupBuying   = group.deals.reduce((s, d) => s + (d.buyingPrice || 0), 0);
+                              const style          = group.isDirect ? DIRECT_STYLE : BUYER_COLORS[group.colorIdx];
+                              const groupRevenue   = group.deals.reduce((s, d) => s + (d.sellingPrice || d.effectiveSellingPrice || 0), 0);
+                              const groupBuying    = group.deals.reduce((s, d) => s + (d.buyingPrice || 0), 0);
                               const groupNetProfit = group.deals.reduce((s, d) => s + (d.netProfit  || 0), 0);
 
                               return (
                                 <React.Fragment key={group.key}>
-                                  {/* Buyer sub-header row — only for named buyers */}
+                                  {/* Buyer sub-header */}
                                   {!group.isDirect && (
                                     <tr className={`${style.header} border-t-2 border-gray-300`}>
-                                      <td
-                                        colSpan={colCount()}
-                                        className={`px-3 py-1.5 ${style.label} font-semibold text-xs`}
-                                      >
-                                        <span className="mr-3">
-                                          {gIdx + 1}&nbsp;🤝 {group.buyer}
-                                        </span>
+                                      <td colSpan={colCount()} className={`px-3 py-1.5 ${style.label} font-semibold text-xs`}>
+                                        <span className="mr-3">{gIdx + 1}&nbsp;🤝 {group.buyer}</span>
                                         <span className="font-normal opacity-75">
                                           {group.deals.length} deal{group.deals.length !== 1 ? "s" : ""}
-                                          &emsp;Purchased at: ₹{groupBuying.toLocaleString("en-IN")}
-                                          &emsp;Sold for: ₹{groupRevenue.toLocaleString("en-IN")}
+                                          &emsp;Purchased: ₹{groupBuying.toLocaleString("en-IN")}
+                                          &emsp;Sold: ₹{groupRevenue.toLocaleString("en-IN")}
                                           {showProfit && (
                                             <span className={groupNetProfit >= 0 ? " text-green-700" : " text-red-600"}>
                                               &emsp;Net P/L: {groupNetProfit >= 0 ? "+" : ""}₹{Math.abs(groupNetProfit).toLocaleString("en-IN")}
@@ -421,115 +402,55 @@ const PhoneSalesReport = () => {
                                     </tr>
                                   )}
 
-                                  {/* Direct / unsold spacer */}
                                   {group.isDirect && gIdx > 0 && (
-                                    <tr>
-                                      <td colSpan={99} className="border-t border-gray-200 h-px p-0" />
-                                    </tr>
+                                    <tr><td colSpan={99} className="border-t border-gray-200 h-px p-0" /></tr>
                                   )}
 
-                                  {/* Deal rows */}
                                   {group.deals.map((deal, dIdx) => {
                                     const sellAmt = deal.sellingPrice || deal.effectiveSellingPrice || 0;
                                     const gross   = deal.grossProfit;
                                     const net     = deal.netProfit;
-
                                     return (
-                                      <tr
-                                        key={deal._id}
-                                        className={`
-                                          ${style.bg}
-                                          border-l-4 ${style.border}
-                                          hover:brightness-95 transition-all
-                                        `}
-                                      >
+                                      <tr key={deal._id} className={`${style.bg} border-l-4 ${style.border} hover:brightness-95 transition-all`}>
                                         <td className="border-b border-gray-200 px-3 py-2 text-gray-400">
                                           {group.isDirect ? gIdx + 1 : `${gIdx + 1}.${dIdx + 1}`}
                                         </td>
-                                        <td className="border-b border-gray-200 px-3 py-2 font-medium text-gray-800">
-                                          {deal.product}
-                                        </td>
-                                        <td className="border-b border-gray-200 px-3 py-2 text-gray-600">
-                                          {deal.purchasedFrom}
-                                        </td>
-                                        {showAccount && (
-                                          <td className="border-b border-gray-200 px-3 py-2 text-gray-500">
-                                            {deal.purchaseAccount || "—"}
-                                          </td>
-                                        )}
-                                        {showCreditCard && (
-                                          <td className="border-b border-gray-200 px-3 py-2 text-gray-500">
-                                            {deal.creditCard || "—"}
-                                          </td>
-                                        )}
-                                        <td className="border-b border-gray-200 px-3 py-2 text-right font-semibold">
-                                          ₹{(deal.buyingPrice || 0).toLocaleString("en-IN")}
-                                        </td>
-                                        {showCashback && (
-                                          <td className="border-b border-gray-200 px-3 py-2 text-right text-emerald-600">
-                                            {deal.cashback ? `₹${deal.cashback.toLocaleString("en-IN")}` : "—"}
-                                          </td>
-                                        )}
-                                        {showCharges && (
-                                          <td className="border-b border-gray-200 px-3 py-2 text-right text-rose-500">
-                                            {deal.charges ? `₹${deal.charges.toLocaleString("en-IN")}` : "—"}
-                                          </td>
-                                        )}
-                                        {showCommission && (
-                                          <td className="border-b border-gray-200 px-3 py-2 text-right text-amber-600">
-                                            {deal.commissionAmount
-                                              ? `₹${deal.commissionAmount.toLocaleString("en-IN")}${deal.commissionTo ? ` (${deal.commissionTo})` : ""}`
-                                              : "—"}
-                                          </td>
-                                        )}
-                                        <td className="border-b border-gray-200 px-3 py-2 text-right font-semibold">
-                                          {sellAmt ? `₹${sellAmt.toLocaleString("en-IN")}` : <span className="text-gray-300">—</span>}
-                                        </td>
+                                        <td className="border-b border-gray-200 px-3 py-2 font-medium text-gray-800">{deal.product}</td>
+                                        <td className="border-b border-gray-200 px-3 py-2 text-gray-600">{deal.purchasedFrom}</td>
+                                        {showAccount    && <td className="border-b border-gray-200 px-3 py-2 text-gray-500">{deal.purchaseAccount || "—"}</td>}
+                                        {showCreditCard && <td className="border-b border-gray-200 px-3 py-2 text-gray-500">{deal.creditCard || "—"}</td>}
+                                        <td className="border-b border-gray-200 px-3 py-2 text-right font-semibold">₹{(deal.buyingPrice || 0).toLocaleString("en-IN")}</td>
+                                        {showCashback   && <td className="border-b border-gray-200 px-3 py-2 text-right text-emerald-600">{deal.cashback ? `₹${deal.cashback.toLocaleString("en-IN")}` : "—"}</td>}
+                                        {showCharges    && <td className="border-b border-gray-200 px-3 py-2 text-right text-rose-500">{deal.charges ? `₹${deal.charges.toLocaleString("en-IN")}` : "—"}</td>}
+                                        {showCommission && <td className="border-b border-gray-200 px-3 py-2 text-right text-amber-600">{deal.commissionAmount ? `₹${deal.commissionAmount.toLocaleString("en-IN")}${deal.commissionTo ? ` (${deal.commissionTo})` : ""}` : "—"}</td>}
+                                        <td className="border-b border-gray-200 px-3 py-2 text-right font-semibold">{sellAmt ? `₹${sellAmt.toLocaleString("en-IN")}` : <span className="text-gray-300">—</span>}</td>
                                         {showProfit && <>
-                                          <td className={`border-b border-gray-200 px-3 py-2 text-right font-medium ${
-                                            gross === null ? "text-gray-300" : gross >= 0 ? "text-green-700" : "text-red-600"
-                                          }`}>
+                                          <td className={`border-b border-gray-200 px-3 py-2 text-right font-medium ${gross === null ? "text-gray-300" : gross >= 0 ? "text-green-700" : "text-red-600"}`}>
                                             {gross === null ? "—" : `${gross >= 0 ? "+" : ""}₹${Math.abs(gross).toLocaleString("en-IN")}`}
                                           </td>
-                                          <td className={`border-b border-gray-200 px-3 py-2 text-right font-medium ${
-                                            net === null ? "text-gray-300" : net >= 0 ? "text-green-700" : "text-red-600"
-                                          }`}>
+                                          <td className={`border-b border-gray-200 px-3 py-2 text-right font-medium ${net === null ? "text-gray-300" : net >= 0 ? "text-green-700" : "text-red-600"}`}>
                                             {net === null ? "—" : `${net >= 0 ? "+" : ""}₹${Math.abs(net).toLocaleString("en-IN")}`}
                                           </td>
                                         </>}
-                                        {showStatus && (
-                                          <td className={`border-b border-gray-200 px-3 py-2 ${statusCls(deal.dealStatus)}`}>
-                                            {statusLabel(deal.dealStatus)}
-                                          </td>
-                                        )}
+                                        {showStatus && <td className={`border-b border-gray-200 px-3 py-2 ${statusCls(deal.dealStatus)}`}>{statusLabel(deal.dealStatus)}</td>}
                                       </tr>
                                     );
                                   })}
 
-                                  {/* Buyer subtotal footer (only for multi-deal buyers) */}
+                                  {/* Buyer subtotal */}
                                   {!group.isDirect && group.deals.length > 1 && (
                                     <tr className={`${style.header} text-xs font-semibold`}>
                                       <td
-                                        colSpan={
-                                          1 + /* # */
-                                          1 + /* Product */
-                                          1 + /* From */
-                                          (showAccount    ? 1 : 0) +
-                                          (showCreditCard ? 1 : 0)
-                                        }
+                                        colSpan={1 + 1 + 1 + (showAccount ? 1 : 0) + (showCreditCard ? 1 : 0)}
                                         className={`px-3 py-1 ${style.label} text-right`}
                                       >
                                         Subtotal
                                       </td>
-                                      <td className={`px-3 py-1 text-right ${style.label}`}>
-                                        ₹{groupBuying.toLocaleString("en-IN")}
-                                      </td>
+                                      <td className={`px-3 py-1 text-right ${style.label}`}>₹{groupBuying.toLocaleString("en-IN")}</td>
                                       {showCashback   && <td className="px-3 py-1" />}
                                       {showCharges    && <td className="px-3 py-1" />}
                                       {showCommission && <td className="px-3 py-1" />}
-                                      <td className={`px-3 py-1 text-right ${style.label}`}>
-                                        ₹{groupRevenue.toLocaleString("en-IN")}
-                                      </td>
+                                      <td className={`px-3 py-1 text-right ${style.label}`}>₹{groupRevenue.toLocaleString("en-IN")}</td>
                                       {showProfit && <>
                                         <td className="px-3 py-1" />
                                         <td className={`px-3 py-1 text-right font-bold ${groupNetProfit >= 0 ? "text-green-700" : "text-red-700"}`}>
@@ -548,26 +469,16 @@ const PhoneSalesReport = () => {
                           <tfoot>
                             <tr className="bg-gray-800 text-white text-xs font-semibold">
                               <td
-                                colSpan={
-                                  1 + /* # */
-                                  1 + /* Product */
-                                  1 + /* From */
-                                  (showAccount    ? 1 : 0) +
-                                  (showCreditCard ? 1 : 0)
-                                }
+                                colSpan={1 + 1 + 1 + (showAccount ? 1 : 0) + (showCreditCard ? 1 : 0)}
                                 className="px-3 py-2 text-right text-gray-300"
                               >
                                 Day Total — {daySales.length} deal{daySales.length !== 1 ? "s" : ""}
                               </td>
-                              <td className="px-3 py-2 text-right">
-                                ₹{dayBuying.toLocaleString("en-IN")}
-                              </td>
+                              <td className="px-3 py-2 text-right">₹{dayBuying.toLocaleString("en-IN")}</td>
                               {showCashback   && <td className="px-3 py-2 text-right text-gray-400">—</td>}
                               {showCharges    && <td className="px-3 py-2 text-right text-gray-400">—</td>}
                               {showCommission && <td className="px-3 py-2 text-right text-gray-400">—</td>}
-                              <td className="px-3 py-2 text-right">
-                                ₹{dayRevenue.toLocaleString("en-IN")}
-                              </td>
+                              <td className="px-3 py-2 text-right">₹{dayRevenue.toLocaleString("en-IN")}</td>
                               {showProfit && <>
                                 <td className={`px-3 py-2 text-right ${dayGross >= 0 ? "text-green-300" : "text-red-300"}`}>
                                   {dayGross >= 0 ? "+" : ""}₹{Math.abs(dayGross).toLocaleString("en-IN")}
@@ -585,12 +496,11 @@ const PhoneSalesReport = () => {
                   );
                 })}
 
-                {/* ── Grand total ── */}
+                {/* Grand total */}
                 <div className="bg-gray-900 text-white rounded-lg p-4 text-sm font-semibold flex flex-wrap gap-6 justify-between items-center mt-2">
                   <span className="text-gray-300">
                     Grand Total — {deals.length} deal{deals.length !== 1 ? "s" : ""}
-                    &nbsp;|&nbsp;
-                    {sortedDates.length} day{sortedDates.length !== 1 ? "s" : ""}
+                    &nbsp;|&nbsp;{sortedDates.length} day{sortedDates.length !== 1 ? "s" : ""}
                   </span>
                   <span className="flex flex-wrap gap-6">
                     <span>Total Purchased: ₹{totalBuying.toLocaleString("en-IN")}</span>
@@ -602,16 +512,8 @@ const PhoneSalesReport = () => {
                       <span className={totalNetProfit >= 0 ? "text-green-300" : "text-red-300"}>
                         Net: {totalNetProfit >= 0 ? "+" : ""}₹{Math.abs(totalNetProfit).toLocaleString("en-IN")}
                       </span>
-                      {totalCashback > 0 && (
-                        <span className="text-gray-400">
-                          Cashback: ₹{totalCashback.toLocaleString("en-IN")}
-                        </span>
-                      )}
-                      {totalCommission > 0 && (
-                        <span className="text-gray-400">
-                          Commission: ₹{totalCommission.toLocaleString("en-IN")}
-                        </span>
-                      )}
+                      {totalCashback > 0 && <span className="text-gray-400">Cashback: ₹{totalCashback.toLocaleString("en-IN")}</span>}
+                      {totalCommission > 0 && <span className="text-gray-400">Commission: ₹{totalCommission.toLocaleString("en-IN")}</span>}
                     </>}
                   </span>
                 </div>
@@ -624,7 +526,7 @@ const PhoneSalesReport = () => {
   );
 };
 
-// ── Summary card ─────────────────────────────────────────────────────────────
+// ── Summary card ──────────────────────────────────────────────────────────────
 const colorMap = {
   blue:    "bg-blue-50 border-blue-200 text-blue-600 text-blue-800",
   green:   "bg-green-50 border-green-200 text-green-600 text-green-800",

@@ -4,15 +4,21 @@ const { PersonalExpense } = require("../../Models/phone/personalExpense");
 const protect = require("../../middlewares/authMiddleWare");
 const protectVansh = require("../../middlewares/phoneAuthMiddleware");
 
-// GET all personal expenses (with optional date range)
+// GET all personal expenses (with optional date range + card + category filters)
 router.get("/", protect, protectVansh, async (req, res) => {
   try {
-    const { from, to } = req.query;
+    const { from, to, card, category } = req.query;
     let query = {};
     if (from || to) {
       query.date = {};
       if (from) query.date.$gte = parseInt(from);
       if (to) query.date.$lte = parseInt(to);
+    }
+    if (card && card !== "all") {
+      query.card = card;
+    }
+    if (category && category !== "all") {
+      query.category = category;
     }
     const expenses = await PersonalExpense.find(query).sort({ date: -1 });
     res.json({ expenses, total: expenses.length });
@@ -58,7 +64,7 @@ router.delete("/:id", protect, protectVansh, async (req, res) => {
   }
 });
 
-// STATS for personal expenses (total by card, by month)
+// STATS for personal expenses (total by card, by month, by category)
 router.get("/meta/stats", protect, protectVansh, async (req, res) => {
   try {
     const { from, to } = req.query;
@@ -78,6 +84,12 @@ router.get("/meta/stats", protect, protectVansh, async (req, res) => {
       byCard[key] = (byCard[key] || 0) + e.amount;
     });
 
+    const byCategory = {};
+    expenses.forEach((e) => {
+      const key = e.category || "Uncategorised";
+      byCategory[key] = (byCategory[key] || 0) + e.amount;
+    });
+
     const byMonth = {};
     expenses.forEach((e) => {
       const date = new Date(e.date);
@@ -85,7 +97,7 @@ router.get("/meta/stats", protect, protectVansh, async (req, res) => {
       byMonth[key] = (byMonth[key] || 0) + e.amount;
     });
 
-    res.json({ totalAmount, byCard, byMonth, count: expenses.length });
+    res.json({ totalAmount, byCard, byCategory, byMonth, count: expenses.length });
   } catch (err) {
     res.status(500).json({ error: "Internal Server Error" });
   }

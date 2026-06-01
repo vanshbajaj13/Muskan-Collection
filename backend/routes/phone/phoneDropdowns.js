@@ -57,8 +57,6 @@ router.post("/", protect, protectVansh, async (req, res) => {
 });
 
 // RENAME a dropdown option — updates the value in ALL deals/expenses automatically
-// because we query by _id in dropdowns and store the string value in deals,
-// we do a bulk update on all affected deal fields
 router.patch("/:id", protect, protectVansh, async (req, res) => {
   try {
     const { value: newValue } = req.body;
@@ -94,11 +92,19 @@ router.patch("/:id", protect, protectVansh, async (req, res) => {
       );
     }
 
-    // For "card" type, also update PersonalExpense
+    // For "card" type, also update PersonalExpense.card
     if (type === "card") {
       await PersonalExpense.updateMany(
         { card: oldValue },
         { $set: { card: newValue.trim() } }
+      );
+    }
+
+    // For "expenseCategory" type, also update PersonalExpense.category
+    if (type === "expenseCategory") {
+      await PersonalExpense.updateMany(
+        { category: oldValue },
+        { $set: { category: newValue.trim() } }
       );
     }
 

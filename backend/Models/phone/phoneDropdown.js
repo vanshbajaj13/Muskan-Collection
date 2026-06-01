@@ -1,13 +1,13 @@
 const mongoose = require("mongoose");
 
 // Stores all dropdown options for the phones business
-// type: "product" | "purchasedFrom" | "account" | "soldTo" | "commissionTo" | "card"
+// type: "product" | "purchasedFrom" | "account" | "soldTo" | "commissionTo" | "card" | "expenseCategory"
 const phoneDropdownSchema = new mongoose.Schema(
   {
     type: {
       type: String,
       required: true,
-      enum: ["product", "purchasedFrom", "account", "soldTo", "commissionTo", "card"],
+      enum: ["product", "purchasedFrom", "account", "soldTo", "commissionTo", "card", "expenseCategory"],
     },
     value: { type: String, required: true, trim: true },
     active: { type: Boolean, default: true },

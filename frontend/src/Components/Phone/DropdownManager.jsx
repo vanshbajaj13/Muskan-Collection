@@ -34,6 +34,12 @@ const TYPES = [
     icon: "💳",
     hint: "Cards used for purchases",
   },
+  {
+    key: "expenseCategory",
+    label: "Expense Categories",
+    icon: "🗂️",
+    hint: "Categories for personal expenses (food, travel, etc.)",
+  },
 ];
 
 const DropdownManager = () => {
@@ -84,11 +90,7 @@ const DropdownManager = () => {
   };
 
   const confirmRename = (id, oldValue, newValue) => {
-    setRenameModal({
-      id,
-      oldValue,
-      newValue,
-    });
+    setRenameModal({ id, oldValue, newValue });
   };
 
   const handleRename = async (id) => {
@@ -125,7 +127,6 @@ const DropdownManager = () => {
           onCancel={() => setConfirmModal(null)}
           onConfirm={async () => {
             setDeletingId(confirmModal.id);
-
             try {
               await deleteDropdown(confirmModal.id);
               showToast(`"${confirmModal.value}" deactivated`);
@@ -147,12 +148,9 @@ const DropdownManager = () => {
           onCancel={() => setRenameModal(null)}
           onConfirm={async () => {
             setSavingEdit(true);
-
             try {
               await renameDropdown(renameModal.id, renameModal.newValue);
-
               showToast("Renamed & updated in all records ✓");
-
               setEditingId(null);
               setRenameModal(null);
             } catch {
