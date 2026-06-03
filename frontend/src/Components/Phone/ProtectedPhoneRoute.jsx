@@ -11,7 +11,6 @@ import Spinner from "../Loader/Spinner";
  */
 const ProtectedPhoneRoute = ({ children }) => {
   const [userRole] = useUserRole();
-    console.log(userRole);
     
   const allowed = ["dev"];
   const isLoading = userRole === "loading";

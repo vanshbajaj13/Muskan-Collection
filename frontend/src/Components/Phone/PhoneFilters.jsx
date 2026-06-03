@@ -10,7 +10,12 @@ import { usePhone } from "./PhoneContext";
  *   showSearch    {bool}     show free-text search box (deals only)
  *   compact       {bool}     render as a collapsible panel (dashboard/report)
  */
-const PhoneFilters = ({ filters = {}, onChange, showSearch = false, compact = false }) => {
+const PhoneFilters = ({
+  filters = {},
+  onChange,
+  showSearch = false,
+  compact = false,
+}) => {
   const { opts } = usePhone();
   const [open, setOpen] = useState(!compact);
 
@@ -35,12 +40,14 @@ const PhoneFilters = ({ filters = {}, onChange, showSearch = false, compact = fa
   return (
     <div className="bg-white border border-slate-200 rounded-xl mb-4 overflow-hidden">
       {/* Header — always visible */}
-      <button
+      <div
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-slate-700">🔍 Filters</span>
+          <span className="text-sm font-semibold text-slate-700">
+            🔍 Filters
+          </span>
           {activeCount > 0 && (
             <span className="bg-indigo-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
               {activeCount}
@@ -50,7 +57,10 @@ const PhoneFilters = ({ filters = {}, onChange, showSearch = false, compact = fa
         <div className="flex items-center gap-3">
           {activeCount > 0 && (
             <button
-              onClick={(e) => { e.stopPropagation(); clearAll(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                clearAll();
+              }}
               className="text-xs text-rose-400 hover:text-rose-600 px-2 py-0.5 rounded hover:bg-rose-50 transition-colors"
             >
               Clear all
@@ -58,13 +68,12 @@ const PhoneFilters = ({ filters = {}, onChange, showSearch = false, compact = fa
           )}
           <span className="text-slate-400 text-xs">{open ? "▲" : "▼"}</span>
         </div>
-      </button>
+      </div>
 
       {/* Body */}
       {open && (
         <div className="px-4 pb-4 pt-1 border-t border-slate-100">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-3">
-
             {/* ── Free-text search ── */}
             {showSearch && (
               <div className="col-span-2 md:col-span-2">
@@ -139,7 +148,9 @@ const PhoneFilters = ({ filters = {}, onChange, showSearch = false, compact = fa
                 >
                   <option value="">All Products</option>
                   {opts("product").map((p) => (
-                    <option key={p} value={p}>{p}</option>
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -158,7 +169,9 @@ const PhoneFilters = ({ filters = {}, onChange, showSearch = false, compact = fa
                 >
                   <option value="">All Accounts</option>
                   {opts("account").map((a) => (
-                    <option key={a} value={a}>{a}</option>
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -177,7 +190,9 @@ const PhoneFilters = ({ filters = {}, onChange, showSearch = false, compact = fa
                 >
                   <option value="">All Sources</option>
                   {opts("purchasedFrom").map((s) => (
-                    <option key={s} value={s}>{s}</option>
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -196,7 +211,9 @@ const PhoneFilters = ({ filters = {}, onChange, showSearch = false, compact = fa
                 >
                   <option value="">All Buyers</option>
                   {opts("soldTo").map((b) => (
-                    <option key={b} value={b}>{b}</option>
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -215,7 +232,9 @@ const PhoneFilters = ({ filters = {}, onChange, showSearch = false, compact = fa
                 >
                   <option value="">All Cards</option>
                   {opts("card").map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -234,7 +253,9 @@ const PhoneFilters = ({ filters = {}, onChange, showSearch = false, compact = fa
                 >
                   <option value="">All</option>
                   {opts("commissionTo").map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -293,7 +314,6 @@ const PhoneFilters = ({ filters = {}, onChange, showSearch = false, compact = fa
                 </select>
               </div>
             )}
-
           </div>
 
           {/* Active filter chips */}

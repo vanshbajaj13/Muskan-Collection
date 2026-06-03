@@ -28,3 +28,29 @@ code {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+
+/* phones */
+/* Prevent iOS Safari zoom-on-focus (font-size must be ≥ 16px) */
+input[type="number"],
+input[type="text"],
+input[type="date"],
+input[type="email"],
+input[type="tel"],
+input[type="password"],
+select,
+textarea {
+  font-size: 16px !important;
+}
+
+/* iOS date input — remove grey native chrome, make it look like a normal input */
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: #ffffff;
+  min-height: 38px;
+}
+
+input[type="date"]:not([value]):not(:focus) {
+  color: #94a3b8;
+}

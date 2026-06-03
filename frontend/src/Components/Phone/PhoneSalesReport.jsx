@@ -387,9 +387,8 @@ const PhoneSalesReport = () => {
                                   {!group.isDirect && (
                                     <tr className={`${style.header} border-t-2 border-gray-300`}>
                                       <td colSpan={colCount()} className={`px-3 py-1.5 ${style.label} font-semibold text-xs`}>
-                                        <span className="mr-3">{gIdx + 1}&nbsp;🤝 {group.buyer}</span>
+                                        <span className="mr-3">{group.buyer}</span>
                                         <span className="font-normal opacity-75">
-                                          {group.deals.length} deal{group.deals.length !== 1 ? "s" : ""}
                                           &emsp;Purchased: ₹{groupBuying.toLocaleString("en-IN")}
                                           &emsp;Sold: ₹{groupRevenue.toLocaleString("en-IN")}
                                           {showProfit && (
@@ -413,7 +412,7 @@ const PhoneSalesReport = () => {
                                     return (
                                       <tr key={deal._id} className={`${style.bg} border-l-4 ${style.border} hover:brightness-95 transition-all`}>
                                         <td className="border-b border-gray-200 px-3 py-2 text-gray-400">
-                                          {group.isDirect ? gIdx + 1 : `${gIdx + 1}.${dIdx + 1}`}
+                                          {dIdx+1}
                                         </td>
                                         <td className="border-b border-gray-200 px-3 py-2 font-medium text-gray-800">{deal.product}</td>
                                         <td className="border-b border-gray-200 px-3 py-2 text-gray-600">{deal.purchasedFrom}</td>
@@ -472,7 +471,7 @@ const PhoneSalesReport = () => {
                                 colSpan={1 + 1 + 1 + (showAccount ? 1 : 0) + (showCreditCard ? 1 : 0)}
                                 className="px-3 py-2 text-right text-gray-300"
                               >
-                                Day Total — {daySales.length} deal{daySales.length !== 1 ? "s" : ""}
+                                Day Total — {daySales.length} item{daySales.length !== 1 ? "s" : ""}
                               </td>
                               <td className="px-3 py-2 text-right">₹{dayBuying.toLocaleString("en-IN")}</td>
                               {showCashback   && <td className="px-3 py-2 text-right text-gray-400">—</td>}
@@ -499,7 +498,7 @@ const PhoneSalesReport = () => {
                 {/* Grand total */}
                 <div className="bg-gray-900 text-white rounded-lg p-4 text-sm font-semibold flex flex-wrap gap-6 justify-between items-center mt-2">
                   <span className="text-gray-300">
-                    Grand Total — {deals.length} deal{deals.length !== 1 ? "s" : ""}
+                    Grand Total — {deals.length} item{deals.length !== 1 ? "s" : ""}
                     &nbsp;|&nbsp;{sortedDates.length} day{sortedDates.length !== 1 ? "s" : ""}
                   </span>
                   <span className="flex flex-wrap gap-6">

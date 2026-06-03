@@ -103,4 +103,24 @@ router.get("/meta/stats", protect, protectVansh, async (req, res) => {
   }
 });
 
+// POST /api/phones/expenses/shortcut
+// Accepts simpler payload; date defaults to now if not provided
+router.post("/shortcut", protect, protectVansh, async (req, res) => {
+  try {
+    const { amount, description, card, category } = req.body;
+    if (!amount) return res.status(400).json({ error: "amount required" });
+    const expense = new PersonalExpense({
+      amount: parseFloat(amount),
+      description: description || "",
+      card: card || "",
+      category: category || "",
+      date: Date.now(), // always uses server time = now
+    });
+    await expense.save();
+    res.status(201).json({ message: "Saved!", expense });
+  } catch (err) {
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 module.exports = router;

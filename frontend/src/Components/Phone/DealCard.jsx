@@ -90,13 +90,13 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
       >
         {/* ── Compact header row ──────────────────────────────────── */}
         <div
-          className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+          className="flex items-center gap-3 px-4 py-3 cursor-pointer overflow-auto"
           onClick={() => setExpanded(!expanded)}
         >
           {/* Date */}
-          <div className="text-xs text-slate-400 w-20 shrink-0 font-mono">
+          {/* <div className="text-xs text-slate-400 w-20 shrink-0 font-mono">
             {formatDate(deal.purchaseDate)}
-          </div>
+          </div> */}
 
           {/* Product */}
           <div className="flex-1 min-w-0">
