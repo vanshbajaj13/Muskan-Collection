@@ -130,4 +130,28 @@ router.delete("/:id", protect, protectVansh, async (req, res) => {
   }
 });
 
+// Public endpoint for iPhone Shortcuts — no auth required
+// Returns card and expenseCategory options as simple arrays
+router.get("/shortcut-options", async (req, res) => {
+  try {
+    const { PhoneDropdown } = require("../../Models/phone/phoneDropdown");
+    const options = await PhoneDropdown.find({
+      active: true,
+      type: { $in: ["card", "expenseCategory"] },
+    }).sort({ type: 1, value: 1 });
+
+    const cards = options
+      .filter((o) => o.type === "card")
+      .map((o) => o.value);
+
+    const categories = options
+      .filter((o) => o.type === "expenseCategory")
+      .map((o) => o.value);
+
+    res.json({ cards, categories });
+  } catch (err) {
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 module.exports = router;
