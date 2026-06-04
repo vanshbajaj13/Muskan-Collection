@@ -58,7 +58,7 @@ const DealDateGroup = ({ group, onEdit, onDelete, onRefresh, formatCurrency }) =
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-slate-700">{group.label}</span>
           <span className="text-xs text-slate-400 bg-white border border-slate-200 rounded-full px-2 py-0.5">
-            {group.deals.length} deal{group.deals.length !== 1 ? "s" : ""}
+            {group.deals.length} Item{group.deals.length !== 1 ? "s" : ""}
           </span>
         </div>
         <div className="flex items-center gap-3">
