@@ -133,7 +133,27 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
 
           {/* Net profit */}
           <div className="text-right shrink-0 w-24">
-            <p className="text-xs text-slate-400">Net</p>
+            <p className="text-xs text-slate-400 hidden sm:block">Net</p>
+            <div className="text-sm font-medium text-slate-700 sm:hidden">
+              {deal.sellingPrice ? (
+                formatCurrency(deal.sellingPrice)
+              ) : (
+                <span className="text-slate-300">—</span>
+              )}
+            <p>
+              {" - "}{formatCurrency(deal.buyingPrice)}
+            </p>
+            {deal.charges !== 0 && (
+              <p className="text-rose-300">
+                {" - "}{formatCurrency(deal.charges)}
+              </p>
+            )}
+            {deal.cashback !== 0 && (
+              <p className="text-emerald-300">
+                {" + "}{formatCurrency(deal.cashback)}
+              </p>
+            )}
+            </div>
             <ProfitChip value={deal.netProfit} />
           </div>
 

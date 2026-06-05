@@ -41,12 +41,26 @@ function groupByDate(deals) {
 }
 
 // ── Date group header + collapsible deals ──────────────────────────────────
-const DealDateGroup = ({ group, onEdit, onDelete, onRefresh, formatCurrency }) => {
+const DealDateGroup = ({
+  group,
+  onEdit,
+  onDelete,
+  onRefresh,
+  formatCurrency,
+  allExpanded,
+}) => {
   const [open, setOpen] = useState(true);
 
-  const totalBuying  = group.deals.reduce((s, d) => s + (d.buyingPrice || 0), 0);
-  const totalNet     = group.deals.reduce((s, d) => s + (d.netProfit  || 0), 0);
-  const totalPending = group.deals.reduce((s, d) => s + (d.paymentPending || 0), 0);
+  const totalBuying = group.deals.reduce((s, d) => s + (d.buyingPrice || 0), 0);
+  const totalNet = group.deals.reduce((s, d) => s + (d.netProfit || 0), 0);
+  const totalPending = group.deals.reduce(
+    (s, d) => s + (d.paymentPending || 0),
+    0,
+  );
+
+  useEffect(() => {
+    if (allExpanded !== null) setOpen(allExpanded);
+  }, [allExpanded]);
 
   return (
     <div>
@@ -56,16 +70,26 @@ const DealDateGroup = ({ group, onEdit, onDelete, onRefresh, formatCurrency }) =
         className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors mb-1"
       >
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-700">{group.label}</span>
+          <span className="text-xs font-bold text-slate-700">
+            {group.label}
+          </span>
           <span className="text-xs text-slate-400 bg-white border border-slate-200 rounded-full px-2 py-0.5">
             {group.deals.length} Item{group.deals.length !== 1 ? "s" : ""}
           </span>
         </div>
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex items-center gap-3 text-xs text-slate-500">
-            <span>Invested: <span className="font-semibold text-slate-700">{formatCurrency(totalBuying)}</span></span>
-            <span className={`font-semibold ${totalNet >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
-              Net: {totalNet >= 0 ? "+" : ""}{formatCurrency(totalNet)}
+            <span>
+              Invested:{" "}
+              <span className="font-semibold text-slate-700">
+                {formatCurrency(totalBuying)}
+              </span>
+            </span>
+            <span
+              className={`font-semibold ${totalNet >= 0 ? "text-emerald-600" : "text-rose-500"}`}
+            >
+              Net: {totalNet >= 0 ? "+" : ""}
+              {formatCurrency(totalNet)}
             </span>
             {totalPending > 0 && (
               <span className="text-amber-600 font-semibold">
@@ -75,8 +99,11 @@ const DealDateGroup = ({ group, onEdit, onDelete, onRefresh, formatCurrency }) =
           </div>
           {/* Mobile: just net profit */}
           <div className="sm:hidden">
-            <span className={`text-xs font-semibold ${totalNet >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
-              {totalNet >= 0 ? "+" : ""}{formatCurrency(totalNet)}
+            <span
+              className={`text-xs font-semibold ${totalNet >= 0 ? "text-emerald-600" : "text-rose-500"}`}
+            >
+              {totalNet >= 0 ? "+" : ""}
+              {formatCurrency(totalNet)}
             </span>
           </div>
           <span className="text-slate-400 text-xs">{open ? "▲" : "▼"}</span>
@@ -103,15 +130,17 @@ const DealDateGroup = ({ group, onEdit, onDelete, onRefresh, formatCurrency }) =
 
 // ── Main PhoneDeals ────────────────────────────────────────────────────────
 const PhoneDeals = () => {
-  const { getDeals, createDeal, updateDeal, deleteDeal, formatCurrency } = usePhone();
+  const { getDeals, createDeal, updateDeal, deleteDeal, formatCurrency } =
+    usePhone();
 
-  const [deals, setDeals]   = useState([]);
+  const [deals, setDeals] = useState([]);
+  const [allExpanded, setAllExpanded] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving]   = useState(false);
-  const [toast, setToast]     = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
   const [filters, setFilters] = useState(INITIAL_FILTERS);
 
-  const [showAdd, setShowAdd]   = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
   const [editDeal, setEditDeal] = useState(null);
 
   const showToast = (message, type = "success") => {
@@ -124,7 +153,8 @@ const PhoneDeals = () => {
     try {
       const params = {};
       if (filters.dateFrom) params.from = new Date(filters.dateFrom).getTime();
-      if (filters.dateTo)   params.to   = new Date(filters.dateTo).setHours(23, 59, 59, 999);
+      if (filters.dateTo)
+        params.to = new Date(filters.dateTo).setHours(23, 59, 59, 999);
       const data = await getDeals(params);
       setDeals(data.deals || []);
     } catch {
@@ -134,7 +164,9 @@ const PhoneDeals = () => {
     }
   }, [getDeals, filters.dateFrom, filters.dateTo]);
 
-  useEffect(() => { fetchDeals(); }, [fetchDeals]);
+  useEffect(() => {
+    fetchDeals();
+  }, [fetchDeals]);
 
   const handleCreate = async (payload) => {
     setSaving(true);
@@ -184,31 +216,39 @@ const PhoneDeals = () => {
         d.commissionTo?.toLowerCase().includes(q);
       if (!hit) return false;
     }
-    if (filters.status && filters.status !== "all" && d.dealStatus !== filters.status) return false;
-    if (filters.product      && d.product          !== filters.product)      return false;
-    if (filters.account      && d.purchaseAccount  !== filters.account)      return false;
-    if (filters.purchasedFrom && d.purchasedFrom   !== filters.purchasedFrom) return false;
-    if (filters.soldTo       && d.soldTo           !== filters.soldTo)       return false;
-    if (filters.creditCard   && d.creditCard       !== filters.creditCard)   return false;
-    if (filters.commissionTo && d.commissionTo     !== filters.commissionTo) return false;
-    if (filters.withGST === "true"  && !d.withGST)  return false;
-    if (filters.withGST === "false" && d.withGST)   return false;
-    if (filters.hasCashback === "yes" && !(d.cashback > 0))      return false;
-    if (filters.hasCashback === "no"  && d.cashback > 0)         return false;
-    if (filters.hasCommission === "yes" && !(d.commissionAmount > 0)) return false;
-    if (filters.hasCommission === "no"  && d.commissionAmount > 0)    return false;
+    if (
+      filters.status &&
+      filters.status !== "all" &&
+      d.dealStatus !== filters.status
+    )
+      return false;
+    if (filters.product && d.product !== filters.product) return false;
+    if (filters.account && d.purchaseAccount !== filters.account) return false;
+    if (filters.purchasedFrom && d.purchasedFrom !== filters.purchasedFrom)
+      return false;
+    if (filters.soldTo && d.soldTo !== filters.soldTo) return false;
+    if (filters.creditCard && d.creditCard !== filters.creditCard) return false;
+    if (filters.commissionTo && d.commissionTo !== filters.commissionTo)
+      return false;
+    if (filters.withGST === "true" && !d.withGST) return false;
+    if (filters.withGST === "false" && d.withGST) return false;
+    if (filters.hasCashback === "yes" && !(d.cashback > 0)) return false;
+    if (filters.hasCashback === "no" && d.cashback > 0) return false;
+    if (filters.hasCommission === "yes" && !(d.commissionAmount > 0))
+      return false;
+    if (filters.hasCommission === "no" && d.commissionAmount > 0) return false;
     return true;
   });
 
   // Summary strip totals
   const totals = visible.reduce(
     (acc, d) => ({
-      buying:  acc.buying  + (d.buyingPrice  || 0),
-      net:     acc.net     + (d.netProfit    || 0),
-      gross:   acc.gross   + (d.grossProfit  || 0),
+      buying: acc.buying + (d.buyingPrice || 0),
+      net: acc.net + (d.netProfit || 0),
+      gross: acc.gross + (d.grossProfit || 0),
       pending: acc.pending + (d.paymentPending || 0),
     }),
-    { buying: 0, net: 0, gross: 0, pending: 0 }
+    { buying: 0, net: 0, gross: 0, pending: 0 },
   );
 
   const dateGroups = groupByDate(visible);
@@ -219,13 +259,21 @@ const PhoneDeals = () => {
 
       {toast && (
         <div className="fixed top-4 right-4 z-50">
-          <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
         </div>
       )}
 
       {showAdd && (
         <Modal title="Add New Deal" onClose={() => setShowAdd(false)} wide>
-          <DealForm onSave={handleCreate} onCancel={() => setShowAdd(false)} loading={saving} />
+          <DealForm
+            onSave={handleCreate}
+            onCancel={() => setShowAdd(false)}
+            loading={saving}
+          />
         </Modal>
       )}
 
@@ -245,19 +293,28 @@ const PhoneDeals = () => {
         <div>
           <h2 className="text-xl font-bold text-slate-800">Phone Deals</h2>
           <p className="text-sm text-slate-400">
-            {visible.length} deal{visible.length !== 1 ? "s" : ""} · {dateGroups.length} day{dateGroups.length !== 1 ? "s" : ""}
+            {visible.length} deal{visible.length !== 1 ? "s" : ""} ·{" "}
+            {dateGroups.length} day{dateGroups.length !== 1 ? "s" : ""}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <a
+          {/* <a
             href="/api/phones/deals/meta/export"
             className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium
               bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 shadow-sm"
             download
           >
             ↓ CSV
-          </a>
-          <Btn variant="primary" onClick={() => setShowAdd(true)}>+ New Deal</Btn>
+          </a> */}
+          <Btn
+            variant="secondary"
+            onClick={() => setAllExpanded((v) => (v === false ? true : false))}
+          >
+            {allExpanded === false ? "Expand All" : "Collapse All"}
+          </Btn>
+          <Btn variant="primary" onClick={() => setShowAdd(true)}>
+            + New Deal
+          </Btn>
         </div>
       </div>
 
@@ -271,10 +328,25 @@ const PhoneDeals = () => {
 
       {/* Summary strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <SummaryStrip label="Total Invested"   value={formatCurrency(totals.buying)} />
-        <SummaryStrip label="Gross Profit"     value={formatCurrency(totals.gross)}   positive={totals.gross >= 0} />
-        <SummaryStrip label="Net Profit"       value={formatCurrency(totals.net)}     positive={totals.net >= 0} />
-        <SummaryStrip label="Pending Payments" value={formatCurrency(totals.pending)} warn={totals.pending > 0} />
+        <SummaryStrip
+          label="Total Invested"
+          value={formatCurrency(totals.buying)}
+        />
+        <SummaryStrip
+          label="Gross Profit"
+          value={formatCurrency(totals.gross)}
+          positive={totals.gross >= 0}
+        />
+        <SummaryStrip
+          label="Net Profit"
+          value={formatCurrency(totals.net)}
+          positive={totals.net >= 0}
+        />
+        <SummaryStrip
+          label="Pending Payments"
+          value={formatCurrency(totals.pending)}
+          warn={totals.pending > 0}
+        />
       </div>
 
       {/* Grouped deals list */}
@@ -284,7 +356,9 @@ const PhoneDeals = () => {
         <div className="text-center py-16 text-slate-400">
           <p className="text-4xl mb-3">📱</p>
           <p className="font-medium text-slate-500">No deals found</p>
-          <p className="text-sm mt-1">Try adjusting your filters or add a new deal</p>
+          <p className="text-sm mt-1">
+            Try adjusting your filters or add a new deal
+          </p>
         </div>
       ) : (
         <div className="space-y-1">
@@ -296,6 +370,7 @@ const PhoneDeals = () => {
               onDelete={handleDelete}
               onRefresh={fetchDeals}
               formatCurrency={formatCurrency}
+              allExpanded={allExpanded}
             />
           ))}
         </div>
@@ -305,11 +380,15 @@ const PhoneDeals = () => {
 };
 
 const SummaryStrip = ({ label, value, positive, warn }) => (
-  <div className={`rounded-xl border px-4 py-3
-    ${warn ? "bg-amber-50 border-amber-100" : "bg-white border-slate-100"}`}>
+  <div
+    className={`rounded-xl border px-4 py-3
+    ${warn ? "bg-amber-50 border-amber-100" : "bg-white border-slate-100"}`}
+  >
     <p className="text-xs text-slate-400 uppercase tracking-wide">{label}</p>
-    <p className={`text-base font-bold mt-0.5
-      ${warn ? "text-amber-600" : positive === false ? "text-rose-500" : "text-slate-800"}`}>
+    <p
+      className={`text-base font-bold mt-0.5
+      ${warn ? "text-amber-600" : positive === false ? "text-rose-500" : "text-slate-800"}`}
+    >
       {value}
     </p>
   </div>

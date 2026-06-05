@@ -410,7 +410,7 @@ const PhoneSalesReport = () => {
                                     const gross   = deal.grossProfit;
                                     const net     = deal.netProfit;
                                     return (
-                                      <tr key={deal._id} className={`${style.bg} border-l-4 ${style.border} hover:brightness-95 transition-all`}>
+                                      <tr key={deal._id} className={`${style.bg} sm:border-l-4 ${style.border} hover:brightness-95 transition-all`}>
                                         <td className="border-b border-gray-200 px-3 py-2 text-gray-400">
                                           {dIdx+1}
                                         </td>
