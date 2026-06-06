@@ -134,7 +134,7 @@ const PhoneDeals = () => {
     usePhone();
 
   const [deals, setDeals] = useState([]);
-  const [allExpanded, setAllExpanded] = useState(null);
+  const [allExpanded, setAllExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
@@ -148,13 +148,12 @@ const PhoneDeals = () => {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const fetchDeals = useCallback(async () => {
+  const fetchDeals = useCallback(async (dateFrom, dateTo) => {
     setLoading(true);
     try {
       const params = {};
-      if (filters.dateFrom) params.from = new Date(filters.dateFrom).getTime();
-      if (filters.dateTo)
-        params.to = new Date(filters.dateTo).setHours(23, 59, 59, 999);
+      if (dateFrom) params.from = new Date(dateFrom).getTime();
+      if (dateTo) params.to = new Date(dateTo).setHours(23, 59, 59, 999);
       const data = await getDeals(params);
       setDeals(data.deals || []);
     } catch {
@@ -162,11 +161,11 @@ const PhoneDeals = () => {
     } finally {
       setLoading(false);
     }
-  }, [getDeals, filters.dateFrom, filters.dateTo]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    fetchDeals();
-  }, [fetchDeals]);
+    fetchDeals(filters.dateFrom, filters.dateTo);
+  }, [filters.dateFrom, filters.dateTo]); // fetchDeals is now stable
 
   const handleCreate = async (payload) => {
     setSaving(true);
@@ -351,9 +350,9 @@ const PhoneDeals = () => {
 
       {/* Grouped deals list */}
       {loading ? (
-        <div className="text-center py-16 text-slate-400">Loading deals…</div>
+        <div className="text-center py-16 text-slate-400 animate-enter">Loading deals…</div>
       ) : visible.length === 0 ? (
-        <div className="text-center py-16 text-slate-400">
+        <div className="text-center py-16 text-slate-400 animate-enter">
           <p className="text-4xl mb-3">📱</p>
           <p className="font-medium text-slate-500">No deals found</p>
           <p className="text-sm mt-1">
@@ -361,7 +360,7 @@ const PhoneDeals = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-1">
+        <div className="space-y-1 animate-enter">
           {dateGroups.map((group) => (
             <DealDateGroup
               key={group.label}

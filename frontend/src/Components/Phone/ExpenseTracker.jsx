@@ -22,13 +22,23 @@ const EMPTY_FORM = {
 
 const INR = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
 const COLORS = [
-  "rgba(99,  102, 241, 0.75)",
-  "rgba(244, 63,  94,  0.75)",
-  "rgba(245, 158, 11,  0.75)",
-  "rgba(16,  185, 129, 0.75)",
-  "rgba(6,   182, 212, 0.75)",
-  "rgba(139, 92,  246, 0.75)",
-  "rgba(249, 115, 22,  0.75)",
+  "rgba(255, 99, 132, 0.7)", // Soft Red
+  "rgba(54, 162, 235, 0.7)", // Soft Blue
+  "rgba(255, 206, 86, 0.7)", // Soft Yellow
+  "rgba(75, 192, 192, 0.7)", // Soft Teal
+  "rgba(192, 192, 192, 0.7)", // Soft Gray
+  "rgba(153, 102, 255, 0.7)", // Soft Purple
+  "rgba(255, 159, 64, 0.7)", // Soft Orange
+  "rgba(255, 99, 255, 0.7)", // Soft Pink
+  "rgba(54, 235, 162, 0.7)", // Soft Mint
+  "rgba(206, 86, 255, 0.7)", // Soft Violet
+  "rgba(192, 75, 192, 0.7)", // Soft Magenta
+  "rgba(99, 255, 132, 0.7)", // Soft Green
+  "rgba(235, 54, 162, 0.7)", // Soft Raspberry
+  "rgba(86, 255, 206, 0.7)", // Soft Cyan
+  "rgba(255, 192, 75, 0.7)", // Soft Amber
+  "rgba(99, 132, 255, 0.7)", // Soft Periwinkle
+  "rgba(162, 54, 235, 0.7)", // Soft Orchid
 ];
 const getColors = (n) =>
   Array.from({ length: n }, (_, i) => COLORS[i % COLORS.length]);
@@ -588,7 +598,6 @@ const ExpenseTracker = () => {
 
   return (
     <div className="relative">
-
       {(saving || deleting) && (
         <FullScreenSpinner message={saving ? "Saving…" : "Deleting…"} />
       )}
@@ -840,7 +849,9 @@ const ExpenseTracker = () => {
       {/* Dashboard tab */}
       {activeTab === "dashboard" &&
         (loading ? (
-          <div className="text-center py-16 text-slate-400">Loading…</div>
+          <div className="text-center py-16 text-slate-400 animate-enter">
+            Loading…
+          </div>
         ) : (
           <ExpenseDashboard
             expenses={expenses}
@@ -897,7 +908,7 @@ const ExpenseTracker = () => {
               </div>
 
               {/* Date-grouped list */}
-              <div className="space-y-3">
+              <div className="space-y-3 animate-enter">
                 {dateGroups.map((group) => (
                   <DateGroup
                     key={group.key}

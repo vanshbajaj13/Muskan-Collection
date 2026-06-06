@@ -8,11 +8,11 @@ import MenuBtn from "../MenuBtn";
 import PhoneSalesReport from "./PhoneSalesReport";
 
 const TABS = [
-  { key: "deals",     label: "📱 Deals",     component: <PhoneDeals /> },
+  { key: "deals", label: "📱 Deals", component: <PhoneDeals /> },
   { key: "dashboard", label: "📊 Dashboard", component: <PhoneDashboard /> },
   { key: "report", label: "📋 Report", component: <PhoneSalesReport /> },
-  { key: "expenses",  label: "💳 Expenses",  component: <ExpenseTracker /> },
-  { key: "dropdowns", label: "⚙️ Options",   component: <DropdownManager /> },
+  { key: "expenses", label: "💳 Expenses", component: <ExpenseTracker /> },
+  { key: "dropdowns", label: "⚙️ Options", component: <DropdownManager /> },
 ];
 
 const PhoneHome = () => {
@@ -30,7 +30,9 @@ const PhoneHome = () => {
             <div className="flex items-center gap-3 py-3 border-b border-slate-100">
               <span className="text-2xl"></span>
               <div>
-                <h1 className="font-bold text-slate-800 text-base leading-tight">Vansh Phones</h1>
+                <h1 className="font-bold text-slate-800 text-base leading-tight">
+                  Vansh Phones
+                </h1>
                 <p className="text-xs text-slate-400">Phone resale tracker</p>
               </div>
               <MenuBtn></MenuBtn>
@@ -43,9 +45,10 @@ const PhoneHome = () => {
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors
-                    ${activeTab === tab.key
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                    ${
+                      activeTab === tab.key
+                        ? "bg-indigo-600 text-white shadow-sm"
+                        : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                     }`}
                 >
                   {tab.label}
@@ -56,7 +59,10 @@ const PhoneHome = () => {
         </div>
 
         {/* ── Tab content ─────────────────────────────────────────── */}
-        <div className="max-w-6xl mx-auto px-4 py-6">
+        <div
+          key={activeTab}
+          className="max-w-6xl mx-auto px-4 py-6 animate-enter"
+        >
           {current?.component}
         </div>
       </div>
