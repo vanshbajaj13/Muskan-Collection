@@ -84,9 +84,9 @@ export const Field = ({ label, children, required, hint }) => (
 export const Input = React.forwardRef(({ className = "", ...props }, ref) => (
   <input
     ref={ref}
-    className={`w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 
+    className={`w-full text-[16px] border border-slate-200 rounded-lg px-3 py-2 text-lg text-slate-800 
       focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent
-      bg-white placeholder-slate-300 ${className}`}
+      bg-white placeholder-slate-300  ${className}`}
     {...props}
   />
 ));

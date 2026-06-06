@@ -1,6 +1,14 @@
 import React, { useState } from "react";
 import { usePhone } from "./PhoneContext";
-import { Btn, Input, Toast, ConfirmModal, RenameConfirmModal, Spinner, FullScreenSpinner } from "./PhoneUI";
+import {
+  Btn,
+  Input,
+  Toast,
+  ConfirmModal,
+  RenameConfirmModal,
+  Spinner,
+  FullScreenSpinner,
+} from "./PhoneUI";
 
 const TYPES = [
   {
@@ -115,7 +123,11 @@ const DropdownManager = () => {
     <div className="relative">
       {/* Block UI while rename/delete is in progress */}
       {(savingEdit || deletingId) && (
-        <FullScreenSpinner message={savingEdit ? "Renaming & updating records…" : "Deactivating option…"} />
+        <FullScreenSpinner
+          message={
+            savingEdit ? "Renaming & updating records…" : "Deactivating option…"
+          }
+        />
       )}
 
       {confirmModal && (
@@ -253,8 +265,8 @@ const DropdownManager = () => {
 
             {/* Options list */}
             {loadingDropdowns ? (
-              <div className="text-center py-10 text-slate-400 text-sm">
-                <Spinner size={16} />
+              <div className="flex justify-center items-center py-10">
+                <Spinner size={32} />
               </div>
             ) : activeOptions.length === 0 ? (
               <div className="text-center py-10 text-slate-400">
