@@ -22,6 +22,7 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
   const [savingPayment, setSavingPayment] = useState(false);
   const [removingPayment, setRemovingPayment] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDeletePayment, setConfirmDeletePayment] = useState(null); // stores paymentId
   const [deleting, setDeleting] = useState(false);
 
   const totalPaid = (deal.payments || []).reduce((s, p) => s + p.amount, 0);
@@ -54,6 +55,7 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
       onRefresh();
     } finally {
       setRemovingPayment(null);
+      setConfirmDeletePayment(null);
     }
   };
 
@@ -66,7 +68,6 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
       setConfirmDelete(false);
     }
   };
-  
 
   return (
     <>
@@ -78,6 +79,17 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
           onConfirm={handleDelete}
           onCancel={() => setConfirmDelete(false)}
           loading={deleting}
+        />
+      )}
+
+      {confirmDeletePayment && (
+        <ConfirmModal
+          title="Remove this payment?"
+          body="This action cannot be undone."
+          confirmTextRequired={true}
+          onConfirm={() => handleRemovePayment(confirmDeletePayment)}
+          onCancel={() => setConfirmDeletePayment(null)}
+          loading={removingPayment === confirmDeletePayment}
         />
       )}
 
@@ -140,19 +152,22 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
               ) : (
                 <span className="text-slate-300">—</span>
               )}
-            <p>
-              {" - "}{formatCurrency(deal.buyingPrice)}
-            </p>
-            {deal.charges !== 0 && (
-              <p className="text-rose-300">
-                {" - "}{formatCurrency(deal.charges)}
+              <p>
+                {" - "}
+                {formatCurrency(deal.buyingPrice)}
               </p>
-            )}
-            {deal.cashback !== 0 && (
-              <p className="text-emerald-300">
-                {" + "}{formatCurrency(deal.cashback)}
-              </p>
-            )}
+              {deal.charges !== 0 && (
+                <p className="text-rose-300">
+                  {" - "}
+                  {formatCurrency(deal.charges)}
+                </p>
+              )}
+              {deal.cashback !== 0 && (
+                <p className="text-emerald-300">
+                  {" + "}
+                  {formatCurrency(deal.cashback)}
+                </p>
+              )}
             </div>
             <ProfitChip value={deal.netProfit} />
           </div>
@@ -206,6 +221,12 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                   deal.sellingPrice ? formatCurrency(deal.sellingPrice) : "—"
                 }
               />
+              <Row
+                label="Buy Price"
+                value={
+                  deal.buyingPrice ? formatCurrency(deal.buyingPrice) : "—"
+                }
+              />
 
               {/* Profit breakdown */}
               <Row
@@ -216,7 +237,10 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                 label="Net Profit"
                 value={<ProfitChip value={deal.netProfit} />}
               />
-              <Row label="Total Paid" value={formatCurrency(totalPaid)} />
+              <Row
+                label="Total Payment Received"
+                value={formatCurrency(totalPaid)}
+              />
             </div>
 
             {/* Notes */}
@@ -337,7 +361,7 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                       )}
                       <button
                         className="ml-auto text-slate-300 hover:text-rose-400 transition-colors"
-                        onClick={() => handleRemovePayment(p._id)}
+                        onClick={() => setConfirmDeletePayment(p._id)}
                         disabled={removingPayment === p._id}
                         title="Remove payment"
                       >

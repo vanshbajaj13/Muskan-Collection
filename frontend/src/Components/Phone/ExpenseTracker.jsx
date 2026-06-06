@@ -336,8 +336,19 @@ const Section = ({ title, children, height = "h-72" }) => (
 );
 
 // ── Date Group Row ─────────────────────────────────────────────────────────
-const DateGroup = ({ group, formatCurrency, formatDate, onEdit, onDelete }) => {
+const DateGroup = ({
+  group,
+  formatCurrency,
+  formatDate,
+  onEdit,
+  onDelete,
+  allExpanded,
+}) => {
   const [open, setOpen] = useState(true);
+
+  useEffect(() => {
+    if (allExpanded !== null) setOpen(allExpanded);
+  }, [allExpanded]);
   const total = group.items.reduce((s, e) => s + e.amount, 0);
 
   return (
@@ -454,6 +465,7 @@ const ExpenseTracker = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [confirmEdit, setConfirmEdit] = useState(null);
+  const [allExpanded, setAllExpanded] = useState(true); // default expanded
 
   // Filters
   const [filterOpen, setFilterOpen] = useState(false);
@@ -681,12 +693,17 @@ const ExpenseTracker = () => {
                 key={t.key}
                 onClick={() => setActiveTab(t.key)}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors
-                  ${activeTab === t.key ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+          ${activeTab === t.key ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
               >
                 {t.label}
               </button>
             ))}
           </div>
+          {activeTab === "list" && (
+            <Btn variant="secondary" onClick={() => setAllExpanded((v) => !v)}>
+              {allExpanded ? "Collapse All" : "Expand All"}
+            </Btn>
+          )}
           <Btn variant="primary" onClick={() => setShowAdd(true)}>
             + Add
           </Btn>
@@ -917,6 +934,7 @@ const ExpenseTracker = () => {
                     formatDate={formatDate}
                     onEdit={setEditItem}
                     onDelete={setConfirmDeleteId}
+                    allExpanded={allExpanded}
                   />
                 ))}
               </div>

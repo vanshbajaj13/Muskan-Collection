@@ -52,6 +52,10 @@ const DealDateGroup = ({
   const [open, setOpen] = useState(true);
 
   const totalBuying = group.deals.reduce((s, d) => s + (d.buyingPrice || 0), 0);
+  const totalSelling = group.deals.reduce(
+    (s, d) => s + (d.sellingPrice || 0),
+    0,
+  );
   const totalNet = group.deals.reduce((s, d) => s + (d.netProfit || 0), 0);
   const totalPending = group.deals.reduce(
     (s, d) => s + (d.paymentPending || 0),
@@ -80,9 +84,15 @@ const DealDateGroup = ({
         <div className="flex items-center gap-3">
           <div className="hidden sm:flex items-center gap-3 text-xs text-slate-500">
             <span>
-              Invested:{" "}
+              Total Purchase:{" "}
               <span className="font-semibold text-slate-700">
                 {formatCurrency(totalBuying)}
+              </span>
+            </span>
+            <span>
+              Total Sale:{" "}
+              <span className="font-semibold text-slate-700">
+                {formatCurrency(totalSelling)}
               </span>
             </span>
             <span
@@ -161,10 +171,12 @@ const PhoneDeals = () => {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchDeals(filters.dateFrom, filters.dateTo);
+    // eslint-disable-next-line
   }, [filters.dateFrom, filters.dateTo]); // fetchDeals is now stable
 
   const handleCreate = async (payload) => {
@@ -350,7 +362,9 @@ const PhoneDeals = () => {
 
       {/* Grouped deals list */}
       {loading ? (
-        <div className="text-center py-16 text-slate-400 animate-enter">Loading deals…</div>
+        <div className="text-center py-16 text-slate-400 animate-enter">
+          Loading deals…
+        </div>
       ) : visible.length === 0 ? (
         <div className="text-center py-16 text-slate-400 animate-enter">
           <p className="text-4xl mb-3">📱</p>

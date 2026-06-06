@@ -176,32 +176,32 @@ export const Btn = ({
 };
 
 // ── Modal wrapper ─────────────────────────────────────────────────────────────
-export const Modal = ({ title, onClose, children, wide = false }) => (
-  <div
-    className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4"
-    style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
-    onClick={(e) => e.target === e.currentTarget && onClose()}
-  >
+export const Modal = ({ title, onClose, children, wide = false }) =>
+  ReactDOM.createPortal(
     <div
-      className={`bg-white rounded-2xl shadow-2xl w-full ${wide ? "max-w-4xl" : "max-w-xl"} 
-      max-h-[85vh] flex flex-col overflow-hidden`}
+      className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+      // onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-        <h2 className="text-base font-semibold text-slate-800">{title}</h2>
-        <button
-          onClick={onClose}
-          className="w-7 h-7 rounded-full flex items-center justify-center
-            text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-        >
-          ✕
-        </button>
+      <div
+        className={`bg-white rounded-2xl shadow-2xl w-full ${wide ? "max-w-4xl" : "max-w-xl"} 
+        max-h-[85vh] flex flex-col overflow-hidden`}
+      >
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <h2 className="text-base font-semibold text-slate-800">{title}</h2>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-full flex items-center justify-center
+              text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 px-6 py-5">{children}</div>
       </div>
-      {/* Body */}
-      <div className="overflow-y-auto flex-1 px-6 py-5">{children}</div>
-    </div>
-  </div>
-);
+    </div>,
+    document.body,
+  );
 
 // ── Summary card ──────────────────────────────────────────────────────────────
 export const SummaryCard = ({ label, value, sub, accent = "indigo" }) => {
@@ -256,10 +256,9 @@ export const ConfirmModal = ({
   confirmTextRequired = false,
 }) => {
   const [confirmText, setConfirmText] = React.useState("");
-
   const canProceed = !confirmTextRequired || confirmText === "CONFIRM";
 
-  return (
+  return ReactDOM.createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center px-4"
       style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
@@ -268,15 +267,12 @@ export const ConfirmModal = ({
         <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mx-auto mb-4">
           <span className="text-rose-500 text-xl">⚠</span>
         </div>
-
         <h3 className="text-center font-semibold text-slate-800 mb-2">
           {title}
         </h3>
-
         {body && (
           <p className="text-center text-sm text-slate-500 mb-5">{body}</p>
         )}
-
         {confirmTextRequired && (
           <div className="mb-5">
             <Input
@@ -287,7 +283,6 @@ export const ConfirmModal = ({
             />
           </div>
         )}
-
         <div className="flex gap-3">
           <Btn
             variant="secondary"
@@ -297,7 +292,6 @@ export const ConfirmModal = ({
           >
             Cancel
           </Btn>
-
           <Btn
             variant="danger"
             className="flex-1"
@@ -308,7 +302,8 @@ export const ConfirmModal = ({
           </Btn>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 
@@ -321,10 +316,9 @@ export const RenameConfirmModal = ({
   loading,
 }) => {
   const [confirmation, setConfirmation] = React.useState("");
-
   const canProceed = confirmation.trim() === newValue.trim();
 
-  return (
+  return ReactDOM.createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center px-4"
       style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
@@ -333,28 +327,22 @@ export const RenameConfirmModal = ({
         <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
           <span className="text-amber-600 text-xl">✏️</span>
         </div>
-
         <h3 className="text-center font-semibold text-slate-800 mb-2">
           Confirm Rename
         </h3>
-
         <div className="text-sm text-slate-600 mb-4 text-center">
           <p className="mt-2">
             <span className="font-medium text-rose-500">{oldValue}</span>
           </p>
-
           <p className="text-center font-extrabold text-xl">↓</p>
-
           <p>
             <span className="font-medium text-emerald-600">{newValue}</span>
           </p>
         </div>
-
         <div className="mb-5">
           <p className="text-xs text-slate-500 mb-2">
             Type the new value exactly to confirm:
           </p>
-
           <Input
             value={confirmation}
             onChange={(e) => setConfirmation(e.target.value)}
@@ -363,7 +351,6 @@ export const RenameConfirmModal = ({
             className="text-center tracking-wide font-medium"
           />
         </div>
-
         <div className="flex gap-3">
           <Btn
             variant="secondary"
@@ -373,7 +360,6 @@ export const RenameConfirmModal = ({
           >
             Cancel
           </Btn>
-
           <Btn
             variant="primary"
             className="flex-1"
@@ -384,6 +370,7 @@ export const RenameConfirmModal = ({
           </Btn>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
