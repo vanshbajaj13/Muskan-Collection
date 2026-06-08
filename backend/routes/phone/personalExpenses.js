@@ -114,7 +114,7 @@ router.post("/shortcut", protect, protectVansh, async (req, res) => {
       description: description || "",
       card: card || "",
       category: category || "",
-      date: date || Date.now(), // uses provided date or defaults to now
+      date: date ? new Date(date).getTime() : Date.now(), // uses provided date or defaults to now
     });
     await expense.save();
     res.status(201).json({ message: "Saved!", expense });
