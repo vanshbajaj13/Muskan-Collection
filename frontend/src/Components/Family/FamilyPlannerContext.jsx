@@ -21,7 +21,7 @@ export const freqToMonthly = (frequency, amount) => {
     case "yearly":
       return amount / 12;
     case "one_time":
-      return 0; // handled separately
+      return 0;
     default:
       return amount;
   }
@@ -39,17 +39,15 @@ export const FREQ_LABELS = {
 export const isActiveInMonth = (item, year, month) => {
   const monthStart = new Date(year, month, 1).getTime();
   const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999).getTime();
-
-  // Must have started by end of this month
   if (item.startDate > monthEnd) return false;
-  // Must not have ended before start of this month
   if (item.endDate && item.endDate < monthStart) return false;
   return true;
 };
 
 // ── Check if a one-time item falls in a given month ──────────────────────────
 export const isOneTimeInMonth = (item, year, month) => {
-  const d = item.occurredDate || item.receivedDate;
+  // For expenses: use occurredDate; for income: use receivedDate or startDate
+  const d = item.occurredDate || item.receivedDate || item.startDate;
   if (!d) return false;
   const date = new Date(d);
   return date.getFullYear() === year && date.getMonth() === month;
@@ -63,6 +61,41 @@ export const FamilyPlannerProvider = ({ children }) => {
   const [savingsGoals, setSavingsGoals] = useState([]);
   const [dropdowns, setDropdowns] = useState({});
   const [loading, setLoading] = useState(true);
+
+  // ── Dashboard setting: include business net profit in income ──────────────
+  const [includeBizProfit, setIncludeBizProfit] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("fp_includeBizProfit") ?? "true");
+    } catch {
+      return true;
+    }
+  });
+
+  const [includeBizNetProfit, setIncludeBizNetProfit] = useState(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem("fp_includeBizNetProfit") ?? "false",
+      );
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleIncludeBizNetProfit = () => {
+    setIncludeBizNetProfit((v) => {
+      const next = !v;
+      localStorage.setItem("fp_includeBizNetProfit", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const toggleIncludeBizProfit = () => {
+    setIncludeBizProfit((v) => {
+      const next = !v;
+      localStorage.setItem("fp_includeBizProfit", JSON.stringify(next));
+      return next;
+    });
+  };
 
   const token = () => {
     const info = window.localStorage.getItem("userInfo");
@@ -306,7 +339,10 @@ export const FamilyPlannerProvider = ({ children }) => {
   const removeContribution = async (goalId, contribId) => {
     const res = await fetch(
       `/api/family/savings/${goalId}/contribution/${contribId}`,
-      { method: "DELETE", headers: authHeaders() },
+      {
+        method: "DELETE",
+        headers: authHeaders(),
+      },
     );
     if (!res.ok) throw new Error("Failed");
     const updated = await res.json();
@@ -332,6 +368,46 @@ export const FamilyPlannerProvider = ({ children }) => {
       [type]: [...(prev[type] || []), { _id: opt._id, value: opt.value }],
     }));
   };
+
+  const renameDropdown = async (type, id, newValue) => {
+    const res = await fetch(`/api/family/dropdowns/${id}`, {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: JSON.stringify({ value: newValue }),
+    });
+    if (!res.ok) {
+      const e = await res.json();
+      throw new Error(e.error || "Failed");
+    }
+    const opt = await res.json();
+
+    // Update local dropdown list
+    setDropdowns((prev) => ({
+      ...prev,
+      [type]: (prev[type] || []).map((o) =>
+        o._id === id ? { ...o, value: opt.value } : o,
+      ),
+    }));
+
+    // Propagate rename into expenses / incomes in local state
+    const oldValue = (dropdowns[type] || []).find((o) => o._id === id)?.value;
+    if (oldValue && type === "expenseCategory") {
+      setExpenses((prev) =>
+        prev.map((e) =>
+          e.category === oldValue ? { ...e, category: opt.value } : e,
+        ),
+      );
+    }
+    if (oldValue && type === "incomeType") {
+      setIncomes((prev) =>
+        prev.map((i) =>
+          i.incomeType === oldValue ? { ...i, incomeType: opt.value } : i,
+        ),
+      );
+    }
+    return opt;
+  };
+
   const deleteDropdown = async (type, id) => {
     await fetch(`/api/family/dropdowns/${id}`, {
       method: "DELETE",
@@ -358,10 +434,23 @@ export const FamilyPlannerProvider = ({ children }) => {
   const dateFromTs = (ts) =>
     ts ? new Date(ts).toISOString().split("T")[0] : "";
 
+  // ── Helpers for business entry sums ──────────────────────────────────────
+  const getBizStockTotal = (entry) => {
+    if (!entry) return 0;
+    if (entry.stockPurchases && entry.stockPurchases.length > 0)
+      return entry.stockPurchases.reduce((s, p) => s + (p.amount || 0), 0);
+    return entry.stockPurchase || 0;
+  };
+  const getBizExpenseTotal = (entry) => {
+    if (!entry) return 0;
+    if (entry.businessExpenses && entry.businessExpenses.length > 0)
+      return entry.businessExpenses.reduce((s, e) => s + (e.amount || 0), 0);
+    return entry.otherBusinessExpense || 0;
+  };
+
   // ── Compute month summary ─────────────────────────────────────────────────
   const getMonthSummary = useCallback(
     (year, month) => {
-      // Income
       let totalIncome = 0;
       const incomeBreakdown = [];
 
@@ -392,13 +481,15 @@ export const FamilyPlannerProvider = ({ children }) => {
           }
         });
 
-      // Business entry for this month
       const bizEntry = businessEntries.find(
         (b) => b.year === year && b.month === month,
       );
       const bizRevenue = bizEntry?.salesRevenue || 0;
-      const bizExpense =
-        (bizEntry?.stockPurchase || 0) + (bizEntry?.otherBusinessExpense || 0);
+      const bizStockExp = getBizStockTotal(bizEntry);
+      const bizOtherExp = getBizExpenseTotal(bizEntry);
+      const bizExpense = bizStockExp + bizOtherExp;
+      const bizNetProfit = bizRevenue - bizExpense;
+
       if (bizRevenue > 0) {
         totalIncome += bizRevenue;
         incomeBreakdown.push({
@@ -409,7 +500,6 @@ export const FamilyPlannerProvider = ({ children }) => {
         });
       }
 
-      // Expenses
       let totalExpenses = 0;
       const expenseBreakdown = [];
 
@@ -450,24 +540,56 @@ export const FamilyPlannerProvider = ({ children }) => {
         });
       }
 
-      const netCashFlow = totalIncome - totalExpenses;
+      // ── Adjustment logic ──────────────────────────────────────────────────
+      let adjustedIncome = totalIncome;
+      let adjustedExpenses = totalExpenses;
+      let adjustedIncomeBreakdown = [...incomeBreakdown];
+      let adjustedExpenseBreakdown = [...expenseBreakdown];
+
+      if (!includeBizProfit && bizRevenue > 0) {
+        // Strip out biz revenue + expenses entirely
+        adjustedIncome -= bizRevenue;
+        adjustedExpenses -= bizExpense;
+        adjustedIncomeBreakdown = adjustedIncomeBreakdown.filter(
+          (i) => i.type !== "business",
+        );
+        adjustedExpenseBreakdown = adjustedExpenseBreakdown.filter(
+          (e) => e.category !== "Business",
+        );
+
+        // If net profit toggle is on, inject only the net profit as a single income line
+        if (includeBizNetProfit && bizNetProfit !== 0) {
+          adjustedIncome += bizNetProfit;
+          adjustedIncomeBreakdown.push({
+            label:
+              bizNetProfit >= 0 ? "Business Net Profit" : "Business Net Loss",
+            amount: bizNetProfit,
+            type: "business",
+            freq: "one_time",
+          });
+        }
+      }
+
+      const netCashFlow = adjustedIncome - adjustedExpenses;
       const savingsRate =
-        totalIncome > 0 ? (netCashFlow / totalIncome) * 100 : 0;
+        adjustedIncome > 0 ? (netCashFlow / adjustedIncome) * 100 : 0;
 
       return {
-        totalIncome,
-        totalExpenses,
+        totalIncome: adjustedIncome,
+        totalExpenses: adjustedExpenses,
         netCashFlow,
         savingsRate,
-        incomeBreakdown,
-        expenseBreakdown,
+        incomeBreakdown: adjustedIncomeBreakdown,
+        expenseBreakdown: adjustedExpenseBreakdown,
         bizEntry,
+        bizRevenue,
+        bizNetProfit,
       };
     },
-    [incomes, expenses, businessEntries],
+    [incomes, expenses, businessEntries, includeBizProfit, includeBizNetProfit],
   );
 
-  // ── Compute forecast for next N months ───────────────────────────────────
+  // ── Forecast ─────────────────────────────────────────────────────────────
   const getForecast = useCallback(
     (fromYear, fromMonth, nMonths = 6) => {
       const months = [];
@@ -506,6 +628,10 @@ export const FamilyPlannerProvider = ({ children }) => {
         savingsGoals,
         dropdowns,
         loading,
+        includeBizProfit,
+        toggleIncludeBizProfit,
+        includeBizNetProfit,
+        toggleIncludeBizNetProfit,
         createIncome,
         updateIncome,
         deleteIncome,
@@ -525,6 +651,7 @@ export const FamilyPlannerProvider = ({ children }) => {
         addContribution,
         removeContribution,
         addDropdown,
+        renameDropdown,
         deleteDropdown,
         opts,
         INR,
@@ -534,6 +661,8 @@ export const FamilyPlannerProvider = ({ children }) => {
         getMonthSummary,
         getForecast,
         fetchAll,
+        getBizStockTotal,
+        getBizExpenseTotal,
       }}
     >
       {children}

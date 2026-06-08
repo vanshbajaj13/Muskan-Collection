@@ -26,15 +26,24 @@ export default function FPSavings() {
   const [goalForm, setGoalForm] = useState(EMPTY_GOAL);
   const [savingGoal, setSavingGoal] = useState(false);
 
-  const [showContribModal, setShowContribModal] = useState(null); // goal object
+  const [showContribModal, setShowContribModal] = useState(null);
   const [contribForm, setContribForm] = useState(EMPTY_CONTRIBUTION);
   const [savingContrib, setSavingContrib] = useState(false);
 
   const [delTarget, setDelTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Edit confirm gate
+  const [editTarget, setEditTarget] = useState(null);
+  const [editConfirmOpen, setEditConfirmOpen] = useState(false);
+
+  // Contribution remove confirm gate
+  const [contribDelTarget, setContribDelTarget] = useState(null); // { goalId, contribId }
+  const [contribDeleting, setContribDeleting] = useState(false);
+
   const [expandedId, setExpandedId] = useState(null);
   const [toast, setToast] = useState(null);
-  const [filter, setFilter] = useState("active"); // active | achieved | all
+  const [filter, setFilter] = useState("active");
 
   const notify = (msg, type = "success") => {
     setToast({ message: msg, type });
@@ -47,7 +56,17 @@ export default function FPSavings() {
     setShowGoalForm(true);
   };
 
-  const openEdit = (goal) => {
+  // Step 1: user clicks ✎ Rename → confirm gate
+  const requestEdit = (goal) => {
+    setEditTarget(goal);
+    setEditConfirmOpen(true);
+  };
+
+  // Step 2: confirmed → open form
+  const proceedEdit = () => {
+    const goal = editTarget;
+    setEditConfirmOpen(false);
+    setEditTarget(null);
     setEditingGoal(goal);
     setGoalForm({
       label: goal.label,
@@ -110,12 +129,22 @@ export default function FPSavings() {
     }
   };
 
-  const handleRemoveContribution = async (goalId, contribId) => {
+  // Confirm gate for contribution removal
+  const requestContribRemove = (goalId, contribId) => {
+    setContribDelTarget({ goalId, contribId });
+  };
+
+  const handleRemoveContribution = async () => {
+    if (!contribDelTarget) return;
+    setContribDeleting(true);
     try {
-      await removeContribution(goalId, contribId);
+      await removeContribution(contribDelTarget.goalId, contribDelTarget.contribId);
       notify("Removed");
+      setContribDelTarget(null);
     } catch {
       notify("Failed", "error");
+    } finally {
+      setContribDeleting(false);
     }
   };
 
@@ -132,7 +161,6 @@ export default function FPSavings() {
     }
   };
 
-  // Helpers to compute saved / remaining (virtuals may not always come through)
   const totalSaved = (goal) =>
     (goal.contributions || []).reduce((s, c) => s + c.amount, 0);
   const remaining = (goal) =>
@@ -142,12 +170,10 @@ export default function FPSavings() {
     return Math.min(100, Math.round((totalSaved(goal) / goal.targetAmount) * 100));
   };
 
-  // Days until target date
   const daysUntil = (ts) => {
     if (!ts) return null;
     const diff = ts - Date.now();
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    return days;
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
   };
 
   const filtered = useMemo(() => {
@@ -191,8 +217,8 @@ export default function FPSavings() {
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: "Active Goals", val: savingsGoals.filter(g => !g.isAchieved).length, color: "bg-violet-50 text-violet-700" },
-          { label: "Total Saved", val: INR(totalContributed), color: "bg-emerald-50 text-emerald-700" },
-          { label: "Still Needed", val: INR(Math.max(0, totalTarget - totalContributed)), color: "bg-amber-50 text-amber-700" },
+          { label: "Total Saved",  val: INR(totalContributed),                           color: "bg-emerald-50 text-emerald-700" },
+          { label: "Still Needed", val: INR(Math.max(0, totalTarget - totalContributed)),color: "bg-amber-50 text-amber-700" },
         ].map(c => (
           <div key={c.label} className={`rounded-xl p-3 text-center ${c.color}`}>
             <p className="text-lg font-bold">{c.val}</p>
@@ -201,7 +227,6 @@ export default function FPSavings() {
         ))}
       </div>
 
-      {/* Goals list */}
       {filtered.length === 0 ? (
         <EmptyState
           icon="🎯"
@@ -211,48 +236,39 @@ export default function FPSavings() {
         />
       ) : (
         <div className="space-y-3">
-          {filtered.map(goal => {
+          {filtered.map((goal) => {
             const saved = totalSaved(goal);
-            const pct = progressPct(goal);
             const rem = remaining(goal);
+            const pct = progressPct(goal);
             const isExpanded = expandedId === goal._id;
             const days = daysUntil(goal.targetDate);
 
             return (
-              <div
-                key={goal._id}
-                className={`bg-white rounded-xl border p-4 ${goal.isAchieved ? "border-emerald-200 bg-emerald-50/30" : "border-slate-200"}`}
-              >
-                <div className="flex items-start justify-between gap-3">
+              <div key={goal._id}
+                className={`bg-white rounded-xl border p-4 animate-enter ${goal.isAchieved ? "border-emerald-200 bg-emerald-50/30" : "border-slate-200"}`}>
+                <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
-                    {/* Title row */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-slate-800">{goal.label}</span>
-                      {goal.isAchieved && <Badge color="green">✓ Achieved</Badge>}
-                      {!goal.isAchieved && days !== null && (
-                        <Badge color={days < 0 ? "red" : days <= 30 ? "amber" : "blue"}>
+                      <span className="font-semibold text-slate-800 text-sm">{goal.label}</span>
+                      {goal.isAchieved && <Badge color="green">🎉 Achieved</Badge>}
+                      {!goal.isAchieved && goal.targetDate && days !== null && (
+                        <Badge color={days < 0 ? "red" : days < 30 ? "amber" : "blue"}>
                           {days < 0 ? `${Math.abs(days)}d overdue` : `${days}d left`}
                         </Badge>
                       )}
                     </div>
 
-                    {/* Amount row */}
                     <div className="mt-1 flex items-center gap-3 flex-wrap text-sm">
-                      <span className="text-violet-700 font-bold">{INR(saved)}</span>
-                      <span className="text-slate-400">of</span>
-                      <span className="text-slate-700 font-semibold">{INR(goal.targetAmount)}</span>
+                      <span className="text-violet-600 font-bold">{INR(saved)}</span>
+                      <span className="text-slate-400 text-xs">of {INR(goal.targetAmount)}</span>
                       {!goal.isAchieved && rem > 0 && (
-                        <span className="text-xs text-slate-400">({INR(rem)} remaining)</span>
-                      )}
-                      {goal.targetDate && (
-                        <span className="text-xs text-slate-400">by {fmtDate(goal.targetDate)}</span>
+                        <span className="text-xs text-slate-400">{INR(rem)} to go</span>
                       )}
                     </div>
 
-                    {/* Progress bar */}
                     <div className="mt-2">
-                      <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-                        <span>{pct}% saved</span>
+                      <div className="flex justify-between text-xs text-slate-400 mb-1">
+                        <span>{pct}%</span>
                         <span>{(goal.contributions || []).length} contribution{(goal.contributions || []).length !== 1 ? "s" : ""}</span>
                       </div>
                       <div className="bg-slate-100 rounded-full h-2">
@@ -271,8 +287,8 @@ export default function FPSavings() {
                   {/* Actions */}
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <div className="flex gap-1">
-                      <Btn variant="ghost" className="px-2 py-1 text-xs" onClick={() => openEdit(goal)}>✏️</Btn>
-                      <Btn variant="ghost" className="px-2 py-1 text-xs text-rose-400" onClick={() => setDelTarget(goal)}>🗑</Btn>
+                      <Btn variant="ghost" className="px-2 py-1 text-xs" onClick={() => requestEdit(goal)}>✎ Rename</Btn>
+                      <Btn variant="ghost" className="px-2 py-1 text-xs text-rose-400" onClick={() => setDelTarget(goal)}>✕</Btn>
                     </div>
                     {!goal.isAchieved && (
                       <Btn
@@ -309,11 +325,9 @@ export default function FPSavings() {
                           {c.note && <span className="text-slate-400 text-xs italic">{c.note}</span>}
                         </div>
                         <button
-                          onClick={() => handleRemoveContribution(goal._id, c._id)}
+                          onClick={() => requestContribRemove(goal._id, c._id)}
                           className="text-xs text-rose-400 hover:text-rose-600 ml-2"
-                        >
-                          ✕
-                        </button>
+                        >✕</button>
                       </div>
                     ))}
                     <div className="flex justify-between text-xs font-bold px-3 pt-1 text-slate-600">
@@ -451,6 +465,18 @@ export default function FPSavings() {
         </Modal>
       )}
 
+      {/* Edit confirm gate */}
+      {editConfirmOpen && editTarget && (
+        <ConfirmModal
+          title="Edit Savings Goal?"
+          body={`You're about to edit "${editTarget.label}". Type CONFIRM to proceed.`}
+          onConfirm={proceedEdit}
+          onCancel={() => { setEditConfirmOpen(false); setEditTarget(null); }}
+          confirmTextRequired
+        />
+      )}
+
+      {/* Delete confirm */}
       {delTarget && (
         <ConfirmModal
           title="Delete Goal?"
@@ -458,6 +484,19 @@ export default function FPSavings() {
           onConfirm={handleDelete}
           onCancel={() => setDelTarget(null)}
           loading={deleting}
+          confirmTextRequired
+        />
+      )}
+
+      {/* Contribution remove confirm */}
+      {contribDelTarget && (
+        <ConfirmModal
+          title="Remove Contribution?"
+          body="This contribution entry will be permanently deleted. Type CONFIRM to proceed."
+          onConfirm={handleRemoveContribution}
+          onCancel={() => setContribDelTarget(null)}
+          loading={contribDeleting}
+          confirmTextRequired
         />
       )}
     </div>

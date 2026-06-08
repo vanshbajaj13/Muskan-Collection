@@ -25,23 +25,31 @@ export default function FPDebts() {
     INR, fmtDate, tsFromDate, dateFromTs, loading,
   } = useFP();
 
-  const [tab, setTab] = useState("active"); // active | settled | all
-  const [typeFilter, setTypeFilter] = useState("all"); // all | borrowed | lent
+  const [tab, setTab] = useState("active");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [showDebtForm, setShowDebtForm] = useState(false);
   const [editingDebt, setEditingDebt] = useState(null);
   const [debtForm, setDebtForm] = useState(EMPTY_DEBT);
   const [savingDebt, setSavingDebt] = useState(false);
 
-  const [showRepayModal, setShowRepayModal] = useState(null); // debt object
+  const [showRepayModal, setShowRepayModal] = useState(null);
   const [repayForm, setRepayForm] = useState(EMPTY_REPAYMENT);
   const [savingRepay, setSavingRepay] = useState(false);
 
   const [delTarget, setDelTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Edit confirm gate
+  const [editTarget, setEditTarget] = useState(null); // debt to edit, pending confirm
+  const [editConfirmOpen, setEditConfirmOpen] = useState(false);
+
+  // Repayment remove confirm gate
+  const [repayDelTarget, setRepayDelTarget] = useState(null); // { debtId, repId }
+  const [repayDeleting, setRepayDeleting] = useState(false);
+
   const [expandedId, setExpandedId] = useState(null);
   const [toast, setToast] = useState(null);
 
-  // Person dropdown
   const [newPersonInput, setNewPersonInput] = useState("");
   const [addingPerson, setAddingPerson] = useState(false);
 
@@ -56,7 +64,17 @@ export default function FPDebts() {
     setShowDebtForm(true);
   };
 
-  const openEdit = (debt) => {
+  // Step 1: user clicks ✎ Rename → show confirm modal
+  const requestEdit = (debt) => {
+    setEditTarget(debt);
+    setEditConfirmOpen(true);
+  };
+
+  // Step 2: user types CONFIRM → actually open the form
+  const proceedEdit = () => {
+    const debt = editTarget;
+    setEditConfirmOpen(false);
+    setEditTarget(null);
     setEditingDebt(debt);
     setDebtForm({
       type: debt.type,
@@ -117,11 +135,20 @@ export default function FPDebts() {
     finally { setSavingRepay(false); }
   };
 
-  const handleRemoveRepayment = async (debtId, repId) => {
+  // Confirm gate for repayment removal
+  const requestRepayRemove = (debtId, repId) => {
+    setRepayDelTarget({ debtId, repId });
+  };
+
+  const handleRemoveRepayment = async () => {
+    if (!repayDelTarget) return;
+    setRepayDeleting(true);
     try {
-      await removeRepayment(debtId, repId);
+      await removeRepayment(repayDelTarget.debtId, repayDelTarget.repId);
       notify("Removed");
+      setRepayDelTarget(null);
     } catch { notify("Failed", "error"); }
+    finally { setRepayDeleting(false); }
   };
 
   const handleDelete = async () => {
@@ -148,7 +175,6 @@ export default function FPDebts() {
 
   const persons = opts("person");
 
-  // Computed outstanding for a debt
   const outstanding = (debt) => {
     const repaid = (debt.repayments || []).reduce((s, r) => s + r.amount, 0);
     return Math.max(0, debt.principalAmount - repaid);
@@ -169,9 +195,9 @@ export default function FPDebts() {
     .reduce((s, d) => s + outstanding(d), 0);
 
   const TABS = [
-    { key: "active", label: `Active (${debts.filter(d => !d.isSettled).length})` },
+    { key: "active",  label: `Active (${debts.filter(d => !d.isSettled).length})` },
     { key: "settled", label: `Settled (${debts.filter(d => d.isSettled).length})` },
-    { key: "all", label: `All (${debts.length})` },
+    { key: "all",     label: `All (${debts.length})` },
   ];
 
   if (loading) return <FullSpinner message="Loading debts…" />;
@@ -187,8 +213,9 @@ export default function FPDebts() {
       <SectionHead title="Debts & Loans" sub="Money borrowed and lent">
         <div className="flex gap-2">
           <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
-            className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-600">
-            <option value="all">All</option>
+            className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-600"
+            style={{ fontSize: "16px" }}>
+            <option value="all">All Types</option>
             <option value="borrowed">Borrowed</option>
             <option value="lent">Lent</option>
           </select>
@@ -197,62 +224,53 @@ export default function FPDebts() {
       </SectionHead>
 
       {/* Summary strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: "I Owe (Borrowed)", val: INR(totalBorrowed), color: "bg-red-50 text-red-700" },
-          { label: "Owed to Me (Lent)", val: INR(totalLent), color: "bg-blue-50 text-blue-700" },
-          { label: "Active Entries", val: debts.filter(d => !d.isSettled).length, color: "bg-amber-50 text-amber-700" },
-          { label: "Settled", val: debts.filter(d => d.isSettled).length, color: "bg-emerald-50 text-emerald-700" },
-        ].map(c => (
-          <div key={c.label} className={`rounded-xl p-3 text-center ${c.color}`}>
-            <p className="text-lg font-bold">{c.val}</p>
-            <p className="text-xs font-medium mt-0.5 opacity-70">{c.label}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl p-3 text-center bg-red-50 text-red-700">
+          <p className="text-lg font-bold">{INR(totalBorrowed)}</p>
+          <p className="text-xs font-medium mt-0.5 opacity-70">I Owe</p>
+        </div>
+        <div className="rounded-xl p-3 text-center bg-blue-50 text-blue-700">
+          <p className="text-lg font-bold">{INR(totalLent)}</p>
+          <p className="text-xs font-medium mt-0.5 opacity-70">Owed to Me</p>
+        </div>
       </div>
 
       <PillTabs tabs={TABS} active={tab} onChange={setTab} />
 
       {filtered.length === 0 ? (
         <EmptyState icon="🤝" title="No entries found"
-          sub="Track money you've borrowed or lent to friends and family"
+          sub="Record money you've borrowed or lent to track repayments"
           action={<Btn onClick={openCreate}>+ Add Entry</Btn>} />
       ) : (
-        <div className="space-y-3">
-          {filtered.map(debt => {
+        <div className="space-y-2">
+          {filtered.map((debt) => {
+            const isExpanded = expandedId === debt._id;
             const out = outstanding(debt);
             const repaid = totalRepaid(debt);
-            const pct = debt.principalAmount > 0 ? Math.round((repaid / debt.principalAmount) * 100) : 0;
-            const isExpanded = expandedId === debt._id;
+            const pct = debt.principalAmount > 0
+              ? Math.min(100, Math.round((repaid / debt.principalAmount) * 100))
+              : 0;
 
             return (
               <div key={debt._id}
-                className={`bg-white rounded-xl border p-4 ${debt.isSettled ? "opacity-70 border-emerald-200" : "border-slate-200"}`}>
-                <div className="flex items-start justify-between gap-3">
+                className={`bg-white rounded-xl border p-4 animate-enter ${debt.isSettled ? "opacity-60" : ""} border-slate-200`}>
+                <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
-                    {/* Header */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`text-base font-bold ${debt.type === "borrowed" ? "text-red-600" : "text-blue-600"}`}>
-                        {debt.type === "borrowed" ? "⬇️" : "⬆️"} {debt.personName}
-                      </span>
+                      <span className="font-semibold text-slate-800 text-sm">{debt.personName}</span>
                       <Badge color={debt.type === "borrowed" ? "red" : "blue"}>
-                        {debt.type === "borrowed" ? "I Borrowed" : "I Lent"}
+                        {debt.type === "borrowed" ? "⬇️ Borrowed" : "⬆️ Lent"}
                       </Badge>
-                      {debt.isSettled && <Badge color="green">✓ Settled</Badge>}
+                      {debt.isSettled && <Badge color="slate">Settled</Badge>}
                     </div>
 
-                    {/* Amounts */}
-                    <div className="mt-1.5 flex items-center gap-4 flex-wrap text-sm">
-                      <span className="text-slate-600">Principal: <strong>{INR(debt.principalAmount)}</strong></span>
-                      <span className="text-emerald-600">Repaid: <strong>{INR(repaid)}</strong></span>
-                      {!debt.isSettled && (
-                        <span className={`font-bold ${debt.type === "borrowed" ? "text-red-600" : "text-blue-600"}`}>
-                          Outstanding: {INR(out)}
-                        </span>
-                      )}
+                    <div className="mt-1 flex items-center gap-3 flex-wrap text-sm">
+                      <span className={`font-bold ${debt.type === "borrowed" ? "text-red-600" : "text-blue-600"}`}>
+                        {INR(out)} outstanding
+                      </span>
+                      <span className="text-xs text-slate-400">of {INR(debt.principalAmount)}</span>
                     </div>
 
-                    {/* Progress bar */}
                     {debt.principalAmount > 0 && (
                       <div className="mt-2">
                         <div className="flex justify-between text-xs text-slate-400 mb-1">
@@ -268,7 +286,6 @@ export default function FPDebts() {
                       </div>
                     )}
 
-                    {/* Dates & reason */}
                     <div className="mt-1.5 flex items-center gap-3 flex-wrap text-xs text-slate-400">
                       {debt.expectedReturnDate && (
                         <span>Expected: {fmtDate(debt.expectedReturnDate)}</span>
@@ -280,8 +297,8 @@ export default function FPDebts() {
                   {/* Actions */}
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <div className="flex gap-1">
-                      <Btn variant="ghost" className="px-2 py-1 text-xs" onClick={() => openEdit(debt)}>✏️</Btn>
-                      <Btn variant="ghost" className="px-2 py-1 text-xs text-rose-400" onClick={() => setDelTarget(debt)}>🗑</Btn>
+                      <Btn variant="ghost" className="px-2 py-1 text-xs" onClick={() => requestEdit(debt)}>✎ Rename</Btn>
+                      <Btn variant="ghost" className="px-2 py-1 text-xs text-rose-400" onClick={() => setDelTarget(debt)}>✕</Btn>
                     </div>
                     {!debt.isSettled && (
                       <Btn variant="secondary" className="text-xs px-2 py-1"
@@ -309,7 +326,8 @@ export default function FPDebts() {
                           <span className="text-slate-400 text-xs">{fmtDate(r.date)}</span>
                           {r.note && <span className="text-slate-400 text-xs italic">{r.note}</span>}
                         </div>
-                        <button onClick={() => handleRemoveRepayment(debt._id, r._id)}
+                        <button
+                          onClick={() => requestRepayRemove(debt._id, r._id)}
                           className="text-xs text-rose-400 hover:text-rose-600 ml-2">✕</button>
                       </div>
                     ))}
@@ -348,7 +366,6 @@ export default function FPDebts() {
                 placeholder="Select person…"
               />
             </Field>
-            {/* Inline add person */}
             <div className="flex gap-2 -mt-2">
               <FPInput
                 value={newPersonInput}
@@ -433,13 +450,38 @@ export default function FPDebts() {
         </Modal>
       )}
 
+      {/* Edit confirm gate */}
+      {editConfirmOpen && editTarget && (
+        <ConfirmModal
+          title="Edit Debt Entry?"
+          body={`You're about to edit "${editTarget.personName}" — ${INR(editTarget.principalAmount)}. Type CONFIRM to proceed.`}
+          onConfirm={proceedEdit}
+          onCancel={() => { setEditConfirmOpen(false); setEditTarget(null); }}
+          confirmTextRequired
+        />
+      )}
+
+      {/* Delete confirm */}
       {delTarget && (
         <ConfirmModal
           title="Delete Debt Entry?"
-          body={`"${delTarget.personName}" entry of ${INR(delTarget.principalAmount)} will be removed.`}
+          body={`"${delTarget.personName}" entry of ${INR(delTarget.principalAmount)} will be permanently removed.`}
           onConfirm={handleDelete}
           onCancel={() => setDelTarget(null)}
           loading={deleting}
+          confirmTextRequired
+        />
+      )}
+
+      {/* Repayment remove confirm */}
+      {repayDelTarget && (
+        <ConfirmModal
+          title="Remove Repayment?"
+          body="This repayment record will be permanently deleted. Type CONFIRM to proceed."
+          onConfirm={handleRemoveRepayment}
+          onCancel={() => setRepayDelTarget(null)}
+          loading={repayDeleting}
+          confirmTextRequired
         />
       )}
     </div>

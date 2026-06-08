@@ -10,13 +10,13 @@ import FPSavings from "./FPSavings";
 import FPSettings from "./FPSettings";
 
 const TABS = [
-  { key: "dashboard", label: "Dashboard", icon: "📊", path: "" },
-  { key: "income",    label: "Income",    icon: "💰", path: "income" },
-  { key: "expenses",  label: "Expenses",  icon: "💸", path: "expenses" },
-  { key: "business",  label: "Business",  icon: "🏪", path: "business" },
-  { key: "debts",     label: "Debts",     icon: "🤝", path: "debts" },
-  { key: "savings",   label: "Goals",     icon: "🎯", path: "savings" },
-  { key: "settings",  label: "Settings",  icon: "⚙️",  path: "settings" },
+  { key: "dashboard", label: "Dashboard", icon: "", path: "" },
+  { key: "income",    label: "Income",    icon: "", path: "income" },
+  { key: "expenses",  label: "Expenses",  icon: "", path: "expenses" },
+  { key: "business",  label: "Business",  icon: "", path: "business" },
+  { key: "debts",     label: "Debts",     icon: "", path: "debts" },
+  { key: "savings",   label: "Goals",     icon: "", path: "savings" },
+  { key: "settings",  label: "Settings",  icon: "",  path: "settings" },
 ];
 
 export default function FamilyHome() {
@@ -38,7 +38,7 @@ export default function FamilyHome() {
         <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-xl">🏠</span>
+              <span className="text-xl"></span>
               <div>
                 <p className="text-base font-bold text-slate-800 leading-tight">Family Planner</p>
                 <p className="text-xs text-slate-400">Financial overview</p>
