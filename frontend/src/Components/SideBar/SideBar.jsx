@@ -79,7 +79,7 @@ const SideBar = () => {
           )}
           {(userRole === "dev" ) && (
             <a
-              href="/vansh"
+              href="/family"
               className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
             >
               Family Expenses
