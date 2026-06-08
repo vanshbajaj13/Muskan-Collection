@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { FamilyPlannerProvider } from "./FamilyPlannerContext";
 import FPDashboard from "./FPDashboard";
@@ -8,6 +8,7 @@ import FPBusiness from "./FPBusiness";
 import FPDebts from "./FPDebts";
 import FPSavings from "./FPSavings";
 import FPSettings from "./FPSettings";
+import MenuBtn from "../MenuBtn";
 
 const TABS = [
   { key: "dashboard", label: "Dashboard", icon: "", path: "" },
@@ -44,6 +45,7 @@ export default function FamilyHome() {
                 <p className="text-xs text-slate-400">Financial overview</p>
               </div>
             </div>
+            <MenuBtn></MenuBtn>
           </div>
 
           {/* ── Tab nav ── */}

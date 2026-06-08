@@ -1,7 +1,11 @@
 import React, { useState } from "react";
 import { useFP } from "./FamilyPlannerContext";
 import {
-  SectionHead, Badge, Btn, Field, FPInput, Toast, FullSpinner, ConfirmModal,
+  Btn,
+  FPInput,
+  Toast,
+  FullSpinner,
+  ConfirmModal,
 } from "./FamilyPlannerUI";
 
 const DROPDOWN_TYPES = [
@@ -38,10 +42,15 @@ const DROPDOWN_TYPES = [
 ];
 
 export default function FPSettings() {
-  const { dropdowns, addDropdown, deleteDropdown, renameDropdown, fetchAll, loading } = useFP();
+  const { dropdowns, addDropdown, deleteDropdown, renameDropdown, loading } =
+    useFP();
 
   const [activeType, setActiveType] = useState("incomeType");
-  const [inputs, setInputs] = useState({ incomeType: "", expenseCategory: "", person: "" });
+  const [inputs, setInputs] = useState({
+    incomeType: "",
+    expenseCategory: "",
+    person: "",
+  });
   const [adding, setAdding] = useState({});
   const [toast, setToast] = useState(null);
 
@@ -63,15 +72,15 @@ export default function FPSettings() {
   const handleAdd = async (type) => {
     const val = inputs[type]?.trim();
     if (!val) return;
-    setAdding(a => ({ ...a, [type]: true }));
+    setAdding((a) => ({ ...a, [type]: true }));
     try {
       await addDropdown(type, val);
-      setInputs(i => ({ ...i, [type]: "" }));
+      setInputs((i) => ({ ...i, [type]: "" }));
       notify(`Added "${val}"`);
     } catch (e) {
       notify(e.message || "Already exists", "error");
     } finally {
-      setAdding(a => ({ ...a, [type]: false }));
+      setAdding((a) => ({ ...a, [type]: false }));
     }
   };
 
@@ -126,14 +135,18 @@ export default function FPSettings() {
 
   if (loading) return <FullSpinner message="Loading settings…" />;
 
-  const activeMeta = DROPDOWN_TYPES.find(dt => dt.key === activeType);
+  const activeMeta = DROPDOWN_TYPES.find((dt) => dt.key === activeType);
   const activeItems = dropdowns[activeType] || [];
 
   return (
     <div className="space-y-5">
       {toast && (
         <div className="fixed top-4 right-4 z-50">
-          <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
         </div>
       )}
 
@@ -141,18 +154,18 @@ export default function FPSettings() {
       <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 text-sm text-indigo-700">
         <p className="font-semibold mb-0.5">Dropdown Management</p>
         <p className="text-indigo-600 text-xs">
-          Add, rename, or remove options that appear in Income, Expenses, and Debt forms.
-          Removing an option here won't delete existing entries that use it.
+          Add, rename, or remove options that appear in Income, Expenses, and
+          Debt forms. Removing an option here won't delete existing entries that
+          use it.
         </p>
       </div>
 
       {/* Two-panel layout */}
       <div className="flex gap-4 flex-col md:flex-row">
-
         {/* ── Left: type selector ── */}
         <div className="md:w-56 shrink-0">
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            {DROPDOWN_TYPES.map(dt => {
+            {DROPDOWN_TYPES.map((dt) => {
               const count = (dropdowns[dt.key] || []).length;
               const isActive = activeType === dt.key;
               return (
@@ -160,14 +173,17 @@ export default function FPSettings() {
                   key={dt.key}
                   onClick={() => setActiveType(dt.key)}
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-slate-100 last:border-0
-                    ${isActive
-                      ? "bg-indigo-50 border-l-2 border-l-indigo-500"
-                      : "hover:bg-slate-50"
+                    ${
+                      isActive
+                        ? "bg-indigo-50 border-l-2 border-l-indigo-500"
+                        : "hover:bg-slate-50"
                     }`}
                 >
                   <span className="text-lg">{dt.icon}</span>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium truncate ${isActive ? "text-indigo-700" : "text-slate-700"}`}>
+                    <p
+                      className={`text-sm font-medium truncate ${isActive ? "text-indigo-700" : "text-slate-700"}`}
+                    >
                       {dt.label}
                     </p>
                     <p className="text-xs text-slate-400">
@@ -178,20 +194,19 @@ export default function FPSettings() {
               );
             })}
           </div>
-
-          
         </div>
 
         {/* ── Right: active type panel ── */}
         <div className="flex-1">
           <div className="bg-white rounded-xl border border-slate-200">
-
             {/* Panel header */}
             <div className="px-5 py-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
                 <span className="text-xl">{activeMeta?.icon}</span>
                 <div>
-                  <h3 className="font-semibold text-slate-800">{activeMeta?.label}</h3>
+                  <h3 className="font-semibold text-slate-800">
+                    {activeMeta?.label}
+                  </h3>
                   <p className="text-xs text-slate-400">{activeMeta?.hint}</p>
                 </div>
               </div>
@@ -202,10 +217,12 @@ export default function FPSettings() {
               <div className="flex gap-2">
                 <FPInput
                   value={inputs[activeType] || ""}
-                  onChange={e => setInputs(i => ({ ...i, [activeType]: e.target.value }))}
+                  onChange={(e) =>
+                    setInputs((i) => ({ ...i, [activeType]: e.target.value }))
+                  }
                   placeholder={activeMeta?.placeholder}
                   className="flex-1"
-                  onKeyDown={e => e.key === "Enter" && handleAdd(activeType)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAdd(activeType)}
                 />
                 <Btn
                   variant="primary"
@@ -222,22 +239,28 @@ export default function FPSettings() {
             {activeItems.length === 0 ? (
               <div className="text-center py-10 text-slate-400">
                 <p className="text-3xl mb-2">{activeMeta?.icon}</p>
-                <p className="text-sm font-medium text-slate-500">No options yet</p>
+                <p className="text-sm font-medium text-slate-500">
+                  No options yet
+                </p>
                 <p className="text-xs mt-1">Add your first one above</p>
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
-                {activeItems.map(opt => {
-                  const isEditingThis = renaming?.type === activeType && renaming?.id === opt._id;
+                {activeItems.map((opt) => {
+                  const isEditingThis =
+                    renaming?.type === activeType && renaming?.id === opt._id;
                   return (
-                    <div key={opt._id} className="flex items-center gap-3 px-5 py-3">
+                    <div
+                      key={opt._id}
+                      className="flex items-center gap-3 px-5 py-3"
+                    >
                       {isEditingThis ? (
                         /* Edit mode */
                         <div className="flex-1 flex gap-2">
                           <FPInput
                             value={renameValue}
-                            onChange={e => setRenameValue(e.target.value)}
-                            onKeyDown={e => {
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onKeyDown={(e) => {
                               if (e.key === "Enter") handleRename();
                               if (e.key === "Escape") cancelRename();
                             }}
@@ -263,16 +286,22 @@ export default function FPSettings() {
                       ) : (
                         /* View mode */
                         <>
-                          <span className="flex-1 text-sm text-slate-700 font-medium">{opt.value}</span>
+                          <span className="flex-1 text-sm text-slate-700 font-medium">
+                            {opt.value}
+                          </span>
                           <button
-                            onClick={() => startRename(activeType, opt._id, opt.value)}
+                            onClick={() =>
+                              startRename(activeType, opt._id, opt.value)
+                            }
                             className="text-xs text-slate-400 hover:text-indigo-600 transition-colors px-2 py-1 rounded hover:bg-indigo-50"
                             title={`Rename ${opt.value}`}
                           >
                             ✎ Rename
                           </button>
                           <button
-                            onClick={() => requestDelete(activeType, opt._id, opt.value)}
+                            onClick={() =>
+                              requestDelete(activeType, opt._id, opt.value)
+                            }
                             className="text-xs text-slate-300 hover:text-rose-400 transition-colors px-2 py-1 rounded hover:bg-rose-50"
                             title={`Remove ${opt.value}`}
                           >
@@ -289,9 +318,11 @@ export default function FPSettings() {
 
           {/* Info box */}
           <div className="mt-3 bg-amber-50 border border-amber-100 rounded-lg px-4 py-3 text-xs text-amber-700">
-            <strong>Rename:</strong> Click <em>✎ Rename</em> to edit inline — updates the label everywhere.
+            <strong>Rename:</strong> Click <em>✎ Rename</em> to edit inline —
+            updates the label everywhere.
             <br />
-            <strong>Remove:</strong> Deletes from future dropdowns but keeps existing entries intact.
+            <strong>Remove:</strong> Deletes from future dropdowns but keeps
+            existing entries intact.
           </div>
         </div>
       </div>
@@ -302,7 +333,10 @@ export default function FPSettings() {
           title={`Remove "${deleteTarget.value}"?`}
           body={`This option will be removed from all dropdown menus. Existing entries that use it won't be affected.`}
           onConfirm={handleDelete}
-          onCancel={() => { setDeleteConfirmOpen(false); setDeleteTarget(null); }}
+          onCancel={() => {
+            setDeleteConfirmOpen(false);
+            setDeleteTarget(null);
+          }}
           loading={deleteLoading}
           confirmTextRequired
         />
