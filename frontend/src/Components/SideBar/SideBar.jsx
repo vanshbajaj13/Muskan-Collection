@@ -77,6 +77,14 @@ const SideBar = () => {
               Vansh
             </a>
           )}
+          {(userRole === "dev" ) && (
+            <a
+              href="/vansh"
+              className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+            >
+              Family Expenses
+            </a>
+          )}
           {(isAdmin || isDev) && (
             <a
               href="/inventory"
