@@ -22,6 +22,13 @@ const phoneDeals = require("./routes/phone/phoneDeals");
 const phoneExpenses = require("./routes/phone/personalExpenses");
 const phoneDropdowns = require("./routes/phone/phoneDropdowns");
 
+// family planner  ← NEW
+const familyIncome = require("./routes/family/familyIncome");
+const familyExpenses = require("./routes/family/familyExpense");
+const familyBusiness = require("./routes/family/familyBusiness");
+const familyDebts = require("./routes/family/familyDebt");
+const familySavings = require("./routes/family/familySavings");
+const familyDropdowns = require("./routes/family/familyDropdowns");
 
 dotenv.config();
 
@@ -53,6 +60,14 @@ app.use("/api/salesreport", salesReport);
 app.use("/api/phones/deals", phoneDeals);
 app.use("/api/phones/expenses", phoneExpenses);
 app.use("/api/phones/dropdowns", phoneDropdowns);
+
+// family planner  ← NEW
+app.use("/api/family/income", familyIncome);
+app.use("/api/family/expenses", familyExpenses);
+app.use("/api/family/business", familyBusiness);
+app.use("/api/family/debts", familyDebts);
+app.use("/api/family/savings", familySavings);
+app.use("/api/family/dropdowns", familyDropdowns);
 
 __dirname = path.resolve();
 

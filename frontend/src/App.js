@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserRoleProvider } from "./auth/UserRoleContext";
 import PhoneHome from "./Components/Phone/PhoneHome";
 import ProtectedPhoneRoute from "./Components/Phone/ProtectedPhoneRoute";
-import FPDashboard from "./Components/Family/FPDashboard";
+import FamilyHome from "./Components/Family/FamilyHome";
 import ProtectedFamilyRoute from "./Components/Family//ProtectedFamilyRoute";
 
 const App = () => {
@@ -25,7 +25,7 @@ const App = () => {
             path="/family/*"
             element={
               <ProtectedFamilyRoute>
-                <FPDashboard />
+                <FamilyHome />
               </ProtectedFamilyRoute>
             }
           />

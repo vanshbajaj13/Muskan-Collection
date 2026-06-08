@@ -107,14 +107,14 @@ router.get("/meta/stats", protect, protectVansh, async (req, res) => {
 // Accepts simpler payload; date defaults to now if not provided
 router.post("/shortcut", protect, protectVansh, async (req, res) => {
   try {
-    const { amount, description, card, category } = req.body;
+    const { amount, description, card, category,date } = req.body;
     if (!amount) return res.status(400).json({ error: "amount required" });
     const expense = new PersonalExpense({
       amount: parseFloat(amount),
       description: description || "",
       card: card || "",
       category: category || "",
-      date: Date.now(), // always uses server time = now
+      date: date || Date.now(), // uses provided date or defaults to now
     });
     await expense.save();
     res.status(201).json({ message: "Saved!", expense });
