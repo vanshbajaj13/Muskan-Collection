@@ -58,14 +58,14 @@ phoneDealSchema.virtual("totalPaymentsReceived").get(function () {
 });
 
 // ── Virtual: deal status ───────────────────────────────────────────
-// "unsold"           → no sellingPrice and no payments
-// "pending_payment"  → sellingPrice set but payments < sellingPrice
-// "complete"         → payments >= sellingPrice OR sellingPrice null but payments > 0
+// "unsold"           → no sellingPrice set (regardless of payments)
+// "pending_payment"  → sellingPrice set but totalPaid < sellingPrice
+// "complete"         → sellingPrice set and totalPaid >= sellingPrice
 phoneDealSchema.virtual("dealStatus").get(function () {
+  if (!this.sellingPrice) return "unsold";
   const totalPaid = this.payments.reduce((sum, p) => sum + p.amount, 0);
-  if (!this.sellingPrice && totalPaid === 0) return "unsold";
-  if (this.sellingPrice && totalPaid < this.sellingPrice) return "pending_payment";
-  return "complete";
+  if (totalPaid >= this.sellingPrice) return "complete";
+  return "pending_payment";
 });
 
 // ── Virtual: payment pending ──────────────────────────────────────
