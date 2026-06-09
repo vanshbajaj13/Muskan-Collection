@@ -1,8 +1,19 @@
 import React, { useState, useMemo } from "react";
 import { useFP } from "./FamilyPlannerContext";
 import {
-  SectionHead, Badge, Btn, Modal, Field, FPInput, FPSelect, FPTextarea,
-  ConfirmModal, Toast, EmptyState, FullSpinner, PillTabs,
+  SectionHead,
+  Badge,
+  Btn,
+  Modal,
+  Field,
+  FPInput,
+  FPSelect,
+  FPTextarea,
+  ConfirmModal,
+  Toast,
+  EmptyState,
+  FullSpinner,
+  PillTabs,
 } from "./FamilyPlannerUI";
 
 const EMPTY_DEBT = {
@@ -19,10 +30,19 @@ const EMPTY_REPAYMENT = { amount: "", date: "", note: "" };
 
 export default function FPDebts() {
   const {
-    debts, createDebt, updateDebt, deleteDebt,
-    addRepayment, removeRepayment,
-    opts, addDropdown,
-    INR, fmtDate, tsFromDate, dateFromTs, loading,
+    debts,
+    createDebt,
+    updateDebt,
+    deleteDebt,
+    addRepayment,
+    removeRepayment,
+    opts,
+    addDropdown,
+    INR,
+    fmtDate,
+    tsFromDate,
+    dateFromTs,
+    loading,
   } = useFP();
 
   const [tab, setTab] = useState("active");
@@ -39,9 +59,9 @@ export default function FPDebts() {
   const [delTarget, setDelTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Edit confirm gate
-  const [editTarget, setEditTarget] = useState(null); // debt to edit, pending confirm
-  const [editConfirmOpen, setEditConfirmOpen] = useState(false);
+  // Edit save confirm gate
+  const [saveConfirmOpen, setSaveConfirmOpen] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState(null);
 
   // Repayment remove confirm gate
   const [repayDelTarget, setRepayDelTarget] = useState(null); // { debtId, repId }
@@ -60,21 +80,14 @@ export default function FPDebts() {
 
   const openCreate = () => {
     setEditingDebt(null);
-    setDebtForm({ ...EMPTY_DEBT, borrowedOrLentDate: new Date().toISOString().split("T")[0] });
+    setDebtForm({
+      ...EMPTY_DEBT,
+      borrowedOrLentDate: new Date().toISOString().split("T")[0],
+    });
     setShowDebtForm(true);
   };
 
-  // Step 1: user clicks ✎ Rename → show confirm modal
-  const requestEdit = (debt) => {
-    setEditTarget(debt);
-    setEditConfirmOpen(true);
-  };
-
-  // Step 2: user types CONFIRM → actually open the form
-  const proceedEdit = () => {
-    const debt = editTarget;
-    setEditConfirmOpen(false);
-    setEditTarget(null);
+  const openEdit = (debt) => {
     setEditingDebt(debt);
     setDebtForm({
       type: debt.type,
@@ -88,24 +101,40 @@ export default function FPDebts() {
     setShowDebtForm(true);
   };
 
-  const setD = (k, v) => setDebtForm(f => ({ ...f, [k]: v }));
-  const setR = (k, v) => setRepayForm(f => ({ ...f, [k]: v }));
+  const setD = (k, v) => setDebtForm((f) => ({ ...f, [k]: v }));
+  const setR = (k, v) => setRepayForm((f) => ({ ...f, [k]: v }));
 
-  const handleSaveDebt = async () => {
-    if (!debtForm.personName || !debtForm.principalAmount || !debtForm.borrowedOrLentDate) {
-      notify("Fill all required fields", "error"); return;
+  const handleSaveDebt = () => {
+    if (
+      !debtForm.personName ||
+      !debtForm.principalAmount ||
+      !debtForm.borrowedOrLentDate
+    ) {
+      notify("Fill all required fields", "error");
+      return;
     }
+    const payload = {
+      type: debtForm.type,
+      personName: debtForm.personName,
+      principalAmount: Number(debtForm.principalAmount),
+      borrowedOrLentDate: tsFromDate(debtForm.borrowedOrLentDate),
+      expectedReturnDate: debtForm.expectedReturnDate
+        ? tsFromDate(debtForm.expectedReturnDate)
+        : null,
+      reason: debtForm.reason,
+      notes: debtForm.notes,
+    };
+    if (editingDebt) {
+      setPendingPayload(payload);
+      setSaveConfirmOpen(true);
+    } else {
+      doSaveDebt(payload);
+    }
+  };
+
+  const doSaveDebt = async (payload) => {
     setSavingDebt(true);
     try {
-      const payload = {
-        type: debtForm.type,
-        personName: debtForm.personName,
-        principalAmount: Number(debtForm.principalAmount),
-        borrowedOrLentDate: tsFromDate(debtForm.borrowedOrLentDate),
-        expectedReturnDate: debtForm.expectedReturnDate ? tsFromDate(debtForm.expectedReturnDate) : null,
-        reason: debtForm.reason,
-        notes: debtForm.notes,
-      };
       if (editingDebt) {
         await updateDebt(editingDebt._id, payload);
         notify("Updated");
@@ -114,13 +143,23 @@ export default function FPDebts() {
         notify("Debt recorded");
       }
       setShowDebtForm(false);
-    } catch { notify("Failed to save", "error"); }
-    finally { setSavingDebt(false); }
+    } catch {
+      notify("Failed to save", "error");
+    } finally {
+      setSavingDebt(false);
+    }
+  };
+
+  const handleConfirmSave = async () => {
+    setSaveConfirmOpen(false);
+    await doSaveDebt(pendingPayload);
+    setPendingPayload(null);
   };
 
   const handleAddRepayment = async () => {
     if (!repayForm.amount || !repayForm.date) {
-      notify("Enter amount and date", "error"); return;
+      notify("Enter amount and date", "error");
+      return;
     }
     setSavingRepay(true);
     try {
@@ -131,8 +170,11 @@ export default function FPDebts() {
       });
       notify("Repayment recorded");
       setRepayForm(EMPTY_REPAYMENT);
-    } catch { notify("Failed", "error"); }
-    finally { setSavingRepay(false); }
+    } catch {
+      notify("Failed", "error");
+    } finally {
+      setSavingRepay(false);
+    }
   };
 
   // Confirm gate for repayment removal
@@ -147,8 +189,11 @@ export default function FPDebts() {
       await removeRepayment(repayDelTarget.debtId, repayDelTarget.repId);
       notify("Removed");
       setRepayDelTarget(null);
-    } catch { notify("Failed", "error"); }
-    finally { setRepayDeleting(false); }
+    } catch {
+      notify("Failed", "error");
+    } finally {
+      setRepayDeleting(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -157,8 +202,11 @@ export default function FPDebts() {
       await deleteDebt(delTarget._id);
       notify("Deleted");
       setDelTarget(null);
-    } catch { notify("Failed", "error"); }
-    finally { setDeleting(false); }
+    } catch {
+      notify("Failed", "error");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleAddPerson = async () => {
@@ -169,8 +217,11 @@ export default function FPDebts() {
       setD("personName", newPersonInput.trim());
       setNewPersonInput("");
       notify("Person added");
-    } catch (e) { notify(e.message || "Already exists", "error"); }
-    finally { setAddingPerson(false); }
+    } catch (e) {
+      notify(e.message || "Already exists", "error");
+    } finally {
+      setAddingPerson(false);
+    }
   };
 
   const persons = opts("person");
@@ -179,25 +230,34 @@ export default function FPDebts() {
     const repaid = (debt.repayments || []).reduce((s, r) => s + r.amount, 0);
     return Math.max(0, debt.principalAmount - repaid);
   };
-  const totalRepaid = (debt) => (debt.repayments || []).reduce((s, r) => s + r.amount, 0);
+  const totalRepaid = (debt) =>
+    (debt.repayments || []).reduce((s, r) => s + r.amount, 0);
 
   const filtered = useMemo(() => {
     let list = debts;
-    if (tab === "active") list = list.filter(d => !d.isSettled);
-    else if (tab === "settled") list = list.filter(d => d.isSettled);
-    if (typeFilter !== "all") list = list.filter(d => d.type === typeFilter);
+    if (tab === "active") list = list.filter((d) => !d.isSettled);
+    else if (tab === "settled") list = list.filter((d) => d.isSettled);
+    if (typeFilter !== "all") list = list.filter((d) => d.type === typeFilter);
     return list.sort((a, b) => b.borrowedOrLentDate - a.borrowedOrLentDate);
   }, [debts, tab, typeFilter]);
 
-  const totalBorrowed = debts.filter(d => !d.isSettled && d.type === "borrowed")
+  const totalBorrowed = debts
+    .filter((d) => !d.isSettled && d.type === "borrowed")
     .reduce((s, d) => s + outstanding(d), 0);
-  const totalLent = debts.filter(d => !d.isSettled && d.type === "lent")
+  const totalLent = debts
+    .filter((d) => !d.isSettled && d.type === "lent")
     .reduce((s, d) => s + outstanding(d), 0);
 
   const TABS = [
-    { key: "active",  label: `Active (${debts.filter(d => !d.isSettled).length})` },
-    { key: "settled", label: `Settled (${debts.filter(d => d.isSettled).length})` },
-    { key: "all",     label: `All (${debts.length})` },
+    {
+      key: "active",
+      label: `Active (${debts.filter((d) => !d.isSettled).length})`,
+    },
+    {
+      key: "settled",
+      label: `Settled (${debts.filter((d) => d.isSettled).length})`,
+    },
+    { key: "all", label: `All (${debts.length})` },
   ];
 
   if (loading) return <FullSpinner message="Loading debts…" />;
@@ -206,15 +266,22 @@ export default function FPDebts() {
     <div className="space-y-5">
       {toast && (
         <div className="fixed top-4 right-4 z-50">
-          <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
         </div>
       )}
 
       <SectionHead title="Debts & Loans" sub="Money borrowed and lent">
         <div className="flex gap-2">
-          <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
             className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-600"
-            style={{ fontSize: "16px" }}>
+            style={{ fontSize: "16px" }}
+          >
             <option value="all">All Types</option>
             <option value="borrowed">Borrowed</option>
             <option value="lent">Lent</option>
@@ -238,26 +305,37 @@ export default function FPDebts() {
       <PillTabs tabs={TABS} active={tab} onChange={setTab} />
 
       {filtered.length === 0 ? (
-        <EmptyState icon="🤝" title="No entries found"
+        <EmptyState
+          icon="🤝"
+          title="No entries found"
           sub="Record money you've borrowed or lent to track repayments"
-          action={<Btn onClick={openCreate}>+ Add Entry</Btn>} />
+          action={<Btn onClick={openCreate}>+ Add Entry</Btn>}
+        />
       ) : (
         <div className="space-y-2">
           {filtered.map((debt) => {
             const isExpanded = expandedId === debt._id;
             const out = outstanding(debt);
             const repaid = totalRepaid(debt);
-            const pct = debt.principalAmount > 0
-              ? Math.min(100, Math.round((repaid / debt.principalAmount) * 100))
-              : 0;
+            const pct =
+              debt.principalAmount > 0
+                ? Math.min(
+                    100,
+                    Math.round((repaid / debt.principalAmount) * 100),
+                  )
+                : 0;
 
             return (
-              <div key={debt._id}
-                className={`bg-white rounded-xl border p-4 animate-enter ${debt.isSettled ? "opacity-60" : ""} border-slate-200`}>
+              <div
+                key={debt._id}
+                className={`bg-white rounded-xl border p-4 animate-enter ${debt.isSettled ? "opacity-60" : ""} border-slate-200`}
+              >
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-slate-800 text-sm">{debt.personName}</span>
+                      <span className="font-semibold text-slate-800 text-sm">
+                        {debt.personName}
+                      </span>
                       <Badge color={debt.type === "borrowed" ? "red" : "blue"}>
                         {debt.type === "borrowed" ? "⬇️ Borrowed" : "⬆️ Lent"}
                       </Badge>
@@ -265,10 +343,14 @@ export default function FPDebts() {
                     </div>
 
                     <div className="mt-1 flex items-center gap-3 flex-wrap text-sm">
-                      <span className={`font-bold ${debt.type === "borrowed" ? "text-red-600" : "text-blue-600"}`}>
+                      <span
+                        className={`font-bold ${debt.type === "borrowed" ? "text-red-600" : "text-blue-600"}`}
+                      >
                         {INR(out)} outstanding
                       </span>
-                      <span className="text-xs text-slate-400">of {INR(debt.principalAmount)}</span>
+                      <span className="text-xs text-slate-400">
+                        of {INR(debt.principalAmount)}
+                      </span>
                     </div>
 
                     {debt.principalAmount > 0 && (
@@ -288,28 +370,59 @@ export default function FPDebts() {
 
                     <div className="mt-1.5 flex items-center gap-3 flex-wrap text-xs text-slate-400">
                       {debt.expectedReturnDate && (
-                        <span>Expected: {fmtDate(debt.expectedReturnDate)}</span>
+                        <span>
+                          Expected: {fmtDate(debt.expectedReturnDate)}
+                        </span>
                       )}
-                      {debt.reason && <span className="italic">"{debt.reason}"</span>}
+                      {debt.reason && (
+                        <span className="italic">"{debt.reason}"</span>
+                      )}
                     </div>
                   </div>
 
                   {/* Actions */}
                   <div className="flex flex-col items-end gap-1 shrink-0">
                     <div className="flex gap-1">
-                      <Btn variant="ghost" className="px-2 py-1 text-xs" onClick={() => requestEdit(debt)}>✎ Rename</Btn>
-                      <Btn variant="ghost" className="px-2 py-1 text-xs text-rose-400" onClick={() => setDelTarget(debt)}>✕</Btn>
+                      <Btn
+                        variant="ghost"
+                        className="px-2 py-1 text-xs"
+                        onClick={() => openEdit(debt)}
+                      >
+                        ✎ Edit
+                      </Btn>
+                      <Btn
+                        variant="ghost"
+                        className="px-2 py-1 text-xs text-rose-400"
+                        onClick={() => setDelTarget(debt)}
+                      >
+                        ✕
+                      </Btn>
                     </div>
                     {!debt.isSettled && (
-                      <Btn variant="secondary" className="text-xs px-2 py-1"
-                        onClick={() => { setShowRepayModal(debt); setRepayForm({ ...EMPTY_REPAYMENT, date: new Date().toISOString().split("T")[0] }); }}>
+                      <Btn
+                        variant="secondary"
+                        className="text-xs px-2 py-1"
+                        onClick={() => {
+                          setShowRepayModal(debt);
+                          setRepayForm({
+                            ...EMPTY_REPAYMENT,
+                            date: new Date().toISOString().split("T")[0],
+                          });
+                        }}
+                      >
                         + Repayment
                       </Btn>
                     )}
                     {(debt.repayments || []).length > 0 && (
-                      <button className="text-xs text-indigo-500 underline"
-                        onClick={() => setExpandedId(isExpanded ? null : debt._id)}>
-                        {isExpanded ? "Hide" : `${debt.repayments.length} repayment${debt.repayments.length > 1 ? "s" : ""}`}
+                      <button
+                        className="text-xs text-indigo-500 underline"
+                        onClick={() =>
+                          setExpandedId(isExpanded ? null : debt._id)
+                        }
+                      >
+                        {isExpanded
+                          ? "Hide"
+                          : `${debt.repayments.length} repayment${debt.repayments.length > 1 ? "s" : ""}`}
                       </button>
                     )}
                   </div>
@@ -318,17 +431,33 @@ export default function FPDebts() {
                 {/* Repayments list */}
                 {isExpanded && (debt.repayments || []).length > 0 && (
                   <div className="mt-3 border-t border-slate-100 pt-3 space-y-1.5">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Repayment History</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
+                      Repayment History
+                    </p>
                     {debt.repayments.map((r) => (
-                      <div key={r._id} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 text-sm">
+                      <div
+                        key={r._id}
+                        className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 text-sm"
+                      >
                         <div className="flex items-center gap-3">
-                          <span className="font-semibold text-emerald-700">{INR(r.amount)}</span>
-                          <span className="text-slate-400 text-xs">{fmtDate(r.date)}</span>
-                          {r.note && <span className="text-slate-400 text-xs italic">{r.note}</span>}
+                          <span className="font-semibold text-emerald-700">
+                            {INR(r.amount)}
+                          </span>
+                          <span className="text-slate-400 text-xs">
+                            {fmtDate(r.date)}
+                          </span>
+                          {r.note && (
+                            <span className="text-slate-400 text-xs italic">
+                              {r.note}
+                            </span>
+                          )}
                         </div>
                         <button
                           onClick={() => requestRepayRemove(debt._id, r._id)}
-                          className="text-xs text-rose-400 hover:text-rose-600 ml-2">✕</button>
+                          className="text-xs text-rose-400 hover:text-rose-600 ml-2"
+                        >
+                          ✕
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -341,17 +470,26 @@ export default function FPDebts() {
 
       {/* Add/Edit Debt Modal */}
       {showDebtForm && (
-        <Modal title={editingDebt ? "Edit Entry" : "Add Debt / Loan"} onClose={() => setShowDebtForm(false)}>
+        <Modal
+          title={editingDebt ? "Edit Entry" : "Add Debt / Loan"}
+          onClose={() => setShowDebtForm(false)}
+        >
           <div className="space-y-4">
             <Field label="Type" required>
               <div className="flex gap-2">
-                {["borrowed", "lent"].map(t => (
-                  <button key={t} onClick={() => setD("type", t)}
+                {["borrowed", "lent"].map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setD("type", t)}
                     className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors
-                      ${debtForm.type === t
-                        ? t === "borrowed" ? "bg-red-500 text-white border-red-500" : "bg-blue-500 text-white border-blue-500"
-                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                      }`}>
+                      ${
+                        debtForm.type === t
+                          ? t === "borrowed"
+                            ? "bg-red-500 text-white border-red-500"
+                            : "bg-blue-500 text-white border-blue-500"
+                          : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                      }`}
+                  >
                     {t === "borrowed" ? "⬇️ I Borrowed" : "⬆️ I Lent"}
                   </button>
                 ))}
@@ -362,52 +500,88 @@ export default function FPDebts() {
               <FPSelect
                 options={persons}
                 value={debtForm.personName}
-                onChange={e => setD("personName", e.target.value)}
+                onChange={(e) => setD("personName", e.target.value)}
                 placeholder="Select person…"
               />
             </Field>
             <div className="flex gap-2 -mt-2">
               <FPInput
                 value={newPersonInput}
-                onChange={e => setNewPersonInput(e.target.value)}
+                onChange={(e) => setNewPersonInput(e.target.value)}
                 placeholder="+ Add new person"
                 className="text-xs"
-                onKeyDown={e => e.key === "Enter" && handleAddPerson()}
+                onKeyDown={(e) => e.key === "Enter" && handleAddPerson()}
               />
-              <Btn variant="secondary" className="text-xs px-3" onClick={handleAddPerson} disabled={addingPerson || !newPersonInput.trim()}>
+              <Btn
+                variant="secondary"
+                className="text-xs px-3"
+                onClick={handleAddPerson}
+                disabled={addingPerson || !newPersonInput.trim()}
+              >
                 Add
               </Btn>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <Field label="Principal Amount (₹)" required>
-                <FPInput type="number" value={debtForm.principalAmount}
-                  onChange={e => setD("principalAmount", e.target.value)} placeholder="0" />
+                <FPInput
+                  type="number"
+                  value={debtForm.principalAmount}
+                  onChange={(e) => setD("principalAmount", e.target.value)}
+                  placeholder="0"
+                />
               </Field>
-              <Field label={debtForm.type === "borrowed" ? "Date Borrowed" : "Date Lent"} required>
-                <FPInput type="date" value={debtForm.borrowedOrLentDate}
-                  onChange={e => setD("borrowedOrLentDate", e.target.value)} />
+              <Field
+                label={
+                  debtForm.type === "borrowed" ? "Date Borrowed" : "Date Lent"
+                }
+                required
+              >
+                <FPInput
+                  type="date"
+                  value={debtForm.borrowedOrLentDate}
+                  onChange={(e) => setD("borrowedOrLentDate", e.target.value)}
+                />
               </Field>
             </div>
 
             <Field label="Expected Return Date" hint="Optional">
-              <FPInput type="date" value={debtForm.expectedReturnDate}
-                onChange={e => setD("expectedReturnDate", e.target.value)} />
+              <FPInput
+                type="date"
+                value={debtForm.expectedReturnDate}
+                onChange={(e) => setD("expectedReturnDate", e.target.value)}
+              />
             </Field>
 
             <Field label="Reason / Purpose">
-              <FPInput value={debtForm.reason} onChange={e => setD("reason", e.target.value)}
-                placeholder="e.g. Medical emergency, wedding…" />
+              <FPInput
+                value={debtForm.reason}
+                onChange={(e) => setD("reason", e.target.value)}
+                placeholder="e.g. Medical emergency, wedding…"
+              />
             </Field>
 
             <Field label="Notes">
-              <FPTextarea value={debtForm.notes} onChange={e => setD("notes", e.target.value)}
-                placeholder="Any additional notes…" />
+              <FPTextarea
+                value={debtForm.notes}
+                onChange={(e) => setD("notes", e.target.value)}
+                placeholder="Any additional notes…"
+              />
             </Field>
 
             <div className="flex gap-3 pt-2">
-              <Btn variant="secondary" className="flex-1" onClick={() => setShowDebtForm(false)}>Cancel</Btn>
-              <Btn className="flex-1" onClick={handleSaveDebt} disabled={savingDebt}>
+              <Btn
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setShowDebtForm(false)}
+              >
+                Cancel
+              </Btn>
+              <Btn
+                className="flex-1"
+                onClick={handleSaveDebt}
+                disabled={savingDebt}
+              >
                 {savingDebt ? "Saving…" : editingDebt ? "Update" : "Add Entry"}
               </Btn>
             </div>
@@ -417,32 +591,57 @@ export default function FPDebts() {
 
       {/* Repayment Modal */}
       {showRepayModal && (
-        <Modal title={`Record Repayment — ${showRepayModal.personName}`}
-          onClose={() => setShowRepayModal(null)}>
+        <Modal
+          title={`Record Repayment — ${showRepayModal.personName}`}
+          onClose={() => setShowRepayModal(null)}
+        >
           <div className="space-y-4">
-            <div className={`rounded-lg px-4 py-3 text-sm font-semibold border ${showRepayModal.type === "borrowed" ? "bg-red-50 text-red-700 border-red-200" : "bg-blue-50 text-blue-700 border-blue-200"}`}>
+            <div
+              className={`rounded-lg px-4 py-3 text-sm font-semibold border ${showRepayModal.type === "borrowed" ? "bg-red-50 text-red-700 border-red-200" : "bg-blue-50 text-blue-700 border-blue-200"}`}
+            >
               Outstanding: {INR(outstanding(showRepayModal))}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <Field label="Amount (₹)" required>
-                <FPInput type="number" value={repayForm.amount}
-                  onChange={e => setR("amount", e.target.value)} placeholder="0" />
+                <FPInput
+                  type="number"
+                  value={repayForm.amount}
+                  onChange={(e) => setR("amount", e.target.value)}
+                  placeholder="0"
+                />
               </Field>
               <Field label="Date" required>
-                <FPInput type="date" value={repayForm.date}
-                  onChange={e => setR("date", e.target.value)} />
+                <FPInput
+                  type="date"
+                  value={repayForm.date}
+                  onChange={(e) => setR("date", e.target.value)}
+                />
               </Field>
             </div>
 
             <Field label="Note">
-              <FPInput value={repayForm.note} onChange={e => setR("note", e.target.value)}
-                placeholder="Optional note…" />
+              <FPInput
+                value={repayForm.note}
+                onChange={(e) => setR("note", e.target.value)}
+                placeholder="Optional note…"
+              />
             </Field>
 
             <div className="flex gap-3 pt-2">
-              <Btn variant="secondary" className="flex-1" onClick={() => setShowRepayModal(null)}>Cancel</Btn>
-              <Btn variant="success" className="flex-1" onClick={handleAddRepayment} disabled={savingRepay}>
+              <Btn
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setShowRepayModal(null)}
+              >
+                Cancel
+              </Btn>
+              <Btn
+                variant="success"
+                className="flex-1"
+                onClick={handleAddRepayment}
+                disabled={savingRepay}
+              >
                 {savingRepay ? "Saving…" : "Record Repayment"}
               </Btn>
             </div>
@@ -450,13 +649,17 @@ export default function FPDebts() {
         </Modal>
       )}
 
-      {/* Edit confirm gate */}
-      {editConfirmOpen && editTarget && (
+      {/* Edit save confirm */}
+      {saveConfirmOpen && editingDebt && (
         <ConfirmModal
-          title="Edit Debt Entry?"
-          body={`You're about to edit "${editTarget.personName}" — ${INR(editTarget.principalAmount)}. Type CONFIRM to proceed.`}
-          onConfirm={proceedEdit}
-          onCancel={() => { setEditConfirmOpen(false); setEditTarget(null); }}
+          title="Save Changes?"
+          body={`Confirm changes to "${editingDebt.personName}" — ${INR(editingDebt.principalAmount)}. Type CONFIRM to proceed.`}
+          onConfirm={handleConfirmSave}
+          onCancel={() => {
+            setSaveConfirmOpen(false);
+            setPendingPayload(null);
+          }}
+          loading={savingDebt}
           confirmTextRequired
         />
       )}

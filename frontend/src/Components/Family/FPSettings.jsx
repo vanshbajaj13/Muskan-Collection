@@ -59,6 +59,9 @@ export default function FPSettings() {
   const [renameValue, setRenameValue] = useState("");
   const [renameSaving, setRenameSaving] = useState(false);
 
+  // Rename save confirm
+  const [renameConfirmOpen, setRenameConfirmOpen] = useState(false);
+
   // Delete confirm state
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -114,8 +117,13 @@ export default function FPSettings() {
     setRenameValue("");
   };
 
-  const handleRename = async () => {
+  const handleRename = () => {
     if (!renaming || !renameValue.trim()) return;
+    setRenameConfirmOpen(true);
+  };
+
+  const doRename = async () => {
+    setRenameConfirmOpen(false);
     setRenameSaving(true);
     try {
       if (typeof renameDropdown === "function") {
@@ -326,6 +334,18 @@ export default function FPSettings() {
           </div>
         </div>
       </div>
+
+      {/* Rename confirm modal */}
+      {renameConfirmOpen && renaming && (
+        <ConfirmModal
+          title="Save Rename?"
+          body={`Confirm renaming to "${renameValue.trim()}". Type CONFIRM to proceed.`}
+          onConfirm={doRename}
+          onCancel={() => setRenameConfirmOpen(false)}
+          loading={renameSaving}
+          confirmTextRequired
+        />
+      )}
 
       {/* Delete confirm modal */}
       {deleteConfirmOpen && deleteTarget && (
