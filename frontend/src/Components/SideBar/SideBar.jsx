@@ -89,6 +89,14 @@ const SideBar = () => {
             Family Expenses
           </NavLink>
         )}
+        {(isAdmin || isDev)  && (
+          <NavLink
+            href="/cars"
+            className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+          >
+            🚗 Car Business
+          </NavLink>
+        )}
 
         {(isAdmin || isDev) && (
           <NavLink

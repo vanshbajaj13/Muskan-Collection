@@ -30,6 +30,10 @@ const familyDebts = require("./routes/family/familyDebt");
 const familySavings = require("./routes/family/familySavings");
 const familyDropdowns = require("./routes/family/familyDropdowns");
 
+// car business
+const carDeals = require("./routes/car/carDeals");
+const carDropdowns = require("./routes/car/carDropdowns");
+
 dotenv.config();
 
 const app = express();
@@ -68,6 +72,10 @@ app.use("/api/family/business", familyBusiness);
 app.use("/api/family/debts", familyDebts);
 app.use("/api/family/savings", familySavings);
 app.use("/api/family/dropdowns", familyDropdowns);
+
+// Car business
+app.use("/api/cars/deals", carDeals);
+app.use("/api/cars/dropdowns", carDropdowns);
 
 __dirname = path.resolve();
 

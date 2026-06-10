@@ -469,11 +469,25 @@ const ExpenseTracker = () => {
 
   // Filters
   const [filterOpen, setFilterOpen] = useState(false);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+
+  // Default to current month
+  const _now = new Date();
+  const _defaultFrom = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-01`;
+  const _lastDay = new Date(
+    _now.getFullYear(),
+    _now.getMonth() + 1,
+    0,
+  ).getDate();
+  const _defaultTo = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_lastDay).padStart(2, "0")}`;
+
+  const [dateFrom, setDateFrom] = useState(_defaultFrom);
+  const [dateTo, setDateTo] = useState(_defaultTo);
   const [cardFilter, setCardFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [searchFilter, setSearchFilter] = useState("");
+
+  // Month-picker: tracks which year is visible in the strip
+  const [stripYear, setStripYear] = useState(_now.getFullYear());
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -543,12 +557,34 @@ const ExpenseTracker = () => {
   ].filter(Boolean).length;
 
   const clearFilters = () => {
-    setDateFrom("");
-    setDateTo("");
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth() + 1;
+    const last = new Date(y, m, 0).getDate();
+    setDateFrom(`${y}-${String(m).padStart(2, "0")}-01`);
+    setDateTo(
+      `${y}-${String(m).padStart(2, "0")}-${String(last).padStart(2, "0")}`,
+    );
     setCardFilter("all");
     setCategoryFilter("all");
     setSearchFilter("");
+    setStripYear(y);
   };
+
+  // Jump to a specific month/year in the date filters
+  const selectMonth = (year, month) => {
+    const last = new Date(year, month, 0).getDate();
+    const m = String(month).padStart(2, "0");
+    setDateFrom(`${year}-${m}-01`);
+    setDateTo(`${year}-${m}-${String(last).padStart(2, "0")}`);
+  };
+
+  // Derive selected month/year from current dateFrom for highlighting
+  const selectedMonthKey = (() => {
+    if (!dateFrom) return null;
+    const d = new Date(dateFrom + "T00:00:00");
+    return `${d.getFullYear()}-${d.getMonth() + 1}`;
+  })();
 
   const totalVisible = expenses.reduce((s, e) => s + e.amount, 0);
 
@@ -861,6 +897,72 @@ const ExpenseTracker = () => {
             )}
           </div>
         )}
+      </div>
+
+      {/* Month / Year quick-select strip */}
+      <div className="bg-white border border-slate-200 rounded-xl mb-4 overflow-hidden">
+        {/* Year row */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 bg-slate-50">
+          <button
+            onClick={() => setStripYear((y) => y - 1)}
+            className="text-slate-400 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-100 transition-colors text-sm font-bold"
+          >
+            ‹
+          </button>
+          <span className="text-sm font-bold text-slate-700 tracking-wide">
+            {stripYear}
+            {stripYear === new Date().getFullYear() && (
+              <span className="ml-2 text-xs text-indigo-500 font-normal">
+                current year
+              </span>
+            )}
+          </span>
+          <button
+            onClick={() => setStripYear((y) => y + 1)}
+            className="text-slate-400 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-100 transition-colors text-sm font-bold"
+          >
+            ›
+          </button>
+        </div>
+        {/* Month pills */}
+        <div className="grid grid-cols-6 md:grid-cols-12 gap-1 p-2">
+          {[
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec",
+          ].map((name, idx) => {
+            const key = `${stripYear}-${idx + 1}`;
+            const isSelected = selectedMonthKey === key;
+            const isCurrentMonth =
+              stripYear === new Date().getFullYear() &&
+              idx === new Date().getMonth();
+            return (
+              <button
+                key={key}
+                onClick={() => selectMonth(stripYear, idx + 1)}
+                className={`px-1 py-2 rounded-lg text-xs font-semibold transition-colors text-center
+                  ${
+                    isSelected
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : isCurrentMonth
+                        ? "bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100"
+                        : "text-slate-600 hover:bg-slate-100"
+                  }`}
+              >
+                {name}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Dashboard tab */}

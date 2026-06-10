@@ -8,6 +8,8 @@ import PhoneHome from "./Components/Phone/PhoneHome";
 import ProtectedPhoneRoute from "./Components/Phone/ProtectedPhoneRoute";
 import FamilyHome from "./Components/Family/FamilyHome";
 import ProtectedFamilyRoute from "./Components/Family/ProtectedFamilyRoute";
+import CarHome from "./Components/Car/CarHome";
+import ProtectedCarRoute from "./Components/Car/ProtectedCarRoute";
 import { FullScreenSpinner } from "./Components/Loader/FullScreenSpinner"; // adjust path
 import { useNavigationLoader } from "./auth/NavigationLoaderContext";
 
@@ -35,6 +37,14 @@ const AppRoutes = () => {
               <ProtectedFamilyRoute>
                 <FamilyHome />
               </ProtectedFamilyRoute>
+            }
+          />
+          <Route
+            path="/cars/*"
+            element={
+              <ProtectedCarRoute>
+                <CarHome />
+              </ProtectedCarRoute>
             }
           />
           <Route path="/*" element={<Home />} />
