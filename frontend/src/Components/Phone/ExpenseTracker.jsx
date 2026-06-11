@@ -473,11 +473,7 @@ const ExpenseTracker = () => {
   // Default to current month
   const _now = new Date();
   const _defaultFrom = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-01`;
-  const _lastDay = new Date(
-    _now.getFullYear(),
-    _now.getMonth() + 1,
-    0,
-  ).getDate();
+  const _lastDay = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).getDate();
   const _defaultTo = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_lastDay).padStart(2, "0")}`;
 
   const [dateFrom, setDateFrom] = useState(_defaultFrom);
@@ -562,9 +558,7 @@ const ExpenseTracker = () => {
     const m = now.getMonth() + 1;
     const last = new Date(y, m, 0).getDate();
     setDateFrom(`${y}-${String(m).padStart(2, "0")}-01`);
-    setDateTo(
-      `${y}-${String(m).padStart(2, "0")}-${String(last).padStart(2, "0")}`,
-    );
+    setDateTo(`${y}-${String(m).padStart(2, "0")}-${String(last).padStart(2, "0")}`);
     setCardFilter("all");
     setCategoryFilter("all");
     setSearchFilter("");
@@ -912,9 +906,7 @@ const ExpenseTracker = () => {
           <span className="text-sm font-bold text-slate-700 tracking-wide">
             {stripYear}
             {stripYear === new Date().getFullYear() && (
-              <span className="ml-2 text-xs text-indigo-500 font-normal">
-                current year
-              </span>
+              <span className="ml-2 text-xs text-indigo-500 font-normal">current year</span>
             )}
           </span>
           <button
@@ -926,36 +918,20 @@ const ExpenseTracker = () => {
         </div>
         {/* Month pills */}
         <div className="grid grid-cols-6 md:grid-cols-12 gap-1 p-2">
-          {[
-            "Jan",
-            "Feb",
-            "Mar",
-            "Apr",
-            "May",
-            "Jun",
-            "Jul",
-            "Aug",
-            "Sep",
-            "Oct",
-            "Nov",
-            "Dec",
-          ].map((name, idx) => {
+          {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map((name, idx) => {
             const key = `${stripYear}-${idx + 1}`;
             const isSelected = selectedMonthKey === key;
-            const isCurrentMonth =
-              stripYear === new Date().getFullYear() &&
-              idx === new Date().getMonth();
+            const isCurrentMonth = stripYear === new Date().getFullYear() && idx === new Date().getMonth();
             return (
               <button
                 key={key}
                 onClick={() => selectMonth(stripYear, idx + 1)}
                 className={`px-1 py-2 rounded-lg text-xs font-semibold transition-colors text-center
-                  ${
-                    isSelected
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : isCurrentMonth
-                        ? "bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100"
-                        : "text-slate-600 hover:bg-slate-100"
+                  ${isSelected
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : isCurrentMonth
+                    ? "bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100"
+                    : "text-slate-600 hover:bg-slate-100"
                   }`}
               >
                 {name}
@@ -989,7 +965,7 @@ const ExpenseTracker = () => {
                   key={card}
                   className="bg-white rounded-xl border border-slate-200 px-4 py-3"
                 >
-                  <p className="text-xs text-slate-400 truncate">💳 {card}</p>
+                  <p className="text-xs text-slate-400 truncate"> {card}</p>
                   <p className="text-base font-bold text-slate-800 mt-0.5">
                     {formatCurrency(total)}
                   </p>
@@ -1002,7 +978,7 @@ const ExpenseTracker = () => {
             <div className="text-center py-16 text-slate-400">Loading…</div>
           ) : expenses.length === 0 ? (
             <div className="text-center py-16 text-slate-400">
-              <p className="text-4xl mb-3">💳</p>
+              <p className="text-4xl mb-3"></p>
               <p className="font-medium text-slate-500">
                 No expenses match your filters
               </p>

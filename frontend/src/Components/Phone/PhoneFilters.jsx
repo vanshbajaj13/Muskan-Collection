@@ -46,7 +46,7 @@ const PhoneFilters = ({
       >
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-slate-700">
-            🔍 Filters
+            Filters
           </span>
           {activeCount > 0 && (
             <span className="bg-indigo-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">

@@ -35,57 +35,7 @@ router.get("/:id", protect, async (req, res) => {
 // CREATE deal
 router.post("/", protect, async (req, res) => {
   try {
-    const {
-      carNumber,
-      carDescription,
-      make,
-      model,
-      year,
-      buyingPrice,
-      boughtFrom,
-      purchaseDate,
-      purchaseNotes,
-      partners,
-      expenses,
-      sellingPrice,
-      soldTo,
-      saleDate,
-      saleNotes,
-      commissions,
-      notes,
-    } = req.body;
-
-    const deal = new CarDeal({
-      carNumber,
-      carDescription,
-      make,
-      model,
-      year: year || null,
-      buyingPrice,
-      boughtFrom,
-      purchaseDate,
-      purchaseNotes,
-      partners: (partners || []).map(({ name, sharePercent }) => ({
-        name,
-        sharePercent,
-      })),
-      expenses: (expenses || []).map(({ description, amount, date }) => ({
-        description,
-        amount,
-        date: date || null,
-      })),
-      sellingPrice: sellingPrice ?? null,
-      soldTo,
-      saleDate: saleDate || null,
-      saleNotes,
-      commissions: (commissions || []).map(({ name, amount, note }) => ({
-        name,
-        amount,
-        note: note || "",
-      })),
-      notes,
-    });
-
+    const deal = new CarDeal(req.body);
     await deal.save();
     res.status(201).json(deal);
   } catch (err) {
@@ -97,53 +47,12 @@ router.post("/", protect, async (req, res) => {
 // UPDATE deal
 router.patch("/:id", protect, async (req, res) => {
   try {
-    const deal = await CarDeal.findById(req.params.id);
+    const deal = await CarDeal.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true, runValidators: true }
+    );
     if (!deal) return res.status(404).json({ message: "Deal not found" });
-
-    // Explicitly assign every field so nested arrays (expenses, partners,
-    // commissions) are fully replaced rather than merged shallowly.
-    const fields = [
-      "carNumber",
-      "carDescription",
-      "make",
-      "model",
-      "year",
-      "buyingPrice",
-      "boughtFrom",
-      "purchaseDate",
-      "purchaseNotes",
-      "sellingPrice",
-      "soldTo",
-      "saleDate",
-      "saleNotes",
-      "notes",
-    ];
-    fields.forEach((key) => {
-      if (req.body[key] !== undefined) deal[key] = req.body[key];
-    });
-
-    // Arrays handled separately to strip stale _ids before saving
-    if (req.body.partners !== undefined)
-      deal.partners = req.body.partners.map(({ name, sharePercent }) => ({
-        name,
-        sharePercent,
-      }));
-    if (req.body.expenses !== undefined)
-      deal.expenses = req.body.expenses.map(
-        ({ description, amount, date }) => ({
-          description,
-          amount,
-          date: date || null,
-        }),
-      );
-    if (req.body.commissions !== undefined)
-      deal.commissions = req.body.commissions.map(({ name, amount, note }) => ({
-        name,
-        amount,
-        note: note || "",
-      }));
-
-    await deal.save();
     res.json(deal);
   } catch (err) {
     console.error(err);
@@ -181,18 +90,9 @@ router.get("/meta/stats", protect, async (req, res) => {
     const totalBuyingCost = deals.reduce((s, d) => s + d.buyingPrice, 0);
     const totalExpenses = deals.reduce((s, d) => s + d.totalExpenses, 0);
     const totalCost = deals.reduce((s, d) => s + d.totalCost, 0);
-    const totalRevenue = soldDeals.reduce(
-      (s, d) => s + (d.sellingPrice || 0),
-      0,
-    );
-    const totalGrossProfit = soldDeals.reduce(
-      (s, d) => s + (d.grossProfit || 0),
-      0,
-    );
-    const totalNetProfit = soldDeals.reduce(
-      (s, d) => s + (d.netProfit || 0),
-      0,
-    );
+    const totalRevenue = soldDeals.reduce((s, d) => s + (d.sellingPrice || 0), 0);
+    const totalGrossProfit = soldDeals.reduce((s, d) => s + (d.grossProfit || 0), 0);
+    const totalNetProfit = soldDeals.reduce((s, d) => s + (d.netProfit || 0), 0);
     const totalCommission = deals.reduce((s, d) => s + d.totalCommission, 0);
     const capitalLocked = unsoldDeals.reduce((s, d) => s + d.totalCost, 0);
 
@@ -201,8 +101,7 @@ router.get("/meta/stats", protect, async (req, res) => {
     soldDeals.forEach((d) => {
       const date = new Date(d.purchaseDate);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      if (!profitByMonth[key])
-        profitByMonth[key] = { gross: 0, net: 0, count: 0, revenue: 0 };
+      if (!profitByMonth[key]) profitByMonth[key] = { gross: 0, net: 0, count: 0, revenue: 0 };
       profitByMonth[key].gross += d.grossProfit || 0;
       profitByMonth[key].net += d.netProfit || 0;
       profitByMonth[key].revenue += d.sellingPrice || 0;
@@ -213,8 +112,7 @@ router.get("/meta/stats", protect, async (req, res) => {
     const partnerProfit = {};
     soldDeals.forEach((d) => {
       (d.partnerBreakdown || []).forEach((p) => {
-        if (!partnerProfit[p.name])
-          partnerProfit[p.name] = { profit: 0, deals: 0 };
+        if (!partnerProfit[p.name]) partnerProfit[p.name] = { profit: 0, deals: 0 };
         partnerProfit[p.name].profit += p.profitShare || 0;
         partnerProfit[p.name].deals += 1;
       });

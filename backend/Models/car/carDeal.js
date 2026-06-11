@@ -12,7 +12,7 @@ const partnerShareSchema = new mongoose.Schema(
 // Expenses done on the car before selling (repair, RC transfer, etc.)
 const carExpenseSchema = new mongoose.Schema(
   {
-    description: { type: String, required: true, trim: true },
+    description: { type: String, trim: true },
     amount: { type: Number, required: true },
     date: { type: Number, default: null },
   },
@@ -22,7 +22,7 @@ const carExpenseSchema = new mongoose.Schema(
 // Commission paid to someone for facilitating the deal
 const commissionSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true },
+    name: { type: String, trim: true },
     amount: { type: Number, required: true },
     note: { type: String, default: "" },
   },
