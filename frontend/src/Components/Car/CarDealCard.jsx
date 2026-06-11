@@ -164,39 +164,6 @@ const CarDealCard = ({ deal, onEdit, onDelete }) => {
               )}
             </div>
 
-            {/* Partners breakdown */}
-            {deal.partnerBreakdown?.length > 0 && (
-              <div>
-                <SectionLabel>Partners</SectionLabel>
-                <div className="space-y-2 mt-2">
-                  {deal.partnerBreakdown.map((p) => (
-                    <div
-                      key={p.name}
-                      className="px-3 py-2.5 bg-indigo-50 rounded-lg border border-indigo-100"
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold text-indigo-800">
-                          {p.name}{" "}
-                          <span className="font-normal text-indigo-500">
-                            ({p.sharePercent}%)
-                          </span>
-                        </span>
-                        {p.profitShare !== null && (
-                          <ProfitChip value={p.profitShare} />
-                        )}
-                      </div>
-                      <div className="flex gap-4 mt-1 text-xs text-indigo-500">
-                        <span>Cost: {formatCurrency(p.costShare)}</span>
-                        {p.revenueShare !== null && (
-                          <span>Revenue: {formatCurrency(p.revenueShare)}</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Commissions */}
             {deal.commissions?.length > 0 && (
               <div>
@@ -221,6 +188,40 @@ const CarDealCard = ({ deal, onEdit, onDelete }) => {
                 </div>
               </div>
             )}
+
+            {/* Partners breakdown */}
+            {deal.partnerBreakdown?.length > 0 && (
+              <div>
+                <SectionLabel>Partners</SectionLabel>
+                <div className="space-y-2 mt-2">
+                  {deal.partnerBreakdown.map((p) => (
+                    <div
+                      key={p.name}
+                      className="px-3 py-2.5 bg-indigo-50 rounded-lg border border-indigo-100"
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-semibold text-indigo-800">
+                          {p.name}{" "}
+                          <span className="font-normal text-indigo-500">
+                            ({p.sharePercent}%)
+                          </span>
+                        </span>
+                        {p.profitShare !== null && (
+                          <ProfitChip value={p.profitShare} />
+                        )}
+                      </div>
+                      <div className="flex gap-4 mt-1 text-lg font-bold text-indigo-500">
+                        <span>Cost: {formatCurrency(p.costShare)}</span>
+                        {p.revenueShare !== null && (
+                          <span>Revenue: {formatCurrency(p.revenueShare)}</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
 
             {/* Notes */}
             {(deal.notes || deal.purchaseNotes || deal.saleNotes) && (
@@ -256,8 +257,8 @@ const CarDealCard = ({ deal, onEdit, onDelete }) => {
                 Edit Deal
               </Btn>
               <Btn
-                variant="ghost"
-                className="text-sm border border-red-200 text-red-500 hover:bg-red-50"
+                variant="danger"
+                className="text-sm border bg-red-600 border-red-200 text-red-500 hover:bg-red-50"
                 onClick={() => setConfirmDelete(true)}
               >
                 Delete

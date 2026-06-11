@@ -502,18 +502,9 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
           {form.expenses.map((e, i) => (
             <div
               key={e._uid || i}
-              className="grid grid-cols-3 gap-2 mb-3 p-3 bg-orange-50 rounded-lg border border-orange-100"
+              className="grid grid-cols-11 items-end gap-2 mb-3 p-3 bg-orange-50 rounded-lg border border-orange-100"
             >
-              <Field label="Description" className="col-span-3 sm:col-span-1">
-                <Input
-                  placeholder="e.g. Repair, RC Transfer"
-                  value={e.description}
-                  onChange={(ev) =>
-                    setExpense(i, "description", ev.target.value)
-                  }
-                />
-              </Field>
-              <Field label="Amount (₹)">
+              <Field label="Amount (₹)" className="col-span-5">
                 <Input
                   type="number"
                   min="0"
@@ -523,7 +514,7 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
                   onWheel={(ev) => ev.target.blur()}
                 />
               </Field>
-              <Field label="Date (optional)">
+              <Field label="Date (optional)" className="col-span-5">
                 <div className="flex gap-2 items-center">
                   <Input
                     type="date"
@@ -531,6 +522,9 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
                     onChange={(ev) => setExpense(i, "date", ev.target.value)}
                     className="flex-1"
                   />
+                </div>
+              </Field>
+              <Field className="col-span-1">
                   <Btn
                     type="button"
                     variant="danger"
@@ -539,7 +533,15 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
                   >
                     ×
                   </Btn>
-                </div>
+              </Field>
+              <Field label="Description" className="col-span-11">
+                <Input
+                  placeholder="e.g. Repair, RC Transfer"
+                  value={e.description}
+                  onChange={(ev) =>
+                    setExpense(i, "description", ev.target.value)
+                  }
+                />
               </Field>
             </div>
           ))}

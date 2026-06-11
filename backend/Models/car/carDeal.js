@@ -104,18 +104,20 @@ carDealSchema.virtual("dealStatus").get(function () {
   return "sold";
 });
 
-// Per-partner breakdown: cost share, profit share
 carDealSchema.virtual("partnerBreakdown").get(function () {
   if (!this.partners || this.partners.length === 0) return [];
-  const netProfit = this.netProfit; // already deducts commissions
+  const netProfit = this.netProfit;
   return this.partners.map((p) => {
     const costShare = (this.totalCost * p.sharePercent) / 100;
+    
+    // ✅ Deduct total commission before splitting revenue
     const revenueShare = this.sellingPrice
-      ? (this.sellingPrice * p.sharePercent) / 100
+      ? ((this.sellingPrice - this.totalCommission) * p.sharePercent) / 100
       : null;
-    // Split net profit (after commissions), not gross
+
     const profitShare =
       netProfit !== null ? (netProfit * p.sharePercent) / 100 : null;
+
     return {
       name: p.name,
       sharePercent: p.sharePercent,
