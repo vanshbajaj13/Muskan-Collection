@@ -57,7 +57,7 @@ export const StatusBadge = ({ status }) => {
     },
     pending_payment: {
       label: "Payment Pending",
-      cls: "bg-amber-50 text-amber-700 border border-amber-200",
+      cls: "bg-amber-50 text-amber-700 border border-amber-200 truncate",
     },
     complete: {
       label: "Complete",

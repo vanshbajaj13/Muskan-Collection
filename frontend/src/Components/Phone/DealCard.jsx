@@ -112,16 +112,16 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
 
           {/* Product */}
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-slate-800 text-sm truncate">
+            <p className="font-semibold text-slate-800 text-sm ">
               {deal.product}
             </p>
-            <p className="text-xs text-slate-400 truncate">
+            <p className="text-xs text-slate-400 ">
               {deal.purchaseAccount} · {deal.purchasedFrom}
             </p>
           </div>
 
           {/* Status + pending */}
-          <div className="flex flex-col items-end gap-1 shrink-0">
+          <div className="flex flex-col items-end gap-1 min-w-0 truncate">
             <StatusBadge status={deal.dealStatus} />
             {pending > 0 && (
               <span className="text-xs text-amber-600 font-medium">
