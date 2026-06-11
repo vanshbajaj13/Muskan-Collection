@@ -144,7 +144,7 @@ const PhoneDeals = () => {
     usePhone();
 
   const [deals, setDeals] = useState([]);
-  const [allExpanded, setAllExpanded] = useState(false);
+  const [allExpanded, setAllExpanded] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);

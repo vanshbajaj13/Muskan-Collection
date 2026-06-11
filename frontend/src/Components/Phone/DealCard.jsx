@@ -121,7 +121,7 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
           </div>
 
           {/* Status + pending */}
-          <div className="flex flex-col items-end gap-1 min-w-0 truncate">
+          <div className="flex flex-col items-end gap-1">
             <StatusBadge status={deal.dealStatus} />
             {pending > 0 && (
               <span className="text-xs text-amber-600 font-medium">
