@@ -10,128 +10,185 @@ const CarDealCard = ({ deal, onEdit, onDelete }) => {
 
   const handleDelete = async () => {
     setDeleting(true);
-    try { await onDelete(deal._id); }
-    finally { setDeleting(false); setConfirmDelete(false); }
+    try {
+      await onDelete(deal._id);
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
   };
 
   const totalExpenses = (deal.expenses || []).reduce((s, e) => s + e.amount, 0);
+  const isSold = deal.dealStatus === "sold";
 
   return (
     <>
       {confirmDelete && (
         <ConfirmModal
-          title="इस डील को हटाएं?"
-          body={`${deal.carNumber} — ${deal.carDescription || ""} हमेशा के लिए हट जाएगी।`}
+          title="Delete this deal?"
+          body={`${deal.carNumber}${deal.carDescription ? ` — ${deal.carDescription}` : ""} will be permanently removed.`}
           onConfirm={handleDelete}
           onCancel={() => setConfirmDelete(false)}
           loading={deleting}
         />
       )}
 
-      <div className={`bg-white rounded-2xl border-2 transition-all duration-200 hover:shadow-md
-        ${deal.dealStatus === "sold" ? "border-green-200" : "border-amber-200"}`}>
-
-        {/* ── Compact header ──────────────────────────────────── */}
+      <div
+        className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+        style={{ borderLeft: `3px solid ${isSold ? "#16a34a" : "#d97706"}` }}
+      >
+        {/* Compact header */}
         <div
-          className="flex items-center gap-3 px-5 py-4 cursor-pointer"
+          className="flex items-center gap-3 px-4 py-3.5 cursor-pointer select-none"
           onClick={() => setExpanded(!expanded)}
         >
-          {/* Car icon by status */}
-          <div className={`text-3xl shrink-0`}>
-            {deal.dealStatus === "sold" ? "✅" : "🚗"}
-          </div>
-
-          {/* Main info */}
           <div className="flex-1 min-w-0">
-            <p className="text-xl font-extrabold text-gray-800 leading-tight">
-              {deal.carNumber}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-base font-bold text-slate-800">
+                {deal.carNumber}
+              </span>
+              <StatusBadge status={deal.dealStatus} />
+            </div>
+            <p className="text-sm text-slate-500 truncate mt-0.5">
+              {deal.carDescription ||
+                [deal.make, deal.model, deal.year].filter(Boolean).join(" ") ||
+                "—"}
             </p>
-            <p className="text-base text-gray-500 truncate">
-              {deal.carDescription || [deal.make, deal.model, deal.year].filter(Boolean).join(" ") || "गाड़ी"}
-            </p>
-            <p className="text-sm text-gray-400 mt-0.5">
-              खरीद: {formatDate(deal.purchaseDate)}
+            <p className="text-lg text-slate-400 font-bold mt-0.5">
+              Bought{formatDate(deal.purchaseDate)}
               {deal.boughtFrom && ` · ${deal.boughtFrom}`}
             </p>
           </div>
 
-          {/* Status + profit */}
-          <div className="flex flex-col items-end gap-2 shrink-0">
-            <StatusBadge status={deal.dealStatus} />
+          <div className="flex flex-col items-end gap-1 shrink-0">
             <ProfitChip value={deal.netProfit} />
+            <p className="text-lg text-slate-400 font-bold mt-0.5">
+              Sold {formatDate(deal.saleDate)}
+              {deal.soldTo && ` · ${deal.soldTo}`}
+            </p>
           </div>
 
-          {/* Chevron */}
-          <span className={`text-gray-400 font-bold transition-transform text-lg ml-1 ${expanded ? "rotate-180" : ""}`}>
-            ▼
-          </span>
+          <svg
+            className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${expanded ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
         </div>
 
-        {/* ── Expanded details ─────────────────────────────────── */}
+        {/* Expanded details */}
         {expanded && (
-          <div className="border-t-2 border-gray-100 px-5 pt-5 pb-5 space-y-5">
-
-            {/* Financials grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <InfoBox label="खरीद मूल्य" value={formatCurrency(deal.buyingPrice)} />
+          <div className="border-t border-slate-100 px-4 pt-4 pb-4 space-y-4">
+            {/* Financial flow */}
+            <div className="rounded-xl border border-slate-200 overflow-hidden">
+              {/* Purchase side */}
+              <div className="bg-slate-50 px-3 py-2 border-b border-slate-100">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Purchase
+                </p>
+              </div>
+              <FlowRow
+                label="Buying Price"
+                value={formatCurrency(deal.buyingPrice)}
+              />
+              {deal.expenses?.length > 0 &&
+                deal.expenses.map((e, i) => (
+                  <FlowRow
+                    key={i}
+                    label={`+ ${e.description || "Expense"}`}
+                    value={formatCurrency(e.amount)}
+                    indent
+                    color="orange"
+                  />
+                ))}
               {totalExpenses > 0 && (
-                <InfoBox label="कुल खर्च" value={formatCurrency(totalExpenses)} />
+                <FlowRow
+                  label="= Total Cost"
+                  value={formatCurrency(deal.totalCost)}
+                  bold
+                  highlight="slate"
+                />
               )}
-              <InfoBox label="कुल लागत" value={formatCurrency(deal.totalCost)} highlight />
-              {deal.sellingPrice && (
-                <InfoBox label="बिक्री मूल्य" value={formatCurrency(deal.sellingPrice)} />
-              )}
-              {deal.grossProfit !== null && (
-                <InfoBox label="सकल मुनाफा" value={<ProfitChip value={deal.grossProfit} />} />
-              )}
-              {deal.netProfit !== null && (
-                <InfoBox label="शुद्ध मुनाफा" value={<ProfitChip value={deal.netProfit} />} />
-              )}
-              {deal.soldTo && (
-                <InfoBox label="किसको बेची" value={deal.soldTo} />
-              )}
-              {deal.saleDate && (
-                <InfoBox label="बिक्री तारीख" value={formatDate(deal.saleDate)} />
+
+              {/* Sale side */}
+              {isSold && (
+                <>
+                  <div className="bg-slate-50 px-3 py-2 border-t border-b border-slate-100">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      Sale{deal.soldTo ? ` · ${deal.soldTo}` : ""}
+                      {deal.saleDate ? ` · ${formatDate(deal.saleDate)}` : ""}
+                    </p>
+                  </div>
+                  <FlowRow
+                    label="Selling Price"
+                    value={formatCurrency(deal.sellingPrice)}
+                  />
+                  <FlowRow
+                    label="− Total Cost"
+                    value={`−${formatCurrency(deal.totalCost)}`}
+                    indent
+                    color="orange"
+                  />
+                  <FlowRow
+                    label="= Gross Profit"
+                    value={formatCurrency(deal.grossProfit)}
+                    bold
+                    highlight={deal.grossProfit >= 0 ? "green" : "red"}
+                  />
+                  {deal.commissions?.length > 0 &&
+                    deal.commissions.map((c, i) => (
+                      <FlowRow
+                        key={i}
+                        label={`− Commission${c.name ? ` (${c.name})` : ""}${c.note ? ` · ${c.note}` : ""}`}
+                        value={`−${formatCurrency(c.amount)}`}
+                        indent
+                        color="purple"
+                      />
+                    ))}
+                  {deal.commissions?.length > 0 && (
+                    <FlowRow
+                      label="= Net Profit"
+                      value={formatCurrency(deal.netProfit)}
+                      bold
+                      highlight={deal.netProfit >= 0 ? "green" : "red"}
+                    />
+                  )}
+                </>
               )}
             </div>
 
-            {/* Expenses breakdown */}
-            {deal.expenses && deal.expenses.length > 0 && (
-              <div>
-                <p className="text-base font-bold text-gray-600 mb-2">🔧 खर्च का विवरण:</p>
-                <div className="space-y-1.5">
-                  {deal.expenses.map((e, i) => (
-                    <div key={i} className="flex justify-between items-center px-4 py-2.5
-                      bg-orange-50 rounded-xl border border-orange-100">
-                      <span className="text-base text-gray-700">{e.description}</span>
-                      <span className="text-base font-bold text-orange-700">
-                        {formatCurrency(e.amount)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Partners breakdown */}
-            {deal.partnerBreakdown && deal.partnerBreakdown.length > 0 && (
+            {deal.partnerBreakdown?.length > 0 && (
               <div>
-                <p className="text-base font-bold text-gray-600 mb-2">🤝 हिस्सेदारों का हिसाब:</p>
-                <div className="space-y-2">
+                <SectionLabel>Partners</SectionLabel>
+                <div className="space-y-2 mt-2">
                   {deal.partnerBreakdown.map((p) => (
-                    <div key={p.name} className="px-4 py-3 bg-blue-50 rounded-xl border border-blue-100">
+                    <div
+                      key={p.name}
+                      className="px-3 py-2.5 bg-indigo-50 rounded-lg border border-indigo-100"
+                    >
                       <div className="flex justify-between items-center">
-                        <span className="text-base font-bold text-blue-800">
-                          {p.name} ({p.sharePercent}% हिस्सा)
+                        <span className="text-sm font-semibold text-indigo-800">
+                          {p.name}{" "}
+                          <span className="font-normal text-indigo-500">
+                            ({p.sharePercent}%)
+                          </span>
                         </span>
                         {p.profitShare !== null && (
                           <ProfitChip value={p.profitShare} />
                         )}
                       </div>
-                      <div className="flex gap-4 mt-1 text-sm text-blue-600">
-                        <span>लागत: {formatCurrency(p.costShare)}</span>
+                      <div className="flex gap-4 mt-1 text-xs text-indigo-500">
+                        <span>Cost: {formatCurrency(p.costShare)}</span>
                         {p.revenueShare !== null && (
-                          <span>आमदनी: {formatCurrency(p.revenueShare)}</span>
+                          <span>Revenue: {formatCurrency(p.revenueShare)}</span>
                         )}
                       </div>
                     </div>
@@ -141,17 +198,22 @@ const CarDealCard = ({ deal, onEdit, onDelete }) => {
             )}
 
             {/* Commissions */}
-            {deal.commissions && deal.commissions.length > 0 && (
+            {deal.commissions?.length > 0 && (
               <div>
-                <p className="text-base font-bold text-gray-600 mb-2">💸 कमीशन:</p>
-                <div className="space-y-1.5">
+                <SectionLabel>Commissions</SectionLabel>
+                <div className="space-y-1.5 mt-2">
                   {deal.commissions.map((c, i) => (
-                    <div key={i} className="flex justify-between items-center px-4 py-2.5
-                      bg-purple-50 rounded-xl border border-purple-100">
-                      <span className="text-base text-gray-700">
-                        {c.name}{c.note && ` — ${c.note}`}
+                    <div
+                      key={i}
+                      className="flex justify-between items-center px-3 py-2 bg-purple-50 rounded-lg border border-purple-100"
+                    >
+                      <span className="text-sm text-slate-700">
+                        {c.name}
+                        {c.note && (
+                          <span className="text-slate-400"> — {c.note}</span>
+                        )}
                       </span>
-                      <span className="text-base font-bold text-purple-700">
+                      <span className="text-sm font-semibold text-purple-700">
                         {formatCurrency(c.amount)}
                       </span>
                     </div>
@@ -162,25 +224,43 @@ const CarDealCard = ({ deal, onEdit, onDelete }) => {
 
             {/* Notes */}
             {(deal.notes || deal.purchaseNotes || deal.saleNotes) && (
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                <p className="text-sm font-bold text-gray-500 mb-1">📝 नोट्स:</p>
-                {deal.purchaseNotes && <p className="text-base text-gray-600">खरीद: {deal.purchaseNotes}</p>}
-                {deal.saleNotes && <p className="text-base text-gray-600">बिक्री: {deal.saleNotes}</p>}
-                {deal.notes && <p className="text-base text-gray-600">{deal.notes}</p>}
+              <div className="bg-slate-50 rounded-lg p-3 border border-slate-100">
+                <SectionLabel>Notes</SectionLabel>
+                <div className="mt-1.5 space-y-1">
+                  {deal.purchaseNotes && (
+                    <p className="text-sm text-slate-600">
+                      <span className="font-medium">Purchase:</span>{" "}
+                      {deal.purchaseNotes}
+                    </p>
+                  )}
+                  {deal.saleNotes && (
+                    <p className="text-sm text-slate-600">
+                      <span className="font-medium">Sale:</span>{" "}
+                      {deal.saleNotes}
+                    </p>
+                  )}
+                  {deal.notes && (
+                    <p className="text-sm text-slate-600">{deal.notes}</p>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* Action buttons */}
-            <div className="flex gap-3 pt-2 border-t-2 border-gray-100">
-              <Btn variant="secondary" className="text-base py-3" onClick={() => onEdit(deal)}>
-                ✎ बदलाव करें / Edit
+            {/* Actions */}
+            <div className="flex gap-2 pt-2 border-t border-slate-100">
+              <Btn
+                variant="secondary"
+                className="flex-1 text-sm"
+                onClick={() => onEdit(deal)}
+              >
+                Edit Deal
               </Btn>
               <Btn
                 variant="ghost"
-                className="text-base py-3 border-2 border-red-200 text-red-500 hover:bg-red-50"
+                className="text-sm border border-red-200 text-red-500 hover:bg-red-50"
                 onClick={() => setConfirmDelete(true)}
               >
-                🗑 हटाएं / Delete
+                Delete
               </Btn>
             </div>
           </div>
@@ -190,11 +270,45 @@ const CarDealCard = ({ deal, onEdit, onDelete }) => {
   );
 };
 
-const InfoBox = ({ label, value, highlight }) => (
-  <div className={`rounded-xl p-3.5 ${highlight ? "bg-blue-50 border-2 border-blue-200" : "bg-gray-50 border border-gray-200"}`}>
-    <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
-    <div className="text-lg font-bold text-gray-800 mt-0.5">{value}</div>
-  </div>
+const FlowRow = ({ label, value, bold, indent, color, highlight }) => {
+  const highlightCls =
+    {
+      green: "bg-green-50 border-t border-green-100",
+      red: "bg-red-50 border-t border-red-100",
+      slate: "bg-slate-100 border-t border-slate-200",
+    }[highlight] || "";
+
+  const valueCls =
+    {
+      green: "text-green-700",
+      red: "text-red-600",
+      slate: "text-slate-800",
+      orange: "text-orange-600",
+      purple: "text-purple-700",
+    }[highlight || color] || "text-slate-700";
+
+  return (
+    <div
+      className={`flex justify-between items-center px-3 py-2 ${highlightCls}`}
+    >
+      <span
+        className={`text-sm ${indent ? "pl-3 text-slate-500" : bold ? "font-bold text-slate-700" : "text-slate-600"}`}
+      >
+        {label}
+      </span>
+      <span
+        className={`text-sm ${bold ? "font-bold" : "font-medium"} ${valueCls}`}
+      >
+        {value}
+      </span>
+    </div>
+  );
+};
+
+const SectionLabel = ({ children }) => (
+  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+    {children}
+  </p>
 );
 
 export default CarDealCard;

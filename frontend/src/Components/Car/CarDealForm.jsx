@@ -1,6 +1,132 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useCar } from "./CarContext";
-import { Field, Input, Select, Textarea, Btn, ConfirmModal } from "./CarUI";
+import { Field, Input, Textarea, Btn, ConfirmModal } from "./CarUI";
+
+// ── ComboBox: free-type + dropdown suggestions + auto-save new values ─────────
+const ComboBox = ({
+  value,
+  onChange,
+  options = [],
+  onAddNew,
+  placeholder = "Type or select…",
+}) => {
+  const [open, setOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const containerRef = useRef(null);
+
+  const trimmed = value.trim();
+  const filtered = options.filter((o) =>
+    o.toLowerCase().includes(trimmed.toLowerCase()),
+  );
+  const isNew =
+    trimmed.length > 0 &&
+    !options.some((o) => o.toLowerCase() === trimmed.toLowerCase());
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (!containerRef.current?.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleSelect = (val) => {
+    onChange(val);
+    setOpen(false);
+  };
+
+  const handleAddNew = async () => {
+    if (!onAddNew || !isNew) return;
+    setAdding(true);
+    try {
+      await onAddNew(trimmed);
+      onChange(trimmed); // ensure value is selected after dropdown list refreshes
+    } finally {
+      setAdding(false);
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder}
+        className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-base text-slate-800
+          focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+          bg-white placeholder-slate-300 transition-shadow pr-8"
+        style={{ fontSize: "16px" }}
+        autoComplete="off"
+      />
+      {/* Chevron */}
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setOpen((o) => !o)}
+        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+      >
+        <svg
+          className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div className="absolute z-30 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+          {filtered.length === 0 && !isNew && (
+            <p className="px-3 py-2.5 text-sm text-slate-400">No matches</p>
+          )}
+          {filtered.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelect(opt);
+              }}
+              className={`w-full text-left px-3 py-2.5 text-sm hover:bg-indigo-50 transition-colors
+                ${value === opt ? "bg-indigo-50 font-semibold text-indigo-700" : "text-slate-700"}`}
+            >
+              {opt}
+            </button>
+          ))}
+          {isNew && (
+            <button
+              type="button"
+              disabled={adding}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleAddNew();
+              }}
+              className="w-full text-left px-3 py-2.5 text-sm text-indigo-600 font-semibold
+                hover:bg-indigo-50 border-t border-slate-100 flex items-center gap-2 transition-colors"
+            >
+              <span className="text-base leading-none">+</span>
+              {adding ? "Saving…" : `Add "${trimmed}"`}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const EMPTY = {
   carNumber: "",
@@ -12,24 +138,33 @@ const EMPTY = {
   boughtFrom: "",
   purchaseDate: "",
   purchaseNotes: "",
-  partners: [], // [{ name, sharePercent }]
-  expenses: [], // [{ description, amount, date }]
+  partners: [],
+  expenses: [],
   sellingPrice: "",
   soldTo: "",
   saleDate: "",
   saleNotes: "",
-  commissions: [], // [{ name, amount, note }]
+  commissions: [],
   notes: "",
 };
 
+let _uid = 0;
+const uid = () => `_${++_uid}`;
+
 const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
-  const { opts, tsFromDate, dateFromTs } = useCar();
+  const { opts, tsFromDate, dateFromTs, addDropdown } = useCar();
+  const initializedRef = useRef(false);
   const [form, setForm] = useState(EMPTY);
   const [showSale, setShowSale] = useState(false);
   const [pendingPayload, setPendingPayload] = useState(null);
 
   useEffect(() => {
-    if (initial) {
+    // Only hydrate from `initial` once per form mount (edit mode).
+    // Without this guard, any context re-render (e.g. after addDropdown →
+    // fetchDropdowns) produces a new `dateFromTs` reference, re-fires this
+    // effect, and resets the form — wiping values the user just added.
+    if (initial && !initializedRef.current) {
+      initializedRef.current = true;
       setForm({
         ...EMPTY,
         ...initial,
@@ -38,12 +173,13 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
         year: initial.year ?? "",
         buyingPrice: initial.buyingPrice ?? "",
         sellingPrice: initial.sellingPrice ?? "",
-        partners: (initial.partners || []).map((p) => ({ ...p })),
+        partners: (initial.partners || []).map((p) => ({ ...p, _uid: uid() })),
         expenses: (initial.expenses || []).map((e) => ({
           ...e,
           date: e.date ? dateFromTs(e.date) : "",
+          _uid: uid(),
         })),
-        commissions: (initial.commissions || []).map((c) => ({ ...c })),
+        commissions: (initial.commissions || []).map((c) => ({ ...c, _uid: uid() })),
       });
       setShowSale(
         !!(initial.soldTo || initial.sellingPrice || initial.saleDate),
@@ -53,11 +189,11 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-  // ── Partners helpers ───────────────────────────────────────────
+  // Partners
   const addPartner = () =>
     setForm((f) => ({
       ...f,
-      partners: [...f.partners, { name: "", sharePercent: "" }],
+      partners: [...f.partners, { name: "", sharePercent: "", _uid: uid() }],
     }));
   const removePartner = (i) =>
     setForm((f) => ({
@@ -70,17 +206,16 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
       p[i] = { ...p[i], [key]: val };
       return { ...f, partners: p };
     });
-
   const totalPartnerShare = form.partners.reduce(
     (s, p) => s + (parseFloat(p.sharePercent) || 0),
     0,
   );
 
-  // ── Expenses helpers ───────────────────────────────────────────
+  // Expenses
   const addExpense = () =>
     setForm((f) => ({
       ...f,
-      expenses: [...f.expenses, { description: "", amount: "", date: "" }],
+      expenses: [...f.expenses, { description: "", amount: "", date: "", _uid: uid() }],
     }));
   const removeExpense = (i) =>
     setForm((f) => ({
@@ -93,17 +228,16 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
       e[i] = { ...e[i], [key]: val };
       return { ...f, expenses: e };
     });
-
   const totalExpenses = form.expenses.reduce(
     (s, e) => s + (parseFloat(e.amount) || 0),
     0,
   );
 
-  // ── Commissions helpers ────────────────────────────────────────
+  // Commissions
   const addCommission = () =>
     setForm((f) => ({
       ...f,
-      commissions: [...f.commissions, { name: "", amount: "", note: "" }],
+      commissions: [...f.commissions, { name: "", amount: "", note: "", _uid: uid() }],
     }));
   const removeCommission = (i) =>
     setForm((f) => ({
@@ -117,7 +251,7 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
       return { ...f, commissions: c };
     });
 
-  // ── Live preview calculations ──────────────────────────────────
+  // Live preview
   const buying = parseFloat(form.buyingPrice) || 0;
   const totalCost = buying + totalExpenses;
   const selling = parseFloat(form.sellingPrice) || 0;
@@ -127,19 +261,17 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
   );
   const grossProfit = selling > 0 ? selling - totalCost : null;
   const netProfit = grossProfit !== null ? grossProfit - totalCommission : null;
-
   const partnerBreakdown = form.partners
     .filter((p) => p.name && parseFloat(p.sharePercent) > 0)
     .map((p) => {
       const pct = parseFloat(p.sharePercent);
       const costShare = (totalCost * pct) / 100;
       const revenueShare = selling > 0 ? (selling * pct) / 100 : null;
-      const profitShare =
-        revenueShare !== null ? revenueShare - costShare : null;
+      // Partners split net profit (after commissions), not gross
+      const profitShare = netProfit !== null ? (netProfit * pct) / 100 : null;
       return { name: p.name, pct, costShare, revenueShare, profitShare };
     });
 
-  // ── Submit ─────────────────────────────────────────────────────
   const handleSubmit = (e) => {
     e.preventDefault();
     const payload = {
@@ -179,8 +311,8 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
     <>
       {pendingPayload && (
         <ConfirmModal
-          title="बदलाव सेव करें?"
-          body={`${form.carNumber} की जानकारी अपडेट होगी।`}
+          title="Save changes?"
+          body={`Updates to ${form.carNumber} will be saved.`}
           onConfirm={() => {
             onSave(pendingPayload);
             setPendingPayload(null);
@@ -190,44 +322,48 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
         />
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* ── Section 1: Car Details ─────────────────────────────── */}
-        <Section title="🚗 गाड़ी की जानकारी / Car Details">
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="गाड़ी नंबर / Car Number" required>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Car Details */}
+        <Section title="Car Details">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Car Number" required>
               <Input
-                placeholder="जैसे HR26DK1234"
+                placeholder="e.g. HR26DK1234"
                 value={form.carNumber}
                 onChange={(e) => set("carNumber", e.target.value.toUpperCase())}
                 required
               />
             </Field>
-            <Field label="गाड़ी का नाम / Car Name">
+            <Field label="Car Name">
               <Input
-                placeholder="जैसे Swift 2019 White"
+                placeholder="e.g. Swift 2019 White"
                 value={form.carDescription}
                 onChange={(e) => set("carDescription", e.target.value)}
               />
             </Field>
-            <Field label="कंपनी / Make">
-              <Select
-                options={opts("make")}
+            <Field label="Make">
+              <ComboBox
                 value={form.make}
-                onChange={(e) => set("make", e.target.value)}
-                placeholder="— कंपनी चुनें —"
+                onChange={(v) => set("make", v)}
+                options={opts("make")}
+                onAddNew={async (v) => {
+                  set("make", v);
+                  await addDropdown("make", v);
+                }}
+                placeholder="Type or select…"
               />
             </Field>
-            <Field label="मॉडल / Model">
+            <Field label="Model">
               <Input
-                placeholder="जैसे Swift VXI"
+                placeholder="e.g. Swift VXI"
                 value={form.model}
                 onChange={(e) => set("model", e.target.value)}
               />
             </Field>
-            <Field label="वर्ष / Year">
+            <Field label="Year">
               <Input
                 type="number"
-                placeholder="जैसे 2019"
+                placeholder="e.g. 2019"
                 min="1990"
                 max="2030"
                 value={form.year}
@@ -238,29 +374,37 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
           </div>
         </Section>
 
-        {/* ── Section 2: Purchase ───────────────────────────────── */}
-        <Section title="💰 खरीद की जानकारी / Purchase Details">
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="खरीद मूल्य (₹) / Buying Price" required>
+        {/* Purchase Details */}
+        <Section title="Purchase Details">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Buying Price (₹)" required>
               <Input
                 type="number"
                 min="0"
-                placeholder="जैसे 600000"
+                placeholder="600000"
                 value={form.buyingPrice}
                 onChange={(e) => set("buyingPrice", e.target.value)}
                 onWheel={(e) => e.target.blur()}
                 required
               />
             </Field>
-            <Field label="किससे खरीदी / Bought From">
-              <Select
-                options={opts("boughtFrom")}
+            <Field label="Bought From">
+              <ComboBox
                 value={form.boughtFrom}
-                onChange={(e) => set("boughtFrom", e.target.value)}
-                placeholder="— व्यक्ति चुनें —"
+                onChange={(v) => set("boughtFrom", v)}
+                options={opts("boughtFrom")}
+                onAddNew={async (v) => {
+                  set("boughtFrom", v);
+                  await addDropdown("boughtFrom", v);
+                }}
+                placeholder="Type or select…"
               />
             </Field>
-            <Field label="खरीद तारीख / Purchase Date" required>
+            <Field
+              label="Purchase Date"
+              required
+              className="col-span-2 sm:col-span-1"
+            >
               <Input
                 type="date"
                 value={form.purchaseDate}
@@ -269,46 +413,43 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
               />
             </Field>
           </div>
-          <Field label="नोट्स">
+          <Field label="Purchase Notes">
             <Textarea
-              placeholder="कोई जरूरी बात..."
+              placeholder="Any relevant notes…"
               value={form.purchaseNotes}
               onChange={(e) => set("purchaseNotes", e.target.value)}
             />
           </Field>
         </Section>
 
-        {/* ── Section 3: Partners ──────────────────────────────── */}
-        <Section title="🤝 हिस्सेदार / Partners (optional)">
-          <p className="text-base text-gray-500 mb-3">
-            अगर इस गाड़ी में किसी का हिस्सा है तो नीचे जोड़ें। सभी का हिस्सा
-            मिलाकर 100% होना चाहिए।
-          </p>
-
+        {/* Partners */}
+        <Section
+          title="Partners"
+          subtitle="Optional — add if others have a share in this deal."
+        >
           {form.partners.map((p, i) => (
             <div
-              key={i}
-              className="flex gap-3 items-end mb-3 p-4 bg-blue-50 rounded-xl border border-blue-100"
+              key={p._uid || i}
+              className="flex gap-2 items-end mb-3 p-3 bg-indigo-50 rounded-lg border border-indigo-100"
             >
-              <Field label="हिस्सेदार का नाम" className="flex-1">
-                <Input
-                  list={`partner-names-${i}`}
-                  placeholder="नाम लिखें..."
+              <Field label="Partner Name" className="flex-1">
+                <ComboBox
                   value={p.name}
-                  onChange={(e) => setPartner(i, "name", e.target.value)}
+                  onChange={(v) => setPartner(i, "name", v)}
+                  options={opts("partner")}
+                  onAddNew={async (v) => {
+                    setPartner(i, "name", v);
+                    await addDropdown("partner", v);
+                  }}
+                  placeholder="Type or select…"
                 />
-                <datalist id={`partner-names-${i}`}>
-                  {opts("partner").map((o) => (
-                    <option key={o} value={o} />
-                  ))}
-                </datalist>
               </Field>
-              <Field label="हिस्सा %" className="w-32">
+              <Field label="Share %" className="w-24">
                 <Input
                   type="number"
                   min="1"
                   max="100"
-                  placeholder="जैसे 50"
+                  placeholder="50"
                   value={p.sharePercent}
                   onChange={(e) =>
                     setPartner(i, "sharePercent", e.target.value)
@@ -319,49 +460,60 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
               <Btn
                 type="button"
                 variant="danger"
-                className="py-3 px-4"
+                className="py-2.5 px-3 text-xs"
                 onClick={() => removePartner(i)}
               >
-                हटाएं
+                Remove
               </Btn>
             </div>
           ))}
 
           {form.partners.length > 0 && (
             <p
-              className={`text-base font-bold mb-3 ${totalPartnerShare > 100 ? "text-red-500" : totalPartnerShare === 100 ? "text-green-600" : "text-amber-600"}`}
+              className={`text-sm font-semibold mb-3 ${
+                totalPartnerShare > 100
+                  ? "text-red-500"
+                  : totalPartnerShare === 100
+                    ? "text-green-600"
+                    : "text-amber-600"
+              }`}
             >
-              कुल हिस्सा: {totalPartnerShare}%
-              {totalPartnerShare > 100 && " ⚠️ 100% से ज्यादा है!"}
-              {totalPartnerShare === 100 && " ✅"}
+              Total share: {totalPartnerShare}%
+              {totalPartnerShare > 100 && " — exceeds 100%"}
+              {totalPartnerShare === 100 && " — perfect"}
             </p>
           )}
 
-          <Btn type="button" variant="secondary" onClick={addPartner}>
-            + हिस्सेदार जोड़ें / Add Partner
+          <Btn
+            type="button"
+            variant="secondary"
+            className="text-sm"
+            onClick={addPartner}
+          >
+            + Add Partner
           </Btn>
         </Section>
 
-        {/* ── Section 4: Expenses ───────────────────────────────── */}
-        <Section title="🔧 गाड़ी पर खर्च / Car Expenses (Repairs, RC, etc.)">
+        {/* Expenses */}
+        <Section
+          title="Expenses"
+          subtitle="Repairs, RC transfer, or any other costs."
+        >
           {form.expenses.map((e, i) => (
             <div
-              key={i}
-              className="grid grid-cols-3 gap-3 mb-3 p-4 bg-orange-50 rounded-xl border border-orange-100 overflow-auto"
+              key={e._uid || i}
+              className="grid grid-cols-3 gap-2 mb-3 p-3 bg-orange-50 rounded-lg border border-orange-100"
             >
-              <Field
-                label="खर्च का विवरण / Description"
-                className="col-span-3 md:col-span-1"
-              >
+              <Field label="Description" className="col-span-3 sm:col-span-1">
                 <Input
-                  placeholder="जैसे Repair, RC Transfer"
+                  placeholder="e.g. Repair, RC Transfer"
                   value={e.description}
                   onChange={(ev) =>
                     setExpense(i, "description", ev.target.value)
                   }
                 />
               </Field>
-              <Field label="राशि (₹) / Amount">
+              <Field label="Amount (₹)">
                 <Input
                   type="number"
                   min="0"
@@ -371,7 +523,7 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
                   onWheel={(ev) => ev.target.blur()}
                 />
               </Field>
-              <Field label="तारीख / Date (optional)">
+              <Field label="Date (optional)">
                 <div className="flex gap-2 items-center">
                   <Input
                     type="date"
@@ -382,64 +534,71 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
                   <Btn
                     type="button"
                     variant="danger"
-                    className="py-3 px-3"
+                    className="py-2.5 px-3 text-xs"
                     onClick={() => removeExpense(i)}
                   >
-                    ✕
+                    ×
                   </Btn>
                 </div>
               </Field>
             </div>
           ))}
-
           {form.expenses.length > 0 && (
-            <p className="text-base font-bold text-orange-700 mb-3">
-              कुल खर्च: ₹{totalExpenses.toLocaleString("en-IN")}
+            <p className="text-sm font-semibold text-orange-700 mb-3">
+              Total expenses: ₹{totalExpenses.toLocaleString("en-IN")}
             </p>
           )}
-
-          <Btn type="button" variant="secondary" onClick={addExpense}>
-            + खर्च जोड़ें / Add Expense
+          <Btn
+            type="button"
+            variant="secondary"
+            className="text-sm"
+            onClick={addExpense}
+          >
+            + Add Expense
           </Btn>
         </Section>
 
-        {/* ── Section 5: Sale (collapsible) ─────────────────────── */}
-        <section className="border-2 border-gray-200 rounded-2xl overflow-hidden">
+        {/* Sale Details (collapsible) */}
+        <section className="border border-slate-200 rounded-xl overflow-hidden">
           <button
             type="button"
             onClick={() => setShowSale(!showSale)}
-            className="w-full flex items-center justify-between px-5 py-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+            className="w-full flex items-center justify-between px-4 py-3.5 bg-slate-50 hover:bg-slate-100 transition-colors"
           >
-            <span className="text-lg font-bold text-gray-700">
-              ✅ बिक्री की जानकारी / Sale Details
+            <span className="text-sm font-bold text-slate-700">
+              Sale Details
             </span>
-            <span className="text-gray-400 text-base font-bold">
-              {showSale ? "▲ बंद करें" : "▼ भरें जब बिके"}
+            <span className="text-xs text-slate-400 font-medium">
+              {showSale ? "Collapse" : "Fill when sold"}
             </span>
           </button>
 
           {showSale && (
-            <div className="px-5 pb-5 pt-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Field label="बिक्री मूल्य (₹) / Selling Price">
+            <div className="px-4 pb-4 pt-3 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Selling Price (₹)">
                   <Input
                     type="number"
                     min="0"
-                    placeholder="जैसे 700000"
+                    placeholder="700000"
                     value={form.sellingPrice}
                     onChange={(e) => set("sellingPrice", e.target.value)}
                     onWheel={(e) => e.target.blur()}
                   />
                 </Field>
-                <Field label="किसको बेची / Sold To">
-                  <Select
-                    options={opts("soldTo")}
+                <Field label="Sold To">
+                  <ComboBox
                     value={form.soldTo}
-                    onChange={(e) => set("soldTo", e.target.value)}
-                    placeholder="— व्यक्ति चुनें —"
+                    onChange={(v) => set("soldTo", v)}
+                    options={opts("soldTo")}
+                    onAddNew={async (v) => {
+                      set("soldTo", v);
+                      await addDropdown("soldTo", v);
+                    }}
+                    placeholder="Type or select…"
                   />
                 </Field>
-                <Field label="बिक्री तारीख / Sale Date">
+                <Field label="Sale Date" className="col-span-2 sm:col-span-1">
                   <Input
                     type="date"
                     value={form.saleDate}
@@ -447,9 +606,9 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
                   />
                 </Field>
               </div>
-              <Field label="बिक्री नोट्स">
+              <Field label="Sale Notes">
                 <Textarea
-                  placeholder="कोई जरूरी बात..."
+                  placeholder="Any notes about the sale…"
                   value={form.saleNotes}
                   onChange={(e) => set("saleNotes", e.target.value)}
                 />
@@ -458,27 +617,26 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
           )}
         </section>
 
-        {/* ── Section 6: Commissions ────────────────────────────── */}
-        <Section title="💸 कमीशन / Commission">
+        {/* Commissions */}
+        <Section title="Commissions">
           {form.commissions.map((c, i) => (
             <div
-              key={i}
-              className="flex gap-3 items-end mb-3 p-4 bg-purple-50 rounded-xl border border-purple-100"
+              key={c._uid || i}
+              className="flex gap-2 items-end mb-3 p-3 bg-purple-50 rounded-lg border border-purple-100"
             >
-              <Field label="किसको कमीशन / To" className="flex-1">
-                <Input
-                  list={`commission-names-${i}`}
-                  placeholder="नाम लिखें / Enter name"
+              <Field label="To" className="flex-1">
+                <ComboBox
                   value={c.name}
-                  onChange={(e) => setCommission(i, "name", e.target.value)}
+                  onChange={(v) => setCommission(i, "name", v)}
+                  options={opts("partner")}
+                  onAddNew={async (v) => {
+                    setCommission(i, "name", v);
+                    await addDropdown("partner", v);
+                  }}
+                  placeholder="Type or select…"
                 />
-                <datalist id={`commission-names-${i}`}>
-                  {opts("partner").map((o) => (
-                    <option key={o} value={o} />
-                  ))}
-                </datalist>
               </Field>
-              <Field label="राशि (₹) / Amount" className="w-40">
+              <Field label="Amount (₹)" className="w-32">
                 <Input
                   type="number"
                   min="0"
@@ -488,10 +646,10 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
                   onWheel={(e) => e.target.blur()}
                 />
               </Field>
-              <Field label="नोट / Note" className="flex-1">
+              <Field label="Note" className="flex-1">
                 <div className="flex gap-2 items-center">
                   <Input
-                    placeholder="कोई नोट..."
+                    placeholder="Optional note"
                     value={c.note}
                     onChange={(e) => setCommission(i, "note", e.target.value)}
                     className="flex-1"
@@ -499,71 +657,76 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
                   <Btn
                     type="button"
                     variant="danger"
-                    className="py-3 px-3"
+                    className="py-2.5 px-3 text-xs"
                     onClick={() => removeCommission(i)}
                   >
-                    ✕
+                    ×
                   </Btn>
                 </div>
               </Field>
             </div>
           ))}
-
-          <Btn type="button" variant="secondary" onClick={addCommission}>
-            + कमीशन जोड़ें / Add Commission
+          <Btn
+            type="button"
+            variant="secondary"
+            className="text-sm"
+            onClick={addCommission}
+          >
+            + Add Commission
           </Btn>
         </Section>
 
-        {/* ── Section 7: General Notes ──────────────────────────── */}
-        <Section title="📝 सामान्य नोट्स / General Notes">
+        {/* General Notes */}
+        <Section title="Notes">
           <Textarea
-            placeholder="कोई भी जरूरी जानकारी..."
+            placeholder="Any other relevant details…"
             value={form.notes}
             onChange={(e) => set("notes", e.target.value)}
           />
         </Section>
 
-        {/* ── Live Preview ──────────────────────────────────────── */}
+        {/* Live Preview */}
         {(buying > 0 || totalExpenses > 0 || selling > 0) && (
-          <div className="rounded-2xl bg-gray-50 border-2 border-gray-200 p-5">
-            <p className="text-base font-bold text-gray-600 mb-3 uppercase tracking-wide">
-              📊 अनुमानित हिसाब / Preview
+          <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">
+              Live Preview
             </p>
-            <div className="space-y-2 text-lg">
+            <div className="space-y-1.5 text-sm">
               <PreviewRow
-                label="खरीद मूल्य"
+                label="Buying Price"
                 value={`₹${buying.toLocaleString("en-IN")}`}
               />
               {totalExpenses > 0 && (
                 <PreviewRow
-                  label="+ कुल खर्च"
+                  label="+ Expenses"
                   value={`₹${totalExpenses.toLocaleString("en-IN")}`}
                 />
               )}
               <PreviewRow
-                label="= कुल लागत"
+                label="= Total Cost"
                 value={`₹${totalCost.toLocaleString("en-IN")}`}
                 bold
               />
               {selling > 0 && (
                 <>
+                  <div className="my-2 border-t border-slate-200" />
                   <PreviewRow
-                    label="बिक्री मूल्य"
+                    label="Selling Price"
                     value={`₹${selling.toLocaleString("en-IN")}`}
                   />
                   {totalCommission > 0 && (
                     <PreviewRow
-                      label="− कमीशन"
+                      label="− Commission"
                       value={`₹${totalCommission.toLocaleString("en-IN")}`}
                     />
                   )}
                   <PreviewRow
-                    label="शुद्ध मुनाफा / Net Profit"
+                    label="Net Profit"
                     value={
                       <span
-                        className={`font-extrabold ${netProfit >= 0 ? "text-green-600" : "text-red-500"}`}
+                        className={`font-bold ${netProfit >= 0 ? "text-green-600" : "text-red-500"}`}
                       >
-                        {netProfit >= 0 ? "▲ +" : "▼ "}₹
+                        {netProfit >= 0 ? "+" : "−"}₹
                         {Math.abs(netProfit).toLocaleString("en-IN")}
                       </span>
                     }
@@ -574,24 +737,24 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
             </div>
 
             {partnerBreakdown.length > 0 && selling > 0 && (
-              <div className="mt-4 pt-4 border-t-2 border-gray-200">
-                <p className="text-base font-bold text-gray-600 mb-2">
-                  हिस्सेदारों का हिसाब:
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                  Partner Breakdown
                 </p>
                 {partnerBreakdown.map((p) => (
                   <div
                     key={p.name}
-                    className="flex justify-between items-center py-1.5 border-b border-gray-100"
+                    className="flex justify-between items-center py-1.5 border-b border-slate-100 last:border-0"
                   >
-                    <span className="text-base font-semibold text-gray-700">
+                    <span className="text-sm font-medium text-slate-700">
                       {p.name} ({p.pct}%)
                     </span>
                     <span
-                      className={`text-base font-bold ${p.profitShare >= 0 ? "text-green-600" : "text-red-500"}`}
+                      className={`text-sm font-bold ${p.profitShare >= 0 ? "text-green-600" : "text-red-500"}`}
                     >
-                      लागत ₹{p.costShare.toLocaleString("en-IN")} →
-                      {p.profitShare >= 0 ? " +" : " "}₹
-                      {p.profitShare.toLocaleString("en-IN")} मुनाफा
+                      Cost ₹{p.costShare.toLocaleString("en-IN")} → Net{" "}
+                      {p.profitShare >= 0 ? "+" : ""}₹
+                      {p.profitShare.toLocaleString("en-IN")}
                     </span>
                   </div>
                 ))}
@@ -600,27 +763,23 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
           </div>
         )}
 
-        {/* ── Actions ───────────────────────────────────────────── */}
-        <div className="flex gap-4 pt-2">
+        {/* Actions */}
+        <div className="flex gap-3 pt-1">
           <Btn
             variant="secondary"
             type="button"
             onClick={onCancel}
-            className="flex-1 text-lg py-4"
+            className="flex-1"
           >
-            रद्द करें / Cancel
+            Cancel
           </Btn>
           <Btn
             variant="primary"
             type="submit"
             disabled={loading}
-            className="flex-1 text-lg py-4"
+            className="flex-1"
           >
-            {loading
-              ? "सेव हो रहा है..."
-              : initial
-                ? "✅ अपडेट करें / Update"
-                : "✅ सेव करें / Save"}
+            {loading ? "Saving…" : initial ? "Save Changes" : "Add Deal"}
           </Btn>
         </div>
       </form>
@@ -628,18 +787,19 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
   );
 };
 
-const Section = ({ title, children }) => (
-  <section className="border-2 border-gray-200 rounded-2xl p-5 space-y-4">
-    <h3 className="text-lg font-bold text-gray-700 pb-2 border-b-2 border-gray-100">
-      {title}
-    </h3>
+const Section = ({ title, subtitle, children }) => (
+  <section className="border border-slate-200 rounded-xl p-4 space-y-3">
+    <div className="pb-2 border-b border-slate-100">
+      <h3 className="text-sm font-bold text-slate-700">{title}</h3>
+      {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+    </div>
     {children}
   </section>
 );
 
 const PreviewRow = ({ label, value, bold }) => (
   <div
-    className={`flex justify-between items-center ${bold ? "font-bold text-gray-800" : "text-gray-600"}`}
+    className={`flex justify-between items-center ${bold ? "font-bold text-slate-800" : "text-slate-500"}`}
   >
     <span>{label}</span>
     <span>{value}</span>

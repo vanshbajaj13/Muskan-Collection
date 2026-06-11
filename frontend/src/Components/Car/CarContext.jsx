@@ -102,28 +102,34 @@ export const CarProvider = ({ children }) => {
   };
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  const opts = (type) => (dropdowns[type] || []).map((o) => o.value);
+  const opts = useCallback(
+    (type) => (dropdowns[type] || []).map((o) => o.value),
+    [dropdowns],
+  );
 
-  const formatCurrency = (n) => {
+  const formatCurrency = useCallback((n) => {
     if (n === null || n === undefined || n === "") return "—";
     const abs = Math.abs(Number(n));
     if (abs >= 100000) return `₹${(Number(n) / 100000).toFixed(2)}L`;
     return `₹${Number(n).toLocaleString("en-IN")}`;
-  };
+  }, []);
 
-  const formatDate = (ts) => {
+  const formatDate = useCallback((ts) => {
     if (!ts) return "—";
     return new Date(ts).toLocaleDateString("en-IN", {
       day: "2-digit", month: "short", year: "numeric",
     });
-  };
+  }, []);
 
-  const tsFromDate = (dateStr) => dateStr ? new Date(dateStr).getTime() : null;
+  const tsFromDate = useCallback(
+    (dateStr) => (dateStr ? new Date(dateStr).getTime() : null),
+    [],
+  );
 
-  const dateFromTs = (ts) => {
+  const dateFromTs = useCallback((ts) => {
     if (!ts) return "";
     return new Date(ts).toISOString().split("T")[0];
-  };
+  }, []);
 
   return (
     <CarContext.Provider value={{

@@ -5,7 +5,8 @@ import CarDealForm from "./CarDealForm";
 import { Modal, Btn, Toast, FullScreenSpinner, StatCard } from "./CarUI";
 
 const CarDeals = () => {
-  const { getDeals, createDeal, updateDeal, deleteDeal, formatCurrency } = useCar();
+  const { getDeals, createDeal, updateDeal, deleteDeal, formatCurrency } =
+    useCar();
 
   const [deals, setDeals] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -15,8 +16,7 @@ const CarDeals = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [editDeal, setEditDeal] = useState(null);
 
-  // Filters
-  const [statusFilter, setStatusFilter] = useState("all");  // all | sold | unsold
+  const [statusFilter, setStatusFilter] = useState("all");
   const [searchText, setSearchText] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -35,25 +35,29 @@ const CarDeals = () => {
       const data = await getDeals(params);
       setDeals(data.deals || []);
     } catch {
-      showToast("डेटा लोड नहीं हुआ। / Failed to load.", "error");
+      showToast("Failed to load deals.", "error");
     } finally {
       setLoading(false);
     }
-  // eslint-disable-next-line
+    // eslint-disable-next-line
   }, [dateFrom, dateTo]);
 
-  useEffect(() => { fetchDeals(); }, [fetchDeals]);
+  useEffect(() => {
+    fetchDeals();
+  }, [fetchDeals]);
 
   const handleCreate = async (payload) => {
     setSaving(true);
     try {
       await createDeal(payload);
       setShowAdd(false);
-      showToast("✅ डील सेव हो गई! / Deal saved!");
+      showToast("Deal saved successfully.");
       fetchDeals();
     } catch {
-      showToast("सेव नहीं हुआ। / Failed to save.", "error");
-    } finally { setSaving(false); }
+      showToast("Failed to save deal.", "error");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleUpdate = async (payload) => {
@@ -61,20 +65,21 @@ const CarDeals = () => {
     try {
       await updateDeal(editDeal._id, payload);
       setEditDeal(null);
-      showToast("✅ अपडेट हो गया! / Updated!");
+      showToast("Deal updated.");
       fetchDeals();
     } catch {
-      showToast("अपडेट नहीं हुआ। / Failed to update.", "error");
-    } finally { setSaving(false); }
+      showToast("Failed to update deal.", "error");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id) => {
     await deleteDeal(id);
-    showToast("हटा दिया गया। / Deleted.", "info");
+    showToast("Deal deleted.", "info");
     fetchDeals();
   };
 
-  // Client-side filtering
   const visible = deals.filter((d) => {
     if (statusFilter !== "all" && d.dealStatus !== statusFilter) return false;
     if (searchText.trim()) {
@@ -91,7 +96,6 @@ const CarDeals = () => {
     return true;
   });
 
-  // Summary totals
   const sold = visible.filter((d) => d.dealStatus === "sold");
   const unsold = visible.filter((d) => d.dealStatus === "unsold");
   const totalNetProfit = sold.reduce((s, d) => s + (d.netProfit || 0), 0);
@@ -99,113 +103,153 @@ const CarDeals = () => {
 
   return (
     <div className="relative">
-      {saving && <FullScreenSpinner message="सेव हो रहा है... / Saving..." />}
+      {saving && <FullScreenSpinner message="Saving…" />}
 
       {toast && (
         <div className="fixed top-4 right-4 z-50">
-          <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
         </div>
       )}
 
       {showAdd && (
-        <Modal title="🚗 नई डील जोड़ें / Add New Deal" onClose={() => setShowAdd(false)} wide>
-          <CarDealForm onSave={handleCreate} onCancel={() => setShowAdd(false)} loading={saving} />
+        <Modal title="Add New Deal" onClose={() => setShowAdd(false)} wide>
+          <CarDealForm
+            onSave={handleCreate}
+            onCancel={() => setShowAdd(false)}
+            loading={saving}
+          />
         </Modal>
       )}
 
       {editDeal && (
-        <Modal title="✎ डील बदलें / Edit Deal" onClose={() => setEditDeal(null)} wide>
-          <CarDealForm initial={editDeal} onSave={handleUpdate} onCancel={() => setEditDeal(null)} loading={saving} />
+        <Modal title="Edit Deal" onClose={() => setEditDeal(null)} wide>
+          <CarDealForm
+            initial={editDeal}
+            onSave={handleUpdate}
+            onCancel={() => setEditDeal(null)}
+            loading={saving}
+          />
         </Modal>
       )}
 
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h2 className="text-2xl font-extrabold text-gray-800">सभी डील / All Deals</h2>
-          <p className="text-base text-gray-500">{visible.length} गाड़ियाँ दिख रही हैं</p>
+          <h2 className="text-xl font-bold text-slate-800">All Deals</h2>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {visible.length} vehicle{visible.length !== 1 ? "s" : ""}
+          </p>
         </div>
-        <Btn variant="primary" className="text-lg py-3 px-6" onClick={() => setShowAdd(true)}>
-          + नई डील / New Deal
+        <Btn variant="primary" onClick={() => setShowAdd(true)}>
+          + New Deal
         </Btn>
       </div>
 
-      {/* Quick summary strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <StatCard label="कुल गाड़ियाँ" value={visible.length} icon="🚗" color="blue" />
-        <StatCard label="बिकी हुई" value={sold.length} icon="✅" color="green" />
-        <StatCard label="स्टॉक में" value={unsold.length} icon="⏳" color="amber" />
-        <StatCard label="शुद्ध मुनाफा" value={formatCurrency(totalNetProfit)} icon="💰" color={totalNetProfit >= 0 ? "green" : "red"} />
+      {/* Summary strip */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <StatCard label="Total" value={visible.length} color="blue" />
+        <StatCard
+          label="Net Profit"
+          value={formatCurrency(totalNetProfit)}
+          color={totalNetProfit >= 0 ? "green" : "red"}
+        />
+        <StatCard label="Sold" value={sold.length} color="green" />
+        <StatCard label="In Stock" value={unsold.length} color="amber" />
       </div>
 
+      {/* Capital locked banner */}
       {capitalLocked > 0 && (
-        <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl px-5 py-3 mb-5 flex items-center gap-3">
-          <span className="text-2xl">🔒</span>
-          <p className="text-base font-bold text-amber-800">
-            पूंजी अटकी है: {formatCurrency(capitalLocked)} — {unsold.length} गाड़ी अभी नहीं बिकी
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 flex items-center gap-2.5">
+          <div className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+          <p className="text-sm font-semibold text-amber-800">
+            {formatCurrency(capitalLocked)} locked in {unsold.length} unsold
+            vehicle{unsold.length !== 1 ? "s" : ""}
           </p>
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-white border-2 border-gray-200 rounded-2xl p-4 mb-5 space-y-3">
-        <p className="text-base font-bold text-gray-600">🔍 फ़िल्टर / Filter</p>
-
+      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-5 space-y-3">
         <input
           type="text"
-          placeholder="गाड़ी नंबर, नाम, व्यक्ति... खोजें"
+          placeholder="Search by number, name, person…"
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
-          className="w-full border-2 border-gray-300 rounded-xl px-4 py-3 text-lg focus:outline-none focus:border-blue-500"
+          className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm
+            focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           style={{ fontSize: "16px" }}
         />
 
-        <div className="flex gap-2 flex-wrap">
+        {/* Status tabs */}
+        <div className="flex gap-2">
           {[
-            { key: "all", label: "सभी / All" },
-            { key: "unsold", label: "🚗 स्टॉक में" },
-            { key: "sold", label: "✅ बिकी हुई" },
+            { key: "all", label: "All" },
+            { key: "unsold", label: "In Stock" },
+            { key: "sold", label: "Sold" },
           ].map((s) => (
             <button
               key={s.key}
               onClick={() => setStatusFilter(s.key)}
-              className={`px-5 py-2.5 rounded-xl text-base font-bold transition-colors
-                ${statusFilter === s.key
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors
+                ${
+                  statusFilter === s.key
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
             >
               {s.label}
             </button>
           ))}
         </div>
 
+        {/* Date range */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-sm font-bold text-gray-500 mb-1 block">शुरू तारीख / From</label>
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-              className="w-full border-2 border-gray-300 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:border-blue-500"
-              style={{ fontSize: "16px" }} />
+            <label className="text-xs font-semibold text-slate-500 mb-1 block">
+              From
+            </label>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              style={{ fontSize: "16px" }}
+            />
           </div>
           <div>
-            <label className="text-sm font-bold text-gray-500 mb-1 block">अंत तारीख / To</label>
-            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-              className="w-full border-2 border-gray-300 rounded-xl px-4 py-2.5 text-base focus:outline-none focus:border-blue-500"
-              style={{ fontSize: "16px" }} />
+            <label className="text-xs font-semibold text-slate-500 mb-1 block">
+              To
+            </label>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              style={{ fontSize: "16px" }}
+            />
           </div>
         </div>
       </div>
 
       {/* Deals list */}
       {loading ? (
-        <div className="text-center py-16 text-gray-400 text-xl">लोड हो रहा है...</div>
+        <div className="text-center py-16 text-slate-400 text-sm">Loading…</div>
       ) : visible.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-6xl mb-4">🚗</p>
-          <p className="text-xl font-bold text-gray-500">कोई डील नहीं मिली</p>
-          <p className="text-base text-gray-400 mt-2">फ़िल्टर बदलें या नई डील जोड़ें</p>
+        <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
+          <p className="text-3xl mb-3">🚗</p>
+          <p className="text-base font-semibold text-slate-500">
+            No deals found
+          </p>
+          <p className="text-sm text-slate-400 mt-1">
+            Adjust filters or add a new deal
+          </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {visible.map((deal) => (
             <CarDealCard
               key={deal._id}

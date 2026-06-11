@@ -10,30 +10,10 @@ import {
 } from "./CarUI";
 
 const TYPES = [
-  {
-    key: "partner",
-    label: "हिस्सेदार / Partners",
-    icon: "🤝",
-    hint: "जो लोग गाड़ी में पैसा लगाते हैं",
-  },
-  {
-    key: "boughtFrom",
-    label: "किससे खरीदी / Bought From",
-    icon: "🧑‍💼",
-    hint: "जिनसे गाड़ी खरीदते हैं",
-  },
-  {
-    key: "soldTo",
-    label: "किसको बेची / Sold To",
-    icon: "🤝",
-    hint: "जिनको गाड़ी बेचते हैं",
-  },
-  {
-    key: "make",
-    label: "कंपनी / Car Make",
-    icon: "🏭",
-    hint: "जैसे Maruti, Hyundai, Honda",
-  },
+  { key: "partner", label: "Partners", hint: "People who invest in deals" },
+  { key: "boughtFrom", label: "Bought From", hint: "Sources you buy from" },
+  { key: "soldTo", label: "Sold To", hint: "People you sell to" },
+  { key: "make", label: "Car Makes", hint: "e.g. Maruti, Hyundai, Honda" },
 ];
 
 const CarDropdownManager = () => {
@@ -53,8 +33,8 @@ const CarDropdownManager = () => {
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [toast, setToast] = useState(null);
-  const [confirmModal, setConfirmModal] = useState(null); // for delete
-  const [renameModal, setRenameModal] = useState(null); // { id, oldValue, newValue }
+  const [confirmModal, setConfirmModal] = useState(null);
+  const [renameModal, setRenameModal] = useState(null);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -71,9 +51,9 @@ const CarDropdownManager = () => {
     try {
       await addDropdown(activeType, newValue.trim());
       setNewValue("");
-      showToast(`"${newValue.trim()}" जोड़ा गया!`);
+      showToast(`"${newValue.trim()}" added.`);
     } catch (err) {
-      showToast(err.message || "जोड़ा नहीं गया।", "error");
+      showToast(err.message || "Failed to add.", "error");
     } finally {
       setAdding(false);
     }
@@ -95,9 +75,9 @@ const CarDropdownManager = () => {
       await renameDropdown(renameModal.id, renameModal.newValue);
       setEditingId(null);
       setRenameModal(null);
-      showToast("बदला गया ✓");
+      showToast("Renamed successfully.");
     } catch {
-      showToast("बदला नहीं गया।", "error");
+      showToast("Failed to rename.", "error");
     } finally {
       setSavingEdit(false);
     }
@@ -106,24 +86,22 @@ const CarDropdownManager = () => {
   return (
     <div className="relative">
       {(savingEdit || deletingId) && (
-        <FullScreenSpinner
-          message={savingEdit ? "बदला जा रहा है..." : "हटाया जा रहा है..."}
-        />
+        <FullScreenSpinner message={savingEdit ? "Renaming…" : "Deleting…"} />
       )}
 
       {confirmModal && (
         <ConfirmModal
-          title="हटाएं?"
-          body={`"${confirmModal.value}" को हटाना है?`}
+          title="Delete option?"
+          body={`"${confirmModal.value}" will be permanently removed.`}
           loading={deletingId === confirmModal.id}
           onCancel={() => setConfirmModal(null)}
           onConfirm={async () => {
             setDeletingId(confirmModal.id);
             try {
               await deleteDropdown(confirmModal.id);
-              showToast(`"${confirmModal.value}" हटा दिया गया`);
+              showToast(`"${confirmModal.value}" deleted.`);
             } catch {
-              showToast("नहीं हटा।", "error");
+              showToast("Failed to delete.", "error");
             } finally {
               setDeletingId(null);
               setConfirmModal(null);
@@ -134,8 +112,8 @@ const CarDropdownManager = () => {
 
       {renameModal && (
         <ConfirmModal
-          title="नाम बदलें / Rename?"
-          body={`"${renameModal.newValue}" — यह नाम सेव होगा।`}
+          title="Save rename?"
+          body={`This will be saved as "${renameModal.newValue}".`}
           loading={savingEdit}
           onCancel={() => setRenameModal(null)}
           onConfirm={doRename}
@@ -153,160 +131,151 @@ const CarDropdownManager = () => {
       )}
 
       <div className="mb-5">
-        <h2 className="text-2xl font-extrabold text-gray-800">
-          ⚙️ विकल्प प्रबंधन / Manage Options
-        </h2>
-        <p className="text-base text-gray-500 mt-1">
-          नाम, जगह और अन्य विकल्प यहाँ जोड़ें और बदलें।
+        <h2 className="text-xl font-bold text-slate-800">Manage Options</h2>
+        <p className="text-sm text-slate-500 mt-0.5">
+          Add and edit dropdown values used across deals.
         </p>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4">
-        {/* Type selector */}
-        <div className="md:w-64 shrink-0">
-          <div className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden">
-            {TYPES.map((t) => {
-              const count = (dropdowns[t.key] || []).length;
-              return (
-                <button
-                  key={t.key}
-                  onClick={() => setActiveType(t.key)}
-                  className={`w-full flex items-center gap-3 px-5 py-4 text-left transition-colors border-b-2 border-gray-100 last:border-0
-                    ${activeType === t.key ? "bg-blue-50 border-l-4 border-l-blue-500" : "hover:bg-gray-50"}`}
+      <div className="flex flex-col gap-4">
+        {/* Type selector — horizontal pills on mobile */}
+        <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+          {TYPES.map((t) => {
+            const count = (dropdowns[t.key] || []).length;
+            const active = activeType === t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setActiveType(t.key)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors
+                  ${active ? "bg-indigo-600 text-white shadow-sm" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+              >
+                {t.label}
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded-full font-bold
+                  ${active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"}`}
                 >
-                  <span className="text-2xl">{t.icon}</span>
-                  <div>
-                    <p
-                      className={`text-base font-bold ${activeType === t.key ? "text-blue-700" : "text-gray-700"}`}
-                    >
-                      {t.label}
-                    </p>
-                    <p className="text-sm text-gray-400">{count} विकल्प</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Options panel */}
-        <div className="flex-1">
-          <div className="bg-white rounded-2xl border-2 border-gray-200">
-            {/* Header */}
-            <div className="px-5 py-4 border-b-2 border-gray-100">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{activeMeta?.icon}</span>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-800">
-                    {activeMeta?.label}
-                  </h3>
-                  <p className="text-sm text-gray-400">{activeMeta?.hint}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Add form */}
-            <div className="px-5 py-4 border-b-2 border-gray-100 bg-gray-50">
-              <form onSubmit={handleAdd} className="flex gap-3">
-                <Input
-                  placeholder={`नया ${activeMeta?.label} जोड़ें...`}
-                  value={newValue}
-                  onChange={(e) => setNewValue(e.target.value)}
-                  className="flex-1"
-                />
-                <Btn
-                  type="submit"
-                  variant="primary"
-                  disabled={adding || !newValue.trim()}
-                  className="text-base"
-                >
-                  {adding ? <Spinner size={20} /> : "+ जोड़ें"}
-                </Btn>
-              </form>
-            </div>
-
-            {/* List */}
-            {loadingDropdowns ? (
-              <div className="flex justify-center py-12">
-                <Spinner size={36} />
-              </div>
-            ) : activeOptions.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
-                <p className="text-4xl mb-3">{activeMeta?.icon}</p>
-                <p className="text-lg font-bold text-gray-500">
-                  अभी कोई विकल्प नहीं
-                </p>
-                <p className="text-sm mt-1">ऊपर से जोड़ें</p>
-              </div>
-            ) : (
-              <div className="divide-y-2 divide-gray-100">
-                {activeOptions.map((opt) => (
-                  <div
-                    key={opt._id}
-                    className="flex items-center gap-3 px-5 py-4"
-                  >
-                    {editingId === opt._id ? (
-                      <div className="flex-1 flex gap-2">
-                        <Input
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleRename(opt._id);
-                            if (e.key === "Escape") setEditingId(null);
-                          }}
-                          autoFocus
-                          className="flex-1"
-                        />
-                        <Btn
-                          variant="primary"
-                          className="text-base py-2 px-4"
-                          onClick={() => handleRename(opt._id)}
-                          disabled={
-                            savingEdit ||
-                            !editValue.trim() ||
-                            editValue.trim() === opt.value
-                          }
-                        >
-                          ✓ सेव
-                        </Btn>
-                        <Btn
-                          variant="secondary"
-                          className="text-base py-2 px-4"
-                          onClick={() => setEditingId(null)}
-                        >
-                          रद्द
-                        </Btn>
-                      </div>
-                    ) : (
-                      <>
-                        <span className="flex-1 text-lg font-semibold text-gray-700">
-                          {opt.value}
-                        </span>
-                        <button
-                          onClick={() => {
-                            setEditingId(opt._id);
-                            setEditValue(opt.value);
-                          }}
-                          className="text-base text-gray-400 hover:text-blue-600 px-3 py-2 rounded-xl hover:bg-blue-50 transition-colors font-medium"
-                        >
-                          ✎ बदलें
-                        </button>
-                        <button
-                          onClick={() =>
-                            setConfirmModal({ id: opt._id, value: opt.value })
-                          }
-                          disabled={deletingId === opt._id}
-                          className="text-base text-gray-300 hover:text-red-400 px-3 py-2 rounded-xl hover:bg-red-50 transition-colors"
-                        >
-                          {deletingId === opt._id ? <Spinner size={18} /> : "✕"}
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+        {/* Panel */}
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          {/* Panel header */}
+          <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50">
+            <p className="text-sm font-bold text-slate-700">
+              {activeMeta?.label}
+            </p>
+            <p className="text-xs text-slate-400">{activeMeta?.hint}</p>
           </div>
+
+          {/* Add form */}
+          <div className="px-4 py-3.5 border-b border-slate-100">
+            <form onSubmit={handleAdd} className="flex gap-2">
+              <Input
+                placeholder={`Add new ${activeMeta?.label.toLowerCase().replace(/s$/, "")}…`}
+                value={newValue}
+                onChange={(e) => setNewValue(e.target.value)}
+                className="flex-1 py-2 text-sm"
+              />
+              <Btn
+                type="submit"
+                variant="primary"
+                disabled={adding || !newValue.trim()}
+                className="text-sm shrink-0"
+              >
+                {adding ? <Spinner size={16} /> : "Add"}
+              </Btn>
+            </form>
+          </div>
+
+          {/* List */}
+          {loadingDropdowns ? (
+            <div className="flex justify-center py-10">
+              <Spinner size={32} />
+            </div>
+          ) : activeOptions.length === 0 ? (
+            <div className="text-center py-12 text-slate-400">
+              <p className="text-base font-semibold text-slate-500">
+                No options yet
+              </p>
+              <p className="text-sm mt-1">Add one above to get started</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {activeOptions.map((opt) => (
+                <div
+                  key={opt._id}
+                  className="flex items-center gap-2 px-4 py-3"
+                >
+                  {editingId === opt._id ? (
+                    <div className="flex-1 flex gap-2">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleRename(opt._id);
+                          if (e.key === "Escape") setEditingId(null);
+                        }}
+                        autoFocus
+                        className="flex-1 py-2 text-sm"
+                      />
+                      <Btn
+                        variant="primary"
+                        className="text-xs py-2 px-3"
+                        onClick={() => handleRename(opt._id)}
+                        disabled={
+                          savingEdit ||
+                          !editValue.trim() ||
+                          editValue.trim() === opt.value
+                        }
+                      >
+                        Save
+                      </Btn>
+                      <Btn
+                        variant="secondary"
+                        className="text-xs py-2 px-3"
+                        onClick={() => setEditingId(null)}
+                      >
+                        Cancel
+                      </Btn>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="flex-1 text-sm font-medium text-slate-700">
+                        {opt.value}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setEditingId(opt._id);
+                          setEditValue(opt.value);
+                        }}
+                        className="text-xs text-slate-400 hover:text-indigo-600 px-2.5 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors font-medium"
+                      >
+                        Rename
+                      </button>
+                      <button
+                        onClick={() =>
+                          setConfirmModal({ id: opt._id, value: opt.value })
+                        }
+                        disabled={deletingId === opt._id}
+                        className="text-xs text-slate-300 hover:text-red-400 px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                      >
+                        {deletingId === opt._id ? (
+                          <Spinner size={14} />
+                        ) : (
+                          "Delete"
+                        )}
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

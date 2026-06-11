@@ -10,9 +10,10 @@ export const Spinner = ({ size = 24 }) => (
         width: size,
         height: size,
         borderRadius: "50%",
-        border: `${Math.max(2, size / 8)}px solid #e5e7eb`,
-        borderTop: `${Math.max(2, size / 8)}px solid #1d4ed8`,
-        animation: "carSpin 0.8s linear infinite",
+        border: `${Math.max(2, size / 8)}px solid #e2e8f0`,
+        borderTop: `${Math.max(2, size / 8)}px solid #4f46e5`,
+        animation: "carSpin 0.7s linear infinite",
+        flexShrink: 0,
       }}
     />
   </>
@@ -23,47 +24,54 @@ export const FullScreenSpinner = ({ message = "Loading…" }) =>
   ReactDOM.createPortal(
     <div
       className="fixed inset-0 z-[999] flex flex-col items-center justify-center gap-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+      style={{
+        backgroundColor: "rgba(15,23,42,0.6)",
+        backdropFilter: "blur(2px)",
+      }}
     >
-      <Spinner size={56} />
-      <p className="text-white text-xl font-bold">{message}</p>
+      <Spinner size={48} />
+      <p className="text-white text-base font-medium tracking-wide">
+        {message}
+      </p>
     </div>,
     document.body,
   );
 
-// ── Big labeled field wrapper (large font for elderly user) ───────────────────
-export const Field = ({ label, children, required, hint }) => (
-  <div className="flex flex-col gap-1.5">
-    <label className="text-base font-bold text-gray-700">
+// ── Field wrapper ─────────────────────────────────────────────────────────────
+export const Field = ({ label, children, required, hint, className = "" }) => (
+  <div className={`flex flex-col gap-1.5 ${className}`}>
+    <label className="text-sm font-semibold text-slate-600">
       {label}
       {required && <span className="text-red-500 ml-1">*</span>}
     </label>
-    {hint && <p className="text-sm text-gray-400 -mt-1">{hint}</p>}
+    {hint && <p className="text-xs text-slate-400 -mt-0.5">{hint}</p>}
     {children}
   </div>
 );
 
-// ── Large text input ───────────────────────────────────────────────────────────
+// ── Input ─────────────────────────────────────────────────────────────────────
 export const Input = React.forwardRef(({ className = "", ...props }, ref) => (
   <input
     ref={ref}
-    className={`w-full border-2 border-gray-300 rounded-xl px-4 py-3 text-lg text-gray-800
-      focus:outline-none focus:border-blue-500 bg-white placeholder-gray-300 ${className}`}
+    className={`w-full border border-slate-200 rounded-lg px-3 py-2.5 text-base text-slate-800
+      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+      bg-white placeholder-slate-300 transition-shadow ${className}`}
     style={{ fontSize: "16px" }}
     {...props}
   />
 ));
 
-// ── Large select dropdown ──────────────────────────────────────────────────────
+// ── Select ────────────────────────────────────────────────────────────────────
 export const Select = ({
   options = [],
-  placeholder = "— चुनें / Select —",
+  placeholder = "Select…",
   className = "",
   ...props
 }) => (
   <select
-    className={`w-full border-2 border-gray-300 rounded-xl px-4 py-3 text-lg text-gray-800
-      focus:outline-none focus:border-blue-500 bg-white ${className}`}
+    className={`w-full border border-slate-200 rounded-lg px-3 py-2.5 text-base text-slate-800
+      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+      bg-white transition-shadow appearance-none ${className}`}
     style={{ fontSize: "16px" }}
     {...props}
   >
@@ -76,18 +84,19 @@ export const Select = ({
   </select>
 );
 
-// ── Large textarea ─────────────────────────────────────────────────────────────
+// ── Textarea ──────────────────────────────────────────────────────────────────
 export const Textarea = ({ className = "", ...props }) => (
   <textarea
-    className={`w-full border-2 border-gray-300 rounded-xl px-4 py-3 text-lg text-gray-800
-      focus:outline-none focus:border-blue-500 bg-white placeholder-gray-300 resize-none ${className}`}
+    className={`w-full border border-slate-200 rounded-lg px-3 py-2.5 text-base text-slate-800
+      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+      bg-white placeholder-slate-300 resize-none transition-shadow ${className}`}
     rows={3}
     style={{ fontSize: "16px" }}
     {...props}
   />
 );
 
-// ── Big button ────────────────────────────────────────────────────────────────
+// ── Button ────────────────────────────────────────────────────────────────────
 export const Btn = ({
   variant = "primary",
   className = "",
@@ -95,17 +104,19 @@ export const Btn = ({
   ...props
 }) => {
   const variants = {
-    primary: "bg-blue-600 hover:bg-blue-700 text-white shadow",
+    primary:
+      "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white shadow-sm",
     secondary:
-      "bg-white hover:bg-gray-50 text-gray-700 border-2 border-gray-300",
-    danger: "bg-red-500 hover:bg-red-600 text-white shadow",
-    success: "bg-green-600 hover:bg-green-700 text-white shadow",
-    ghost: "bg-transparent hover:bg-gray-100 text-gray-600",
+      "bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-700 border border-slate-200",
+    danger:
+      "bg-red-500 hover:bg-red-600 active:bg-red-700 text-white shadow-sm",
+    success: "bg-green-600 hover:bg-green-700 text-white shadow-sm",
+    ghost: "bg-transparent hover:bg-slate-100 text-slate-600",
   };
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl
-        text-base font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed
+      className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
+        text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed
         ${variants[variant]} ${className}`}
       {...props}
     >
@@ -118,24 +129,27 @@ export const Btn = ({
 export const Modal = ({ title, onClose, children, wide = false }) =>
   ReactDOM.createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-8 px-3"
-      style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+      className="fixed inset-0 z-50 flex items-start justify-center pt-6 px-3 pb-6"
+      style={{
+        backgroundColor: "rgba(15,23,42,0.55)",
+        backdropFilter: "blur(2px)",
+      }}
     >
       <div
-        className={`bg-white rounded-2xl shadow-2xl w-full ${wide ? "max-w-3xl" : "max-w-xl"}
-        max-h-[90vh] flex flex-col overflow-hidden`}
+        className={`bg-white rounded-xl shadow-2xl w-full ${wide ? "max-w-2xl" : "max-w-lg"}
+        max-h-[92vh] flex flex-col overflow-hidden`}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b-2 border-gray-100">
-          <h2 className="text-xl font-bold text-gray-800">{title}</h2>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h2 className="text-base font-bold text-slate-800">{title}</h2>
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-gray-400
-              hover:text-gray-700 hover:bg-gray-100 text-xl font-bold transition-colors"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400
+              hover:text-slate-700 hover:bg-slate-100 transition-colors text-lg font-bold"
           >
-            ✕
+            ×
           </button>
         </div>
-        <div className="overflow-y-auto flex-1 px-6 py-5">{children}</div>
+        <div className="overflow-y-auto flex-1 px-5 py-5">{children}</div>
       </div>
     </div>,
     document.body,
@@ -145,18 +159,18 @@ export const Modal = ({ title, onClose, children, wide = false }) =>
 export const StatusBadge = ({ status }) => {
   const cfg = {
     sold: {
-      label: "✅ बिका / Sold",
-      cls: "bg-green-100 text-green-700 border border-green-300",
+      label: "Sold",
+      cls: "bg-green-100 text-green-700 ring-1 ring-green-200",
     },
     unsold: {
-      label: "🚗 स्टॉक में / In Stock",
-      cls: "bg-amber-100 text-amber-700 border border-amber-300",
+      label: "In Stock",
+      cls: "bg-amber-100 text-amber-700 ring-1 ring-amber-200",
     },
   };
   const { label, cls } = cfg[status] || cfg.unsold;
   return (
     <span
-      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${cls}`}
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${cls}`}
     >
       {label}
     </span>
@@ -166,42 +180,59 @@ export const StatusBadge = ({ status }) => {
 // ── Profit chip ───────────────────────────────────────────────────────────────
 export const ProfitChip = ({ value }) => {
   if (value === null || value === undefined)
-    return <span className="text-gray-400">—</span>;
+    return <span className="text-slate-400 text-sm">—</span>;
   const pos = value >= 0;
   return (
     <span
-      className={`font-bold text-lg ${pos ? "text-green-600" : "text-red-500"}`}
+      className={`font-bold text-base ${pos ? "text-green-600" : "text-red-500"}`}
     >
-      {pos ? "▲ +" : "▼ "}₹{Math.abs(value).toLocaleString("en-IN")}
+      {pos ? "+" : "−"}₹{Math.abs(value).toLocaleString("en-IN")}
     </span>
   );
 };
 
-// ── Confirm modal — always requires typing CONFIRM ────────────────────────────
+// ── Confirm modal ─────────────────────────────────────────────────────────────
 export const ConfirmModal = ({ title, body, onConfirm, onCancel, loading }) => {
   const [confirmText, setConfirmText] = React.useState("");
   const canProceed = confirmText === "CONFIRM";
 
   return ReactDOM.createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
+      className="fixed inset-0 z-[60] flex items-center justify-center px-4"
+      style={{
+        backgroundColor: "rgba(15,23,42,0.55)",
+        backdropFilter: "blur(2px)",
+      }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-7">
-        <div className="text-5xl mb-4 text-center">⚠️</div>
-        <h3 className="text-xl font-bold text-gray-800 mb-2 text-center">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+        <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+          <svg
+            className="w-5 h-5 text-red-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+            />
+          </svg>
+        </div>
+        <h3 className="text-base font-bold text-slate-800 mb-1 text-center">
           {title}
         </h3>
         {body && (
-          <p className="text-base text-gray-500 mb-4 text-center">{body}</p>
+          <p className="text-sm text-slate-500 mb-5 text-center">{body}</p>
         )}
         <div className="mb-5">
-          <p className="text-sm font-bold text-gray-500 mb-2 text-center">
-            आगे बढ़ने के लिए{" "}
-            <span className="text-red-500 font-extrabold tracking-widest">
+          <p className="text-xs font-semibold text-slate-500 mb-2 text-center">
+            Type{" "}
+            <span className="text-red-500 font-bold tracking-widest">
               CONFIRM
             </span>{" "}
-            टाइप करें
+            to proceed
           </p>
           <Input
             value={confirmText}
@@ -218,7 +249,7 @@ export const ConfirmModal = ({ title, body, onConfirm, onCancel, loading }) => {
             onClick={onCancel}
             disabled={loading}
           >
-            रद्द करें / Cancel
+            Cancel
           </Btn>
           <Btn
             variant="danger"
@@ -226,7 +257,7 @@ export const ConfirmModal = ({ title, body, onConfirm, onCancel, loading }) => {
             onClick={onConfirm}
             disabled={loading || !canProceed}
           >
-            {loading ? <Spinner size={20} /> : "✓ Confirm"}
+            {loading ? <Spinner size={16} /> : "Confirm"}
           </Btn>
         </div>
       </div>
@@ -240,42 +271,42 @@ export const Toast = ({ message, type = "success", onClose }) => {
   const colors = {
     success: "bg-green-600",
     error: "bg-red-500",
-    info: "bg-blue-500",
+    info: "bg-indigo-500",
     warning: "bg-amber-500",
   };
   return (
     <div
-      className={`${colors[type]} text-white px-5 py-4 rounded-xl shadow-xl flex items-center gap-3 min-w-72`}
+      className={`${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-64`}
     >
-      <span className="text-base flex-1">{message}</span>
+      <span className="text-sm flex-1 font-medium">{message}</span>
       <button
         onClick={onClose}
-        className="text-white/70 hover:text-white text-xl"
+        className="text-white/70 hover:text-white text-lg leading-none"
       >
-        ✕
+        ×
       </button>
     </div>
   );
 };
 
-// ── Summary stat card ─────────────────────────────────────────────────────────
+// ── Stat card ─────────────────────────────────────────────────────────────────
 export const StatCard = ({ label, value, sub, color = "blue", icon }) => {
   const colors = {
-    blue: "bg-blue-50 border-blue-200 text-blue-700",
-    green: "bg-green-50 border-green-200 text-green-700",
-    amber: "bg-amber-50 border-amber-200 text-amber-700",
-    red: "bg-red-50 border-red-200 text-red-600",
-    purple: "bg-purple-50 border-purple-200 text-purple-700",
-    slate: "bg-gray-50 border-gray-200 text-gray-600",
+    blue: "bg-indigo-50 border-indigo-100 text-indigo-700",
+    green: "bg-green-50 border-green-100 text-green-700",
+    amber: "bg-amber-50 border-amber-100 text-amber-700",
+    red: "bg-red-50 border-red-100 text-red-600",
+    purple: "bg-purple-50 border-purple-100 text-purple-700",
+    slate: "bg-slate-50 border-slate-100 text-slate-600",
   };
   return (
-    <div className={`rounded-2xl border-2 p-5 ${colors[color]}`}>
-      {icon && <div className="text-3xl mb-2">{icon}</div>}
-      <p className="text-sm font-semibold uppercase tracking-wide opacity-60">
+    <div className={`rounded-xl border p-4 ${colors[color]}`}>
+      {icon && <div className="text-xl mb-1.5 opacity-70">{icon}</div>}
+      <p className="text-xs font-semibold uppercase tracking-wider opacity-60">
         {label}
       </p>
-      <p className="text-2xl font-extrabold mt-1">{value}</p>
-      {sub && <p className="text-sm mt-1 opacity-60">{sub}</p>}
+      <p className="text-xl font-extrabold mt-0.5 leading-tight">{value}</p>
+      {sub && <p className="text-xs mt-1 opacity-60">{sub}</p>}
     </div>
   );
 };
