@@ -47,7 +47,7 @@ const PhoneHome = () => {
                   className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors
                     ${
                       activeTab === tab.key
-                        ? "bg-indigo-600 text-white shadow-sm"
+                        ? "bg-slate-600 text-white shadow-sm"
                         : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                     }`}
                 >

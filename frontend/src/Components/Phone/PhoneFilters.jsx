@@ -45,11 +45,9 @@ const PhoneFilters = ({
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-slate-700">
-            Filters
-          </span>
+          <span className="text-sm font-semibold text-slate-700">Filters</span>
           {activeCount > 0 && (
-            <span className="bg-indigo-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            <span className="bg-emerald-300 text-white text-xs font-bold px-2 py-0.5 rounded-full">
               {activeCount}
             </span>
           )}
@@ -71,7 +69,11 @@ const PhoneFilters = ({
       </div>
 
       {/* Body */}
-      {open && (
+      <div
+        className={`overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+          open ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
         <div className="px-4 pb-4 pt-1 border-t border-slate-100">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-3">
             {/* ── Free-text search ── */}
@@ -291,7 +293,8 @@ const PhoneFilters = ({
                   className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white"
                 >
                   <option value="">All</option>
-                  <option value="yes">Has Cashback</option>
+                  <option value="yes">Received</option>
+                  <option value="expected">Expected (Pending)</option>
                   <option value="no">No Cashback</option>
                 </select>
               </div>
@@ -337,13 +340,28 @@ const PhoneFilters = ({
                   hasCashback: "Cashback",
                   hasCommission: "Commission",
                 };
+                const valueLabels = {
+                  hasCashback: {
+                    yes: "Received",
+                    expected: "Expected (Pending)",
+                    no: "No Cashback",
+                  },
+                  hasCommission: { yes: "Has Commission", no: "No Commission" },
+                  withGST: { true: "With GST", false: "Without GST" },
+                  status: {
+                    unsold: "Unsold",
+                    pending_payment: "Payment Pending",
+                    complete: "Complete",
+                  },
+                };
+                const displayValue = valueLabels[key]?.[value] ?? value;
                 return (
                   <span
                     key={key}
                     className="inline-flex items-center gap-1 bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs px-2 py-0.5 rounded-full"
                   >
                     <span className="font-medium">{labels[key] || key}:</span>
-                    <span>{value}</span>
+                    <span>{displayValue}</span>
                     <button
                       onClick={() => set(key, key === "status" ? "all" : "")}
                       className="ml-0.5 hover:text-indigo-900"
@@ -356,7 +374,7 @@ const PhoneFilters = ({
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

@@ -473,7 +473,11 @@ const ExpenseTracker = () => {
   // Default to current month
   const _now = new Date();
   const _defaultFrom = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-01`;
-  const _lastDay = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).getDate();
+  const _lastDay = new Date(
+    _now.getFullYear(),
+    _now.getMonth() + 1,
+    0,
+  ).getDate();
   const _defaultTo = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_lastDay).padStart(2, "0")}`;
 
   const [dateFrom, setDateFrom] = useState(_defaultFrom);
@@ -558,7 +562,9 @@ const ExpenseTracker = () => {
     const m = now.getMonth() + 1;
     const last = new Date(y, m, 0).getDate();
     setDateFrom(`${y}-${String(m).padStart(2, "0")}-01`);
-    setDateTo(`${y}-${String(m).padStart(2, "0")}-${String(last).padStart(2, "0")}`);
+    setDateTo(
+      `${y}-${String(m).padStart(2, "0")}-${String(last).padStart(2, "0")}`,
+    );
     setCardFilter("all");
     setCategoryFilter("all");
     setSearchFilter("");
@@ -774,7 +780,11 @@ const ExpenseTracker = () => {
           </div>
         </div>
 
-        {filterOpen && (
+        <div
+          className={`overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+            filterOpen ? "max-h-[1200px] opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
           <div className="px-4 pb-4 pt-1 border-t border-slate-100">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mt-3">
               <div>
@@ -890,7 +900,7 @@ const ExpenseTracker = () => {
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Month / Year quick-select strip */}
@@ -906,7 +916,9 @@ const ExpenseTracker = () => {
           <span className="text-sm font-bold text-slate-700 tracking-wide">
             {stripYear}
             {stripYear === new Date().getFullYear() && (
-              <span className="ml-2 text-xs text-indigo-500 font-normal">current year</span>
+              <span className="ml-2 text-xs text-indigo-500 font-normal">
+                current year
+              </span>
             )}
           </span>
           <button
@@ -918,20 +930,36 @@ const ExpenseTracker = () => {
         </div>
         {/* Month pills */}
         <div className="grid grid-cols-6 md:grid-cols-12 gap-1 p-2">
-          {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map((name, idx) => {
+          {[
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec",
+          ].map((name, idx) => {
             const key = `${stripYear}-${idx + 1}`;
             const isSelected = selectedMonthKey === key;
-            const isCurrentMonth = stripYear === new Date().getFullYear() && idx === new Date().getMonth();
+            const isCurrentMonth =
+              stripYear === new Date().getFullYear() &&
+              idx === new Date().getMonth();
             return (
               <button
                 key={key}
                 onClick={() => selectMonth(stripYear, idx + 1)}
                 className={`px-1 py-2 rounded-lg text-xs font-semibold transition-colors text-center
-                  ${isSelected
-                    ? "bg-indigo-600 text-white shadow-sm"
-                    : isCurrentMonth
-                    ? "bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100"
-                    : "text-slate-600 hover:bg-slate-100"
+                  ${
+                    isSelected
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : isCurrentMonth
+                        ? "bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100"
+                        : "text-slate-600 hover:bg-slate-100"
                   }`}
               >
                 {name}

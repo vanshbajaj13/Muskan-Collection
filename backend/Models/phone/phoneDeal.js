@@ -21,6 +21,7 @@ const phoneDealSchema = new mongoose.Schema(
     creditCard: { type: String, default: "" },             // "SBI Card", "HDFC Regalia"
     cashback: { type: Number, default: 0 },
     cashbackDate: { type: Number, default: null },
+    cashbackExpected: { type: Boolean, default: false },   // toggle: cashback is supposed to come
     charges: { type: Number, default: 0 },                 // EMI charges, platform fees
     chargesDescription: { type: String, default: "" },
     withGST: { type: Boolean, default: false },
@@ -73,6 +74,16 @@ phoneDealSchema.virtual("paymentPending").get(function () {
   const totalPaid = this.payments.reduce((sum, p) => sum + p.amount, 0);
   if (!this.sellingPrice) return 0;
   return Math.max(0, this.sellingPrice - totalPaid);
+});
+
+// ── Virtual: cashback status ──────────────────────────────────────
+// "not_expected" → cashbackExpected is false
+// "pending"      → cashbackExpected true, cashback amount is 0/empty
+// "received"     → cashbackExpected true, cashback amount > 0
+phoneDealSchema.virtual("cashbackStatus").get(function () {
+  if (!this.cashbackExpected) return "not_expected";
+  if (!this.cashback || this.cashback === 0) return "pending";
+  return "received";
 });
 
 // ── Virtual: gross profit (before commission) ─────────────────────

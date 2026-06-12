@@ -31,10 +31,18 @@ const COLORS = [
 const getColors = (n) =>
   Array.from({ length: n }, (_, i) => COLORS[i % COLORS.length]);
 
-// Dashboard filter keys (no search, no status tabs — those are in Deals)
+const _now = new Date();
+const _defaultFrom = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-01`;
+const _lastDay = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).getDate();
+const _defaultTo = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_lastDay).padStart(2, "0")}`;
+
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// Dashboard filter keys (status & cashback added for quick capsule filters)
 const INITIAL_FILTERS = {
-  dateFrom: "",
-  dateTo: "",
+  dateFrom: _defaultFrom,
+  dateTo: _defaultTo,
+  status: "all",
   product: "",
   account: "",
   purchasedFrom: "",
@@ -44,6 +52,30 @@ const INITIAL_FILTERS = {
   withGST: "",
   hasCashback: "",
   hasCommission: "",
+};
+
+// ── Capsule filter button ───────────────────────────────────────────────────
+const Capsule = ({ active, onClick, children, activeColor = "gray" }) => {
+  const activeClasses = {
+    indigo: "bg-indigo-600 text-white border-indigo-600 shadow-sm",
+    emerald: "bg-emerald-400 text-white border-emerald-400 shadow-sm",
+    amber: "bg-amber-300 text-white border-amber-300 shadow-sm",
+    slate: "bg-slate-600 text-white border-slate-600 shadow-sm",
+    gray: "bg-slate-300 text-white border-slate-300 shadow-sm",
+    rose: "bg-rose-500 text-white border-rose-500 shadow-sm",
+  };
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors whitespace-nowrap
+        ${active
+          ? activeClasses[activeColor]
+          : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+        }`}
+    >
+      {children}
+    </button>
+  );
 };
 
 // ── Summary card ───────────────────────────────────────────────────────────
@@ -84,6 +116,29 @@ const PhoneDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const [stripYear, setStripYear] = useState(_now.getFullYear());
+
+  // Jump to a specific month/year in the date filters
+  const selectMonth = (year, month) => {
+    const last = new Date(year, month, 0).getDate();
+    const m = String(month).padStart(2, "0");
+    setFilters((f) => ({
+      ...f,
+      dateFrom: `${year}-${m}-01`,
+      dateTo: `${year}-${m}-${String(last).padStart(2, "0")}`,
+    }));
+  };
+
+  const clearMonthFilter = () => {
+    setFilters((f) => ({ ...f, dateFrom: "", dateTo: "" }));
+  };
+
+  // Derive selected month/year from current dateFrom for highlighting
+  const selectedMonthKey = (() => {
+    if (!filters.dateFrom) return null;
+    const d = new Date(filters.dateFrom + "T00:00:00");
+    return `${d.getFullYear()}-${d.getMonth() + 1}`;
+  })();
 
   // Build query params from date filters only (server-side date range)
   const buildParams = useCallback(() => {
@@ -136,6 +191,8 @@ const PhoneDashboard = () => {
 
     // Apply non-date filters to rawDeals
     const filtered = rawDeals.filter((d) => {
+      if (filters.status && filters.status !== "all" && d.dealStatus !== filters.status)
+        return false;
       if (filters.product && d.product !== filters.product) return false;
       if (filters.account && d.purchaseAccount !== filters.account)
         return false;
@@ -149,7 +206,8 @@ const PhoneDashboard = () => {
       if (filters.withGST === "true" && !d.withGST) return false;
       if (filters.withGST === "false" && d.withGST) return false;
       if (filters.hasCashback === "yes" && !(d.cashback > 0)) return false;
-      if (filters.hasCashback === "no" && d.cashback > 0) return false;
+      if (filters.hasCashback === "expected" && !(d.cashbackExpected && !(d.cashback > 0))) return false;
+      if (filters.hasCashback === "no" && (d.cashback > 0 || d.cashbackExpected)) return false;
       if (filters.hasCommission === "yes" && !(d.commissionAmount > 0))
         return false;
       if (filters.hasCommission === "no" && d.commissionAmount > 0)
@@ -159,6 +217,7 @@ const PhoneDashboard = () => {
 
     const hasClientFilters = Object.entries(filters).some(([k, v]) => {
       if (k === "dateFrom" || k === "dateTo") return false;
+      if (k === "status") return v && v !== "all";
       return v && v !== "";
     });
 
@@ -441,6 +500,107 @@ const PhoneDashboard = () => {
         showSearch={false}
         compact={true}
       />
+
+      {/* Month / Year quick-select strip */}
+      <div className="bg-white border border-slate-200 rounded-xl mb-4 overflow-hidden">
+        {/* Year row */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 bg-slate-50">
+          <button
+            onClick={() => setStripYear((y) => y - 1)}
+            className="text-slate-400 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-100 transition-colors text-sm font-bold"
+          >
+            ‹
+          </button>
+          <span className="text-sm font-bold text-slate-700 tracking-wide">
+            {stripYear}
+            {stripYear === new Date().getFullYear() && (
+              <span className="ml-2 text-xs text-slate-500 font-normal">current year</span>
+            )}
+          </span>
+          <button
+            onClick={() => setStripYear((y) => y + 1)}
+            className="text-slate-400 hover:text-slate-700 px-2 py-1 rounded hover:bg-slate-100 transition-colors text-sm font-bold"
+          >
+            ›
+          </button>
+        </div>
+        {/* Month pills */}
+        <div className="grid grid-cols-6 md:grid-cols-12 gap-1 p-2">
+          {MONTH_NAMES.map((name, idx) => {
+            const key = `${stripYear}-${idx + 1}`;
+            const isSelected = selectedMonthKey === key;
+            const isCurrentMonth = stripYear === new Date().getFullYear() && idx === new Date().getMonth();
+            return (
+              <button
+                key={key}
+                onClick={() => selectMonth(stripYear, idx + 1)}
+                className={`px-1 py-2 rounded-lg text-xs font-semibold transition-colors text-center
+                  ${isSelected
+                    ? "bg-slate-300 text-white shadow-sm"
+                    : isCurrentMonth
+                    ? "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-indigo-100"
+                    : "text-slate-600 hover:bg-slate-100"
+                  }`}
+              >
+                {name}
+              </button>
+            );
+          })}
+        </div>
+        {/* Active month / clear */}
+        {(filters.dateFrom || filters.dateTo) && (
+          <div className="px-3 py-2 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+            <span className="text-xs text-slate-500">
+              {filters.dateFrom || "…"} → {filters.dateTo || "…"}
+            </span>
+            <button
+              onClick={clearMonthFilter}
+              className="text-xs text-indigo-500 hover:text-indigo-700 font-medium"
+            >
+              Clear date range
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Quick capsule filters: status & cashback */}
+      <div className="mb-5 space-y-2">
+        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+          {[
+            { key: "all", label: "All Status", color: "slate" },
+            { key: "unsold", label: "Unsold", color: "gray" },
+            { key: "pending_payment", label: "Payment Pending", color: "amber" },
+            { key: "complete", label: "Complete", color: "emerald" },
+          ].map((c) => (
+            <Capsule
+              key={c.key}
+              active={filters.status === c.key}
+              activeColor={c.color}
+              onClick={() => setFilters((f) => ({ ...f, status: c.key }))}
+            >
+              {c.label}
+            </Capsule>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+          {[
+            { key: "", label: "All", color: "slate" },
+            { key: "yes", label: "Cashback Received", color: "emerald" },
+            { key: "expected", label: "Cashback Pending", color: "amber" },
+            { key: "no", label: "No Cashback", color: "gray" },
+          ].map((c) => (
+            <Capsule
+              key={c.key || "all"}
+              active={filters.hasCashback === c.key}
+              activeColor={c.color}
+              onClick={() => setFilters((f) => ({ ...f, hasCashback: c.key }))}
+            >
+              {c.label}
+            </Capsule>
+          ))}
+        </div>
+      </div>
+
 
       {error ? (
         <div className="text-center py-24 text-rose-400">{error}</div>

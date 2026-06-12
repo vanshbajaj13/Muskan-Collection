@@ -128,6 +128,16 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                 Pending {formatCurrency(pending)}
               </span>
             )}
+            {deal.cashbackStatus === "pending" && (
+              <span className="text-xs text-violet-600 font-medium bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded">
+                Cashback pending
+              </span>
+            )}
+            {deal.cashbackStatus === "received" && (
+              <span className="ml-1 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+              Cashback ✓
+            </span>
+            )}
           </div>
 
           {/* Financials */}
@@ -183,64 +193,192 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
         {/* ── Expanded details ────────────────────────────────────── */}
         {expanded && (
           <div className="border-t border-slate-100 px-4 pt-4 pb-4">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-sm mb-4">
-              {/* Purchase */}
-              <Row label="Credit Card" value={deal.creditCard || "—"} />
-              <Row label="With GST" value={deal.withGST ? "Yes" : "No"} />
-              <Row
-                label="Cashback"
-                value={
-                  deal.cashback
-                    ? `${formatCurrency(deal.cashback)} on ${formatDate(deal.cashbackDate)}`
-                    : "—"
-                }
-              />
-              <Row
-                label="Charges"
-                value={
-                  deal.charges
-                    ? `${formatCurrency(deal.charges)}${deal.chargesDescription ? ` (${deal.chargesDescription})` : ""}`
-                    : "—"
-                }
-              />
-              <Row
-                label="Commission"
-                value={
-                  deal.commissionAmount
-                    ? `${formatCurrency(deal.commissionAmount)} to ${deal.commissionTo || "—"}`
-                    : "—"
-                }
-              />
 
-              {/* Sale */}
-              <Row label="Sold To" value={deal.soldTo || "—"} />
-              <Row label="Sale Date" value={formatDate(deal.saleDate)} />
-              <Row
-                label="Selling Price"
-                value={
-                  deal.sellingPrice ? formatCurrency(deal.sellingPrice) : "—"
-                }
-              />
-              <Row
-                label="Buy Price"
-                value={
-                  deal.buyingPrice ? formatCurrency(deal.buyingPrice) : "—"
-                }
-              />
+            {/* ── Two-column layout: deal info + profit breakdown ── */}
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
 
-              {/* Profit breakdown */}
-              <Row
-                label="Gross Profit"
-                value={<ProfitChip value={deal.grossProfit} />}
-              />
-              <Row
-                label="Net Profit"
-                value={<ProfitChip value={deal.netProfit} />}
-              />
-              <Row
-                label="Total Payment Received"
-                value={formatCurrency(totalPaid)}
-              />
+              {/* Left: deal meta info */}
+              <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                <Row label="Purchase Date" value={formatDate(deal.purchaseDate)} />
+                <Row label="Credit Card" value={deal.creditCard || "—"} />
+                <Row label="With GST" value={deal.withGST ? "Yes" : "No"} />
+                <Row label="Sold To" value={deal.soldTo || "—"} />
+                <Row label="Sale Date" value={formatDate(deal.saleDate)} />
+                <Row
+                  label="Cashback"
+                  value={
+                    deal.cashbackStatus === "not_expected" ? (
+                      "—"
+                    ) : deal.cashbackStatus === "pending" ? (
+                      <span className="text-xs font-semibold text-violet-600 bg-violet-50 border border-violet-200 px-2 py-0.5 rounded">
+                        Pending
+                      </span>
+                    ) : (
+                      <span>
+                        {formatCurrency(deal.cashback)}
+                        {deal.cashbackDate && (
+                          <span className="text-slate-400 ml-1 text-xs">
+                            on {formatDate(deal.cashbackDate)}
+                          </span>
+                        )}
+                      </span>
+                    )
+                  }
+                />
+                <Row
+                  label="Total Received"
+                  value={
+                    <span className={totalPaid > 0 ? "text-emerald-600 font-semibold" : ""}>
+                      {formatCurrency(totalPaid)}
+                    </span>
+                  }
+                />
+                {pending > 0 && (
+                  <Row
+                    label="Still Pending"
+                    value={
+                      <span className="text-amber-600 font-semibold">
+                        {formatCurrency(pending)}
+                      </span>
+                    }
+                  />
+                )}
+              </div>
+
+              {/* Right: profit breakdown card */}
+              {deal.sellingPrice ? (
+                <div className="md:w-60 shrink-0">
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm">
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
+                      Profit Breakdown
+                    </p>
+
+                    {/* Selling price */}
+                    <div className="flex justify-between items-center py-1.5">
+                      <span className="text-slate-600">Selling Price</span>
+                      <span className="font-semibold text-slate-800">
+                        {formatCurrency(deal.sellingPrice)}
+                      </span>
+                    </div>
+
+                    {/* Buying price */}
+                    <div className="flex justify-between items-center py-1.5">
+                      <span className="text-slate-500">− Buying Price</span>
+                      <span className="font-medium text-rose-500">
+                        − {formatCurrency(deal.buyingPrice)}
+                      </span>
+                    </div>
+
+                    {/* Charges (only if present) */}
+                    {deal.charges > 0 && (
+                      <div className="flex justify-between items-center py-1.5">
+                        <span className="text-slate-500 truncate mr-2">
+                          − Charges
+                          {deal.chargesDescription && (
+                            <span className="text-slate-400 text-xs ml-1">
+                              ({deal.chargesDescription})
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-medium text-rose-400 shrink-0">
+                          − {formatCurrency(deal.charges)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Cashback (only if received) */}
+                    {deal.cashback > 0 && (
+                      <div className="flex justify-between items-center py-1.5">
+                        <span className="text-slate-500">+ Cashback</span>
+                        <span className="font-medium text-emerald-500">
+                          + {formatCurrency(deal.cashback)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Divider + Gross Profit */}
+                    <div className="border-t border-slate-200 mt-1 pt-2 flex justify-between items-center">
+                      <span className="text-slate-700 font-semibold text-xs uppercase tracking-wide">
+                        Gross Profit
+                      </span>
+                      <ProfitChip value={deal.grossProfit} />
+                    </div>
+
+                    {/* Commission (only if present) */}
+                    {deal.commissionAmount > 0 && (
+                      <div className="flex justify-between items-center py-1.5 mt-0.5">
+                        <span className="text-slate-500 truncate mr-2">
+                          − Commission
+                          {deal.commissionTo && (
+                            <span className="text-slate-400 text-xs ml-1">
+                              ({deal.commissionTo})
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-medium text-rose-400 shrink-0">
+                          − {formatCurrency(deal.commissionAmount)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Net Profit — only show separately if commission exists */}
+                    {deal.commissionAmount > 0 && (
+                      <div className="border-t border-slate-200 mt-1 pt-2 flex justify-between items-center">
+                        <span className="text-slate-700 font-bold text-xs uppercase tracking-wide">
+                          Net Profit
+                        </span>
+                        <ProfitChip value={deal.netProfit} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Unsold — show a minimal cost summary */
+                <div className="md:w-60 shrink-0">
+                  <div className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-4 text-sm">
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
+                      Cost Summary
+                    </p>
+                    <div className="flex justify-between items-center py-1.5">
+                      <span className="text-slate-600">Buying Price</span>
+                      <span className="font-semibold text-slate-800">
+                        {formatCurrency(deal.buyingPrice)}
+                      </span>
+                    </div>
+                    {deal.charges > 0 && (
+                      <div className="flex justify-between items-center py-1.5">
+                        <span className="text-slate-500">+ Charges</span>
+                        <span className="font-medium text-rose-400">
+                          + {formatCurrency(deal.charges)}
+                        </span>
+                      </div>
+                    )}
+                    {deal.cashback > 0 && (
+                      <div className="flex justify-between items-center py-1.5">
+                        <span className="text-slate-500">− Cashback</span>
+                        <span className="font-medium text-emerald-500">
+                          − {formatCurrency(deal.cashback)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="border-t border-slate-200 mt-1 pt-2 flex justify-between items-center">
+                      <span className="text-slate-700 font-semibold text-xs uppercase tracking-wide">
+                        Effective Cost
+                      </span>
+                      <span className="font-bold text-slate-800">
+                        {formatCurrency(
+                          (deal.buyingPrice || 0) +
+                          (deal.charges || 0) -
+                          (deal.cashback || 0)
+                        )}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-3 text-center italic">
+                      Not sold yet
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Notes */}
