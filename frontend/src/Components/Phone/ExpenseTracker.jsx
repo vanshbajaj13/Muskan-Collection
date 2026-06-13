@@ -502,8 +502,8 @@ const ExpenseTracker = () => {
       if (dateTo) params.to = new Date(dateTo).setHours(23, 59, 59, 999);
       const data = await getExpenses(params);
       setAllExpenses(data.expenses || []);
-    } catch {
-      showToast("Failed to load expenses", "error");
+    } catch (err) {
+      showToast(err.message || "Failed to load expenses", "error");
     } finally {
       setLoading(false);
     }
@@ -596,8 +596,8 @@ const ExpenseTracker = () => {
       setShowAdd(false);
       showToast("Expense added!");
       fetchExpenses();
-    } catch {
-      showToast("Failed to save", "error");
+    } catch (err) {
+      showToast(err.message || "Failed to save", "error");
     } finally {
       setSaving(false);
     }
@@ -614,8 +614,8 @@ const ExpenseTracker = () => {
       setEditItem(null);
       showToast("Expense updated!");
       fetchExpenses();
-    } catch {
-      showToast("Failed to update", "error");
+    } catch (err) {
+      showToast(err.message || "Failed to update", "error");
     } finally {
       setSaving(false);
     }
@@ -628,8 +628,8 @@ const ExpenseTracker = () => {
       setConfirmDeleteId(null);
       showToast("Deleted", "info");
       fetchExpenses();
-    } catch {
-      showToast("Failed to delete", "error");
+    } catch (err) {
+      showToast(err.message || "Failed to delete", "error");
     } finally {
       setDeleting(false);
     }

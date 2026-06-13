@@ -7,6 +7,7 @@ import {
   Input,
   Field,
   ConfirmModal,
+  Toast,
 } from "./PhoneUI";
 
 const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
@@ -24,6 +25,12 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDeletePayment, setConfirmDeletePayment] = useState(null); // stores paymentId
   const [deleting, setDeleting] = useState(false);
+  const [cardToast, setCardToast] = useState(null);
+
+  const showCardToast = (message, type = "error") => {
+    setCardToast({ message, type });
+    setTimeout(() => setCardToast(null), 3500);
+  };
 
   const totalPaid = (deal.payments || []).reduce((s, p) => s + p.amount, 0);
   const pending = deal.sellingPrice
@@ -42,7 +49,10 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
       });
       setPaymentForm({ amount: "", date: "", note: "" });
       setShowPaymentForm(false);
+      showCardToast("Payment added", "success");
       onRefresh();
+    } catch (err) {
+      showCardToast(err.message || "Failed to add payment. Please try again.");
     } finally {
       setSavingPayment(false);
     }
@@ -52,7 +62,10 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
     setRemovingPayment(paymentId);
     try {
       await removePayment(deal._id, paymentId);
+      showCardToast("Payment removed", "success");
       onRefresh();
+    } catch (err) {
+      showCardToast(err.message || "Failed to remove payment. Please try again.");
     } finally {
       setRemovingPayment(null);
       setConfirmDeletePayment(null);
@@ -63,6 +76,8 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
     setDeleting(true);
     try {
       await onDelete(deal._id);
+    } catch (err) {
+      showCardToast(err.message || "Failed to delete deal. Please try again.");
     } finally {
       setDeleting(false);
       setConfirmDelete(false);
@@ -71,6 +86,16 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
 
   return (
     <>
+      {cardToast && (
+        <div className="fixed top-4 right-4 z-[60]">
+          <Toast
+            message={cardToast.message}
+            type={cardToast.type}
+            onClose={() => setCardToast(null)}
+          />
+        </div>
+      )}
+
       {confirmDelete && (
         <ConfirmModal
           title="Delete this deal?"

@@ -235,8 +235,8 @@ const PhoneDeals = () => {
       setShowAdd(false);
       showToast("Deal added!");
       fetchDeals(filters.dateFrom, filters.dateTo);
-    } catch {
-      showToast("Failed to save deal", "error");
+    } catch (err) {
+      showToast(err.message || "Failed to save deal", "error");
     } finally {
       setSaving(false);
     }
@@ -249,17 +249,24 @@ const PhoneDeals = () => {
       setEditDeal(null);
       showToast("Deal updated!");
       fetchDeals(filters.dateFrom, filters.dateTo);
-    } catch {
-      showToast("Failed to update deal", "error");
+    } catch (err) {
+      showToast(err.message || "Failed to update deal", "error");
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id) => {
-    await deleteDeal(id);
-    showToast("Deal deleted", "info");
-    fetchDeals(filters.dateFrom, filters.dateTo);
+    setSaving(true);
+    try {
+      await deleteDeal(id);
+      showToast("Deal deleted", "info");
+      fetchDeals(filters.dateFrom, filters.dateTo);
+    } catch (err) {
+      showToast(err.message || "Failed to delete deal", "error");
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Jump to a specific month/year in the date filters

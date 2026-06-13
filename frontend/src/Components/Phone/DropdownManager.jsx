@@ -108,8 +108,8 @@ const DropdownManager = () => {
       await renameDropdown(id, editValue.trim());
       setEditingId(null);
       showToast("Renamed & updated in all records ✓");
-    } catch {
-      showToast("Failed to rename", "error");
+    } catch (err) {
+      showToast(err.message || "Failed to rename", "error");
     } finally {
       setSavingEdit(false);
     }
@@ -142,8 +142,8 @@ const DropdownManager = () => {
             try {
               await deleteDropdown(confirmModal.id);
               showToast(`"${confirmModal.value}" deactivated`);
-            } catch {
-              showToast("Failed to delete", "error");
+            } catch (err) {
+              showToast(err.message || "Failed to delete", "error");
             } finally {
               setDeletingId(null);
               setConfirmModal(null);
@@ -165,8 +165,8 @@ const DropdownManager = () => {
               showToast("Renamed & updated in all records ✓");
               setEditingId(null);
               setRenameModal(null);
-            } catch {
-              showToast("Failed to rename", "error");
+            } catch (err) {
+              showToast(err.message || "Failed to rename", "error");
             } finally {
               setSavingEdit(false);
             }
