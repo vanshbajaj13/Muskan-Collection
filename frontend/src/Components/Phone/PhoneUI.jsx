@@ -374,3 +374,110 @@ export const RenameConfirmModal = ({
     document.body,
   );
 };
+
+// ── ComboBox: free-type + dropdown + auto-save new values ─────────────────────
+export const ComboBox = ({
+  value,
+  onChange,
+  options = [],
+  onAddNew,
+  placeholder = "Type or select…",
+}) => {
+  const [open, setOpen] = React.useState(false);
+  const [adding, setAdding] = React.useState(false);
+  const containerRef = React.useRef(null);
+
+  const trimmed = (value || "").trim();
+  const filtered = options.filter((o) =>
+    o.toLowerCase().includes(trimmed.toLowerCase())
+  );
+  const isNew =
+    trimmed.length > 0 &&
+    !options.some((o) => o.toLowerCase() === trimmed.toLowerCase());
+
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (!containerRef.current?.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleSelect = (val) => {
+    onChange(val);
+    setOpen(false);
+  };
+
+  const handleAddNew = async () => {
+    if (!onAddNew || !isNew) return;
+    setAdding(true);
+    try {
+      await onAddNew(trimmed);
+      onChange(trimmed);
+    } finally {
+      setAdding(false);
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        type="text"
+        value={value || ""}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder}
+        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-slate-800
+          focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent
+          bg-white placeholder-slate-300 pr-8"
+        style={{ fontSize: "16px" }}
+        autoComplete="off"
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setOpen((o) => !o)}
+        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+      >
+        <svg
+          className={`w-4 h-4 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute z-30 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden max-h-52 overflow-y-auto">
+          {filtered.length === 0 && !isNew && (
+            <p className="px-3 py-2.5 text-sm text-slate-400">No matches</p>
+          )}
+          {filtered.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onMouseDown={(e) => { e.preventDefault(); handleSelect(opt); }}
+              className={`w-full text-left px-3 py-2.5 text-sm hover:bg-indigo-50 transition-colors
+                ${value === opt ? "bg-indigo-50 font-semibold text-indigo-700" : "text-slate-700"}`}
+            >
+              {opt}
+            </button>
+          ))}
+          {isNew && (
+            <button
+              type="button"
+              disabled={adding}
+              onMouseDown={(e) => { e.preventDefault(); handleAddNew(); }}
+              className="w-full text-left px-3 py-2.5 text-sm text-indigo-600 font-semibold
+                hover:bg-indigo-50 border-t border-slate-100 flex items-center gap-2 transition-colors"
+            >
+              <span className="text-base leading-none">+</span>
+              {adding ? "Saving…" : `Add "${trimmed}"`}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};

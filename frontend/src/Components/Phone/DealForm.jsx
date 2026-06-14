@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { usePhone } from "./PhoneContext";
-import { Field, Input, Select, Textarea, Btn, ConfirmModal } from "./PhoneUI";
+import { Field, Input, Textarea, Btn, ConfirmModal, ComboBox } from "./PhoneUI";
 
 const EMPTY = {
   purchaseDate: "",
@@ -24,13 +24,15 @@ const EMPTY = {
 };
 
 const DealForm = ({ initial, onSave, onCancel, loading }) => {
-  const { opts, tsFromDate, dateFromTs } = usePhone();
+  const { opts, tsFromDate, dateFromTs, addDropdown } = usePhone();
   const [form, setForm] = useState(EMPTY);
   const [showSaleFields, setShowSaleFields] = useState(false);
   const [pendingPayload, setPendingPayload] = useState(null);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
-    if (initial) {
+    if (initial && !initializedRef.current) {
+      initializedRef.current = true;
       setForm({
         ...EMPTY,
         ...initial,
@@ -68,9 +70,9 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
         form.sellingPrice !== "" ? parseFloat(form.sellingPrice) : null,
     };
     if (initial) {
-      setPendingPayload(payload); // show confirm modal for edits
+      setPendingPayload(payload);
     } else {
-      onSave(payload); // add new deal — no confirmation needed
+      onSave(payload);
     }
   };
 
@@ -104,8 +106,9 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
           loading={loading}
         />
       )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* ── Purchase Info ────────────────────────────────────────── */}
+        {/* ── Purchase Details ─────────────────────────────────────── */}
         <section>
           <h3 className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-3 pb-1 border-b border-slate-100">
             Purchase Details
@@ -119,30 +122,46 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
                 required
               />
             </Field>
+
             <Field label="Product" required>
-              <Select
-                options={opts("product")}
+              <ComboBox
                 value={form.product}
-                onChange={(e) => set("product", e.target.value)}
-                required
+                onChange={(v) => set("product", v)}
+                options={opts("product")}
+                onAddNew={async (v) => {
+                  set("product", v);
+                  await addDropdown("product", v);
+                }}
+                placeholder="Type or select…"
               />
             </Field>
+
             <Field label="Purchased From" required>
-              <Select
-                options={opts("purchasedFrom")}
+              <ComboBox
                 value={form.purchasedFrom}
-                onChange={(e) => set("purchasedFrom", e.target.value)}
-                required
+                onChange={(v) => set("purchasedFrom", v)}
+                options={opts("purchasedFrom")}
+                onAddNew={async (v) => {
+                  set("purchasedFrom", v);
+                  await addDropdown("purchasedFrom", v);
+                }}
+                placeholder="Type or select…"
               />
             </Field>
+
             <Field label="Account" required hint="Whose account was used">
-              <Select
-                options={opts("account")}
+              <ComboBox
                 value={form.purchaseAccount}
-                onChange={(e) => set("purchaseAccount", e.target.value)}
-                required
+                onChange={(v) => set("purchaseAccount", v)}
+                options={opts("account")}
+                onAddNew={async (v) => {
+                  set("purchaseAccount", v);
+                  await addDropdown("account", v);
+                }}
+                placeholder="Type or select…"
               />
             </Field>
+
             <Field label="Buying Price (₹)" required>
               <Input
                 type="number"
@@ -154,17 +173,21 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
                 required
               />
             </Field>
+
             <Field label="Credit Card Used">
-              <Select
-                options={opts("card")}
+              <ComboBox
                 value={form.creditCard}
-                onChange={(e) => set("creditCard", e.target.value)}
-                placeholder="Select card"
+                onChange={(v) => set("creditCard", v)}
+                options={opts("card")}
+                onAddNew={async (v) => {
+                  set("creditCard", v);
+                  await addDropdown("card", v);
+                }}
+                placeholder="Type or select…"
               />
             </Field>
           </div>
 
-          {/* EMI toggle */}
           <label className="flex items-center gap-2 mt-3 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -176,23 +199,20 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
           </label>
         </section>
 
-        {/* ── Cashback ──────────────────────────────────────────────── */}
+        {/* ── Cashback ─────────────────────────────────────────────── */}
         <section>
           <h3 className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-3 pb-1 border-b border-slate-100">
             Cashback
           </h3>
-
-          {/* Toggle: is cashback expected for this deal? */}
           <div className="mb-4 flex items-center justify-between bg-amber-50 border border-amber-100 rounded-lg px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-amber-800">
                 Cashback Expected?
               </p>
               <p className="text-xs text-amber-600 mt-0.5">
-                Enable this if you expect cashback on this purchase.
+                Enable if you expect cashback on this purchase.
               </p>
             </div>
-
             <label className="flex items-center gap-2 cursor-pointer select-none ml-4 shrink-0">
               <div
                 onClick={() => set("cashbackExpected", !form.cashbackExpected)}
@@ -206,11 +226,8 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
                   }`}
                 />
               </div>
-
               <span
-                className={`text-sm font-semibold ${
-                  form.cashbackExpected ? "text-amber-700" : "text-slate-500"
-                }`}
+                className={`text-sm font-semibold ${form.cashbackExpected ? "text-amber-700" : "text-slate-500"}`}
               >
                 {form.cashbackExpected ? "Enabled" : "Disabled"}
               </span>
@@ -239,7 +256,7 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
           )}
         </section>
 
-        {/* ── Charges & Commission ─────────────────────────────────── */}
+        {/* ── Charges & Commission ──────────────────────────────────── */}
         <section>
           <h3 className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-3 pb-1 border-b border-slate-100">
             Charges & Commission
@@ -273,17 +290,21 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
               />
             </Field>
             <Field label="Commission To">
-              <Select
-                options={opts("commissionTo")}
+              <ComboBox
                 value={form.commissionTo}
-                onChange={(e) => set("commissionTo", e.target.value)}
-                placeholder="Select person"
+                onChange={(v) => set("commissionTo", v)}
+                options={opts("commissionTo")}
+                onAddNew={async (v) => {
+                  set("commissionTo", v);
+                  await addDropdown("commissionTo", v);
+                }}
+                placeholder="Type or select…"
               />
             </Field>
           </div>
         </section>
 
-        {/* ── Sale Info (collapsible) ──────────────────────────────── */}
+        {/* ── Sale Details (collapsible) ────────────────────────────── */}
         <section>
           <button
             type="button"
@@ -303,11 +324,15 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
           {showSaleFields && (
             <div className="grid grid-cols-2 gap-3">
               <Field label="Sold To">
-                <Select
-                  options={opts("soldTo")}
+                <ComboBox
                   value={form.soldTo}
-                  onChange={(e) => set("soldTo", e.target.value)}
-                  placeholder="Select buyer"
+                  onChange={(v) => set("soldTo", v)}
+                  options={opts("soldTo")}
+                  onAddNew={async (v) => {
+                    set("soldTo", v);
+                    await addDropdown("soldTo", v);
+                  }}
+                  placeholder="Type or select…"
                 />
               </Field>
               <Field label="Sale Date">
