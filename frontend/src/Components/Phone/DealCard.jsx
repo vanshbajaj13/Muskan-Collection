@@ -36,6 +36,9 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
   const pending = deal.sellingPrice
     ? Math.max(0, deal.sellingPrice - totalPaid)
     : 0;
+  const excess = deal.sellingPrice
+    ? Math.max(0, totalPaid - deal.sellingPrice)
+    : 0;
 
   const handleAddPayment = async (e) => {
     e.preventDefault();
@@ -123,6 +126,7 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
         ${deal.dealStatus === "unsold" ? "border-slate-200" : ""}
         ${deal.dealStatus === "pending_payment" ? "border-amber-200" : ""}
         ${deal.dealStatus === "complete" ? "border-emerald-200" : ""}
+        ${deal.dealStatus === "excess_payment" ? "border-rose-200" : ""}
         hover:shadow-md`}
       >
         {/* ── Compact header row ──────────────────────────────────── */}
@@ -151,6 +155,11 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
             {pending > 0 && (
               <span className="text-xs text-amber-600 font-medium">
                 Pending {formatCurrency(pending)}
+              </span>
+            )}
+            {excess > 0 && (
+              <span className="text-xs text-rose-600 font-medium">
+                Excess {formatCurrency(excess)}
               </span>
             )}
             {deal.cashbackStatus === "pending" && (
@@ -264,6 +273,16 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                     value={
                       <span className="text-amber-600 font-semibold">
                         {formatCurrency(pending)}
+                      </span>
+                    }
+                  />
+                )}
+                {excess > 0 && (
+                  <Row
+                    label="Excess Received"
+                    value={
+                      <span className="text-rose-600 font-semibold">
+                        {formatCurrency(excess)}
                       </span>
                     }
                   />

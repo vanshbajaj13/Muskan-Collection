@@ -354,6 +354,7 @@ const PhoneDeals = () => {
     { key: "unsold", label: "Unsold", color: "gray" },
     { key: "pending_payment", label: "Payment Pending", color: "amber" },
     { key: "complete", label: "Complete", color: "emerald" },
+    { key: "excess_payment", label: "Excess Payment", color: "rose" },
   ];
 
   const cashbackCapsules = [

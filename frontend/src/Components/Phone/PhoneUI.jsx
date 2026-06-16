@@ -63,6 +63,10 @@ export const StatusBadge = ({ status }) => {
       label: "Complete",
       cls: "bg-emerald-50 text-emerald-700 border border-emerald-200",
     },
+    excess_payment: {
+      label: "Excess Payment",
+      cls: "bg-rose-50 text-rose-700 border border-rose-200",
+    },
   };
   const { label, cls } = config[status] || config.unsold;
   return (

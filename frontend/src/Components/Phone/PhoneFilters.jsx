@@ -133,6 +133,7 @@ const PhoneFilters = ({
                   <option value="unsold">Unsold</option>
                   <option value="pending_payment">Payment Pending</option>
                   <option value="complete">Complete</option>
+                  <option value="excess_payment">Excess Payment</option>
                 </select>
               </div>
             )}
@@ -352,6 +353,7 @@ const PhoneFilters = ({
                     unsold: "Unsold",
                     pending_payment: "Payment Pending",
                     complete: "Complete",
+                    excess_payment: "Excess Payment",
                   },
                 };
                 const displayValue = valueLabels[key]?.[value] ?? value;

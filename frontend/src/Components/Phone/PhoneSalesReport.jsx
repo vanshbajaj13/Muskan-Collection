@@ -152,8 +152,8 @@ const PhoneSalesReport = () => {
   );
 
   // ── Helpers ───────────────────────────────────────────────────────────────
-  const statusLabel = (s) => ({ unsold: "Unsold", pending_payment: "Pending", complete: "Complete" })[s] || s;
-  const statusCls   = (s) => ({ unsold: "text-slate-500", pending_payment: "text-amber-600 font-medium", complete: "text-emerald-600 font-medium" })[s] || "";
+  const statusLabel = (s) => ({ unsold: "Unsold", pending_payment: "Pending", complete: "Complete", excess_payment: "Excess" })[s] || s;
+  const statusCls   = (s) => ({ unsold: "text-slate-500", pending_payment: "text-amber-600 font-medium", complete: "text-emerald-600 font-medium", excess_payment: "text-rose-600 font-medium" })[s] || "";
 
   const colCount = () =>
     1 + 1 + 1 +

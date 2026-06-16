@@ -62,10 +62,12 @@ phoneDealSchema.virtual("totalPaymentsReceived").get(function () {
 // ── Virtual: deal status ───────────────────────────────────────────
 // "unsold"           → no sellingPrice set (regardless of payments)
 // "pending_payment"  → sellingPrice set but totalPaid < sellingPrice
-// "complete"         → sellingPrice set and totalPaid >= sellingPrice
+// "complete"         → sellingPrice set and totalPaid === sellingPrice (exact)
+// "excess_payment"   → sellingPrice set and totalPaid > sellingPrice (overpaid — likely a mistake)
 phoneDealSchema.virtual("dealStatus").get(function () {
   if (!this.sellingPrice) return "unsold";
   const totalPaid = this.payments.reduce((sum, p) => sum + p.amount, 0);
+  if (totalPaid > this.sellingPrice) return "excess_payment";
   if (totalPaid >= this.sellingPrice) return "complete";
   return "pending_payment";
 });
@@ -75,6 +77,14 @@ phoneDealSchema.virtual("paymentPending").get(function () {
   const totalPaid = this.payments.reduce((sum, p) => sum + p.amount, 0);
   if (!this.sellingPrice) return 0;
   return Math.max(0, this.sellingPrice - totalPaid);
+});
+
+// ── Virtual: payment excess ────────────────────────────────────────
+// How much MORE than the agreed sellingPrice has been received. 0 if none/unsold.
+phoneDealSchema.virtual("paymentExcess").get(function () {
+  const totalPaid = this.payments.reduce((sum, p) => sum + p.amount, 0);
+  if (!this.sellingPrice) return 0;
+  return Math.max(0, totalPaid - this.sellingPrice);
 });
 
 // ── Virtual: cashback status ──────────────────────────────────────

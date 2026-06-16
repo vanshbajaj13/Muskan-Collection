@@ -252,6 +252,10 @@ const PhoneDashboard = () => {
       (s, d) => s + (d.paymentPending || 0),
       0,
     );
+    const totalExcess = filtered.reduce(
+      (s, d) => s + (d.paymentExcess || 0),
+      0,
+    );
 
     const cashbackByCard = {};
     filtered.forEach((d) => {
@@ -289,6 +293,9 @@ const PhoneDashboard = () => {
         (d) => d.dealStatus === "pending_payment",
       ).length,
       complete: filtered.filter((d) => d.dealStatus === "complete").length,
+      excess_payment: filtered.filter(
+        (d) => d.dealStatus === "excess_payment",
+      ).length,
     };
 
     setStats({
@@ -302,6 +309,7 @@ const PhoneDashboard = () => {
         totalGrossProfit,
         totalNetProfit,
         totalPending,
+        totalExcess,
         statusCounts,
       },
       cashbackByCard,
@@ -359,18 +367,20 @@ const PhoneDashboard = () => {
 
   const statusChartData = stats
     ? {
-        labels: ["Complete", "Payment Pending", "Unsold"],
+        labels: ["Complete", "Payment Pending", "Unsold", "Excess Payment"],
         datasets: [
           {
             data: [
               stats.summary.statusCounts.complete,
               stats.summary.statusCounts.pending_payment,
               stats.summary.statusCounts.unsold,
+              stats.summary.statusCounts.excess_payment || 0,
             ],
             backgroundColor: [
               "rgba(16,  215, 119, 0.7)",
               "rgba(245, 158, 11,  0.7)",
               "rgba(148, 163, 184, 0.7)",
+              "rgba(244, 63,  94,  0.7)",
             ],
             borderWidth: 1,
           },
@@ -571,6 +581,7 @@ const PhoneDashboard = () => {
             { key: "unsold", label: "Unsold", color: "gray" },
             { key: "pending_payment", label: "Payment Pending", color: "amber" },
             { key: "complete", label: "Complete", color: "emerald" },
+            { key: "excess_payment", label: "Excess Payment", color: "rose" },
           ].map((c) => (
             <Capsule
               key={c.key}
@@ -632,6 +643,17 @@ const PhoneDashboard = () => {
                   stats.summary.statusCounts.pending_payment + " deals pending"
                 }
               />
+              {stats.summary.totalExcess > 0 && (
+                <Card
+                  label="Excess Received"
+                  value={INR(stats.summary.totalExcess)}
+                  accent="rose"
+                  sub={
+                    (stats.summary.statusCounts.excess_payment || 0) +
+                    " deal(s) overpaid"
+                  }
+                />
+              )}
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

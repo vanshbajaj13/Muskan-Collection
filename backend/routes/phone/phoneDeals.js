@@ -197,6 +197,7 @@ router.get("/meta/stats", protect, protectVansh, async (req, res) => {
       dealStatus: d.dealStatus,
       totalPaymentsReceived: d.totalPaymentsReceived,
       paymentPending: d.paymentPending,
+      paymentExcess: d.paymentExcess,
     }));
 
     // Summary totals (completed/partial deals only — exclude unsold)
@@ -209,6 +210,7 @@ router.get("/meta/stats", protect, protectVansh, async (req, res) => {
     const totalGrossProfit = soldDeals.reduce((s, d) => s + (d.grossProfit || 0), 0);
     const totalNetProfit = soldDeals.reduce((s, d) => s + (d.netProfit || 0), 0);
     const totalPending = computed.reduce((s, d) => s + d.paymentPending, 0);
+    const totalExcess = computed.reduce((s, d) => s + (d.paymentExcess || 0), 0);
 
     // Cashback by card
     const cashbackByCard = {};
@@ -246,6 +248,7 @@ router.get("/meta/stats", protect, protectVansh, async (req, res) => {
       unsold: computed.filter((d) => d.dealStatus === "unsold").length,
       pending_payment: computed.filter((d) => d.dealStatus === "pending_payment").length,
       complete: computed.filter((d) => d.dealStatus === "complete").length,
+      excess_payment: computed.filter((d) => d.dealStatus === "excess_payment").length,
     };
 
     res.json({
@@ -259,6 +262,7 @@ router.get("/meta/stats", protect, protectVansh, async (req, res) => {
         totalGrossProfit,
         totalNetProfit,
         totalPending,
+        totalExcess,
         statusCounts,
       },
       cashbackByCard,
