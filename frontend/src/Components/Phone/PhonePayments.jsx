@@ -89,7 +89,6 @@ const PaymentForm = ({ initial, onClose, onSuccess, mode = "add" }) => {
     return new Date().toISOString().split("T")[0];
   });
   const [method, setMethod] = useState(initial?.method || "");
-  // Strip auto-generated note prefix — just the user note portion
   const [note, setNote] = useState(() => {
     if (!initial?.note) return "";
     const match = initial.note.match(/\. Note: (.+)$/);
@@ -102,7 +101,6 @@ const PaymentForm = ({ initial, onClose, onSuccess, mode = "add" }) => {
   const [search, setSearch] = useState("");
   const [showAllDeals, setShowAllDeals] = useState(false);
 
-  // Seed selected deals from existing allocations
   const [selectedIds, setSelectedIds] = useState(
     initial?.allocations?.map((a) => a.dealId?.toString?.() || String(a.dealId)) || []
   );
@@ -115,15 +113,12 @@ const PaymentForm = ({ initial, onClose, onSuccess, mode = "add" }) => {
     }
     return seed;
   });
-  const [autoSplit, setAutoSplit] = useState(!initial); // off when editing
+  const [autoSplit, setAutoSplit] = useState(!initial);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [confirmEdit, setConfirmEdit] = useState(false);
 
-  // In edit mode, adjust each deal's payment figures by adding back whatever
-  // this receipt originally allocated — so the UI shows "true" pending
-  // before this receipt is factored in, and auto-split has accurate room.
   const adjustDealForEdit = useCallback(
     (deal) => {
       if (mode !== "edit" || !initial?.allocations) return deal;
@@ -175,9 +170,6 @@ const PaymentForm = ({ initial, onClose, onSuccess, mode = "add" }) => {
     loadDeals();
   }, [loadDeals]);
 
-  // Re-run auto allocation when amount, selection, or deal data changes.
-  // eligibleDeals already have adjusted paymentPending (adjustDealForEdit),
-  // so pass them directly — no further per-deal correction needed.
   useEffect(() => {
     if (!autoSplit) return;
     const amt = parseFloat(amount);
@@ -198,31 +190,46 @@ const PaymentForm = ({ initial, onClose, onSuccess, mode = "add" }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [amount, selectedIds, autoSplit, eligibleDeals]);
 
+  // Toggling a deal selects/deselects it. On deselect we also clear its
+  // allocation value so a stale amount can't reappear if it's re-selected.
   const toggleDeal = (deal) => {
     const id = deal._id;
     setEligibleDeals((prev) =>
       prev.some((d) => d._id === id) ? prev : [...prev, adjustDealForEdit(deal)]
     );
+    const isCurrentlySelected = selectedIds.includes(id);
     setSelectedIds((ids) =>
-      ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]
+      isCurrentlySelected ? ids.filter((x) => x !== id) : [...ids, id]
     );
+    if (isCurrentlySelected) {
+      setAllocations((a) => {
+        if (a[id] === undefined) return a;
+        const next = { ...a };
+        delete next[id];
+        return next;
+      });
+    }
   };
 
+  // allocs is always derived from selectedIds — a deselected deal's amount
+  // can never sneak into allocatedTotal / diff / the save payload.
+  const allocs = selectedIds.map((id) => ({
+    dealId: id,
+    amount: parseFloat(allocations[id] || 0) || 0,
+  }));
 
-  const allocatedTotal = Object.values(allocations).reduce(
-    (s, v) => s + (parseFloat(v) || 0),
-    0
-  );
+  const allocatedTotal = allocs.reduce((s, a) => s + a.amount, 0);
   const enteredAmount = parseFloat(amount) || 0;
   const diff = Math.round((enteredAmount - allocatedTotal) * 100) / 100;
 
-  // Build allocs once — shared by validation and the actual save call
-  const allocs = selectedIds.map((id) => ({
-    dealId: id,
-    amount: parseFloat(allocations[id] || 0),
-  }));
+  const isValid =
+    !!amount &&
+    enteredAmount > 0 &&
+    !!date &&
+    selectedIds.length > 0 &&
+    Math.abs(diff) < 0.01 &&
+    allocs.every((a) => a.amount > 0);
 
-  // Validate and either proceed (add) or open confirm modal (edit)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -242,7 +249,6 @@ const PaymentForm = ({ initial, onClose, onSuccess, mode = "add" }) => {
       return;
     }
 
-    // Edit mode: require explicit CONFIRM before touching any records
     if (mode === "edit") {
       setConfirmEdit(true);
       return;
@@ -251,7 +257,6 @@ const PaymentForm = ({ initial, onClose, onSuccess, mode = "add" }) => {
     await doSubmit();
   };
 
-  // Actual API call — called directly (add) or after confirm modal (edit)
   const doSubmit = async () => {
     setSaving(true);
     try {
@@ -305,246 +310,270 @@ const PaymentForm = ({ initial, onClose, onSuccess, mode = "add" }) => {
           }}
         />
       )}
-    <Modal title={title} onClose={onClose} wide={true}>
-      {saving && <FullScreenSpinner message="Updating payment…" />}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
-          <div className="bg-rose-50 border border-rose-100 text-rose-600 text-sm px-3 py-2 rounded-lg">
-            {error}
-          </div>
-        )}
 
-        {/* Amount / date / method */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field label="Amount Received (₹)" required>
-            <Input
-              type="number"
-              min="0"
-              placeholder="e.g. 240000"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              onWheel={(e) => e.target.blur()}
-              required
-            />
-          </Field>
-          <Field label="Date" required>
-            <Input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Method (optional)">
-            <Input
-              placeholder="UPI / Cash / Bank Transfer"
-              value={method}
-              onChange={(e) => setMethod(e.target.value)}
-            />
-          </Field>
-        </div>
-
-        <Field label="Note (optional)" hint="Added on top of the auto-generated breakup note">
-          <Input
-            placeholder="e.g. Bulk settlement from Vaibhav"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </Field>
-
-        {/* Deal selection */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
-              {mode === "edit" ? "Re-allocate to Deals" : "Select Deals to Apply Payment To"}
-            </p>
-            <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showAllDeals}
-                onChange={(e) => setShowAllDeals(e.target.checked)}
-              />
-              Show all deals (incl. completed &amp; unsold)
-            </label>
-          </div>
-
-          <Input
-            placeholder="Search by product or buyer…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="mb-2"
-          />
-
-          <div className="border border-slate-200 rounded-xl max-h-64 overflow-y-auto">
-            {loadingDeals ? (
-              <div className="text-center py-6 text-sm text-slate-400">Loading deals…</div>
-            ) : eligibleDeals.length === 0 ? (
-              <div className="text-center py-6 text-sm text-slate-400">No matching deals</div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {eligibleDeals.map((d) => {
-                  const id = d._id;
-                  const checked = selectedIds.includes(id);
-                  const originalAlloc = initial?.allocations?.find(
-                    (a) => (a.dealId?.toString?.() || String(a.dealId)) === id
-                  );
-                  const wasOriginallyAllocated = !!originalAlloc;
-                  const thisAlloc = parseFloat(allocations[id] || 0);
-
-                  // Project deal status after applying current allocation input
-                  const projectedReceived = checked
-                    ? (d.totalPaymentsReceived || 0) + thisAlloc
-                    : d.totalPaymentsReceived || 0;
-                  let projectedStatus = d.dealStatus;
-                  if (d.sellingPrice) {
-                    if (projectedReceived > d.sellingPrice) projectedStatus = "excess_payment";
-                    else if (projectedReceived >= d.sellingPrice) projectedStatus = "complete";
-                    else projectedStatus = "pending_payment";
-                  }
-
-                  return (
-                    <label
-                      key={id}
-                      className={`flex items-start gap-3 px-3 py-3 cursor-pointer transition-colors
-                        ${checked ? "bg-indigo-50" : "hover:bg-slate-50"}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleDeal(d)}
-                        className="shrink-0 mt-1"
-                      />
-                      <div className="flex-1 min-w-0">
-                        {/* Deal name */}
-                        <p className="text-sm font-medium text-slate-700 truncate">
-                          {d.product}
-                          {d.soldTo && <span className="text-slate-400"> &rarr; {d.soldTo}</span>}
-                          {wasOriginallyAllocated && mode === "edit" && (
-                            <span className="ml-2 text-xs text-violet-600 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded">
-                              prev. allocated
-                            </span>
-                          )}
-                        </p>
-
-                        {/* Selling price + before/this-receipt context */}
-                        {d.dealStatus !== "unsold" && d.sellingPrice ? (
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            Sell {formatCurrency(d.sellingPrice)}
-                            {mode === "edit" && wasOriginallyAllocated ? (
-                              <>
-                                {" \u00b7 "}Before: {formatCurrency(d.totalPaymentsReceived)}
-                                {" \u00b7 "}
-                                <p className="text-violet-500">
-                                  This receipt: {formatCurrency(originalAlloc.amount)}
-                                </p>
-                              </>
-                            ) : (
-                              <> &middot; Received: {formatCurrency(d.totalPaymentsReceived)}</>
-                            )}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-slate-400 mt-0.5">Unsold</p>
-                        )}
-
-                        {/* Live projected outcome */}
-                        {checked && d.sellingPrice && (
-                          <p className="text-xs mt-1 font-semibold">
-                            {projectedStatus === "complete" && (
-                              <span className="text-emerald-600">&check; Fully paid after this</span>
-                            )}
-                            {projectedStatus === "excess_payment" && (
-                              <span className="text-rose-500">
-                                &frasl; Overpaid by {formatCurrency(projectedReceived - d.sellingPrice)}
-                              </span>
-                            )}
-                            {projectedStatus === "pending_payment" && (
-                              <span className="text-amber-500">
-                                Still pending {formatCurrency(d.sellingPrice - projectedReceived)}
-                              </span>
-                            )}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Right side: input when checked, pending status when unchecked */}
-                      {checked ? (
-                        <div className="w-28 shrink-0">
-                          <Input
-                            type="number"
-                            min="0"
-                            placeholder="split"
-                            value={allocations[id] || ""}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => {
-                              setAutoSplit(false);
-                              setAllocations((a) => ({ ...a, [id]: e.target.value }));
-                            }}
-                            onWheel={(e) => e.target.blur()}
-                            className="text-right text-sm"
-                          />
-                        </div>
-                      ) : (
-                        d.dealStatus !== "unsold" && d.sellingPrice && (
-                          <span className="text-xs font-medium shrink-0 mt-0.5 text-slate-400">
-                            {(projectedReceived - d.sellingPrice) > 0
-                              ? `Pending ${formatCurrency(d.paymentPending)}`
-                              : "Fully Paid"}
-                          </span>
-                        )
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Allocation summary bar — always visible when amount is entered, updates live on (de)select */}
-        {enteredAmount > 0 && (
-          <div
-            className={`rounded-lg px-4 py-3 text-sm flex items-center justify-between gap-3
-              ${Math.abs(diff) < 0.01 && selectedIds.length > 0
-                ? "bg-emerald-50 border border-emerald-100"
-                : "bg-amber-50 border border-amber-100"}`}
-          >
-            <span className="text-slate-600">
-              Allocated:{" "}
-              <span className="font-semibold">{formatCurrency(allocatedTotal)}</span>{" "}
-              of <span className="font-semibold">{formatCurrency(enteredAmount)}</span>
-              {selectedIds.length === 0 && (
-                <span className="ml-2 text-amber-500 font-medium">— select at least one deal</span>
-              )}
-            </span>
-            {selectedIds.length > 0 && Math.abs(diff) >= 0.01 && (
-              <span className="font-semibold text-amber-600 shrink-0">
-                {diff > 0
-                  ? `${formatCurrency(diff)} unallocated`
-                  : `Over by ${formatCurrency(Math.abs(diff))}`}
-              </span>
-            )}
+      {/* Fixed-to-viewport error banner — stays visible no matter how far
+          the user has scrolled inside the form */}
+      {error && (
+        <div className="fixed top-4 inset-x-0 z-[100] flex justify-center px-4 pointer-events-none">
+          <div className="pointer-events-auto bg-rose-600 text-white px-4 py-3 rounded-xl shadow-2xl flex items-start gap-3 max-w-md w-full">
+            <span className="text-sm flex-1">{error}</span>
             <button
               type="button"
-              onClick={() => setAutoSplit(true)}
-              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium underline shrink-0"
+              onClick={() => setError("")}
+              className="text-white/70 hover:text-white text-lg leading-none shrink-0"
             >
-              Auto-split
+              ✕
             </button>
           </div>
-        )}
-
-        <div className="flex gap-2 pt-2 border-t border-slate-100">
-          <Btn type="button" variant="secondary" className="flex-1" onClick={onClose}>
-            Cancel
-          </Btn>
-          <Btn type="submit" variant="primary" className="flex-1" disabled={saving}>
-            {saving
-              ? mode === "edit" ? "Updating…" : "Saving…"
-              : mode === "edit" ? "Update Payment" : "Save Payment"}
-          </Btn>
         </div>
-      </form>
-    </Modal>
+      )}
+
+      <Modal title={title} onClose={onClose} wide={true}>
+        {saving && <FullScreenSpinner message="Updating payment…" />}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Field label="Amount Received (₹)" required>
+              <Input
+                type="number"
+                min="0"
+                placeholder="e.g. 240000"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                onWheel={(e) => e.target.blur()}
+                required
+              />
+            </Field>
+            <Field label="Date" required>
+              <Input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+              />
+            </Field>
+            <Field label="Method (optional)">
+              <Input
+                placeholder="UPI / Cash / Bank Transfer"
+                value={method}
+                onChange={(e) => setMethod(e.target.value)}
+              />
+            </Field>
+          </div>
+
+          <Field label="Note (optional)" hint="Added on top of the auto-generated breakup note">
+            <Input
+              placeholder="e.g. Bulk settlement from Vaibhav"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
+          </Field>
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                {mode === "edit" ? "Re-allocate to Deals" : "Select Deals to Apply Payment To"}
+              </p>
+              <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showAllDeals}
+                  onChange={(e) => setShowAllDeals(e.target.checked)}
+                />
+                Show all deals (incl. completed &amp; unsold)
+              </label>
+            </div>
+
+            <Input
+              placeholder="Search by product or buyer…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="mb-2"
+            />
+
+            <div className="border border-slate-200 rounded-xl max-h-72 overflow-y-auto">
+              {loadingDeals ? (
+                <div className="text-center py-6 text-sm text-slate-400">Loading deals…</div>
+              ) : eligibleDeals.length === 0 ? (
+                <div className="text-center py-6 text-sm text-slate-400">No matching deals</div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {eligibleDeals.map((d) => {
+                    const id = d._id;
+                    const checked = selectedIds.includes(id);
+                    const originalAlloc = initial?.allocations?.find(
+                      (a) => (a.dealId?.toString?.() || String(a.dealId)) === id
+                    );
+                    const wasOriginallyAllocated = !!originalAlloc;
+                    const thisAlloc = parseFloat(allocations[id] || 0) || 0;
+                    const receivedBefore = d.totalPaymentsReceived || 0;
+
+                    const projectedReceived = checked ? receivedBefore + thisAlloc : receivedBefore;
+                    let projectedStatus = d.dealStatus;
+                    if (d.sellingPrice) {
+                      if (projectedReceived > d.sellingPrice) projectedStatus = "excess_payment";
+                      else if (projectedReceived >= d.sellingPrice) projectedStatus = "complete";
+                      else projectedStatus = "pending_payment";
+                    }
+
+                    return (
+                      <label
+                        key={id}
+                        className={`flex items-start gap-3 px-3 py-3 cursor-pointer transition-colors
+                          ${checked ? "bg-indigo-50" : "hover:bg-slate-50"}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleDeal(d)}
+                          className="shrink-0 mt-1"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-slate-700 truncate">
+                            {d.product}
+                            {d.soldTo && <span className="text-slate-400"> &rarr; {d.soldTo}</span>}
+                            {wasOriginallyAllocated && mode === "edit" && (
+                              <span className="ml-2 text-xs text-violet-600 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded">
+                                prev. allocated
+                              </span>
+                            )}
+                          </p>
+
+                          {d.dealStatus !== "unsold" && d.sellingPrice ? (
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              Selling Price {formatCurrency(d.sellingPrice)}
+                              {" \u00b7 "}Received Before {formatCurrency(receivedBefore)}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              Unsold
+                              {receivedBefore > 0 && (
+                                <> &middot; Received Before {formatCurrency(receivedBefore)}</>
+                              )}
+                            </p>
+                          )}
+
+                          {checked && (
+                            <div className="mt-2 rounded-lg bg-white border border-indigo-100 p-2 text-xs space-y-1">
+                              <div className="flex justify-between items-center">
+                                <span className="text-slate-500">This Receipt (allocated)</span>
+                                <span className="font-semibold text-indigo-600">
+                                  + {formatCurrency(thisAlloc)}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center border-t border-slate-100 pt-1">
+                                <span className="text-slate-600 font-medium">
+                                  {d.sellingPrice ? "Total Payment" : "Total Received (unsold)"}
+                                </span>
+                                <span className="font-semibold text-slate-800">
+                                  {formatCurrency(projectedReceived)}
+                                </span>
+                              </div>
+                              {d.sellingPrice && projectedStatus === "complete" && (
+                                <p className="text-emerald-600 font-semibold">
+                                    Fully paid after this
+                                </p>
+                              )}
+                              {d.sellingPrice && projectedStatus === "excess_payment" && (
+                                <p className="text-rose-500 font-semibold">
+                                  Overpaid by {formatCurrency(projectedReceived - d.sellingPrice)}
+                                </p>
+                              )}
+                              {d.sellingPrice && projectedStatus === "pending_payment" && (
+                                <p className="text-amber-500 font-semibold">
+                                  Still pending {formatCurrency(d.sellingPrice - projectedReceived)}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {checked ? (
+                          <div className="w-28 shrink-0">
+                            <Input
+                              type="number"
+                              min="0"
+                              placeholder="split"
+                              value={allocations[id] || ""}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => {
+                                setAutoSplit(false);
+                                setAllocations((a) => ({ ...a, [id]: e.target.value }));
+                              }}
+                              onWheel={(e) => e.target.blur()}
+                              className="text-right text-sm"
+                            />
+                          </div>
+                        ) : (
+                          d.dealStatus !== "unsold" && d.sellingPrice && (
+                            <span className="text-xs font-medium shrink-0 mt-0.5 text-slate-400">
+                              {d.paymentPending > 0
+                                ? `Pending ${formatCurrency(d.paymentPending)}`
+                                : "Fully Paid"}
+                            </span>
+                          )
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {enteredAmount > 0 && (
+            <div
+              className={`rounded-lg px-4 py-3 text-sm flex items-center justify-between gap-3
+                ${Math.abs(diff) < 0.01 && selectedIds.length > 0
+                  ? "bg-emerald-50 border border-emerald-100"
+                  : "bg-amber-50 border border-amber-100"}`}
+            >
+              <span className="text-slate-600">
+                Allocated:{" "}
+                <span className="font-semibold">{formatCurrency(allocatedTotal)}</span>{" "}
+                of <span className="font-semibold">{formatCurrency(enteredAmount)}</span>
+                {selectedIds.length === 0 && (
+                  <span className="ml-2 text-amber-500 font-medium">— select at least one deal</span>
+                )}
+              </span>
+              {selectedIds.length > 0 && Math.abs(diff) >= 0.01 && (
+                <span className="font-semibold text-amber-600 shrink-0">
+                  {diff > 0
+                    ? `${formatCurrency(diff)} unallocated`
+                    : `Over by ${formatCurrency(Math.abs(diff))}`}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setAutoSplit(true)}
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium underline shrink-0"
+              >
+                Auto-split
+              </button>
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-2 border-t border-slate-100">
+            <Btn type="button" variant="secondary" className="flex-1" onClick={onClose}>
+              Cancel
+            </Btn>
+            <Btn
+              type="submit"
+              variant="primary"
+              className="flex-1"
+              disabled={saving || !isValid}
+              title={
+                !isValid
+                  ? "Enter an amount and date, select at least one deal, and make sure allocations add up to the received amount."
+                  : undefined
+              }
+            >
+              {saving
+                ? mode === "edit" ? "Updating…" : "Saving…"
+                : mode === "edit" ? "Update Payment" : "Save Payment"}
+            </Btn>
+          </div>
+        </form>
+      </Modal>
     </>
   );
 };
