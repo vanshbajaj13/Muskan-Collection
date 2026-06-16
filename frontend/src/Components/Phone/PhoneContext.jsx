@@ -173,6 +173,13 @@ export const PhoneProvider = ({ children }) => {
       body: JSON.stringify(data),
     });
 
+  const updatePaymentReceipt = (id, data) =>
+  request(`/api/phones/payments/${id}`, {
+    method: "PATCH",
+    headers: authHeaders(true),
+    body: JSON.stringify(data),
+  });
+
   const deletePaymentReceipt = (id) =>
     request(`/api/phones/payments/${id}`, {
       method: "DELETE",
@@ -273,7 +280,7 @@ export const PhoneProvider = ({ children }) => {
         dropdowns, loadingDropdowns, fetchDropdowns, opts,
         getDeals, createDeal, updateDeal, deleteDeal,
         addPayment, removePayment, getDealStats,
-        getPayments, getEligibleDeals, createPaymentReceipt, deletePaymentReceipt,
+        getPayments, getEligibleDeals, createPaymentReceipt,updatePaymentReceipt, deletePaymentReceipt,
         getExpenses, createExpense, updateExpense, deleteExpense,
         addDropdown, renameDropdown, deleteDropdown,
         formatCurrency, formatDate, tsFromDate, dateFromTs,

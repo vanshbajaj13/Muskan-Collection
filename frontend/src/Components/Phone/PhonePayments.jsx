@@ -19,22 +19,48 @@ const MONTH_NAMES = [
 ];
 
 // ── Helper: greedily auto-allocate an amount across selected deals ────────
-// Fills each deal's pending amount first (in the order given), then dumps
-// any leftover onto the last selected deal. Returns { dealId: amount }.
+// Pass 1: fill each deal up to its paymentPending (skips unsold/excess/zero-pending).
+// Pass 2: spread any leftover evenly across open deals (unsold, excess, zero-pending).
+//         If no open deals, dump remainder onto the last deal.
 function autoAllocate(totalAmount, selectedDeals) {
   let remaining = totalAmount;
   const result = {};
+
+  // Pass 1 — fill deals that have a real pending amount
   selectedDeals.forEach((d) => {
-    const cap = d.dealStatus === "unsold" ? remaining : Math.max(0, d.paymentPending);
-    const take = Math.min(remaining, cap > 0 ? cap : remaining);
-    result[d._id] = take;
-    remaining -= take;
+    const pending = d.paymentPending || 0;
+    const isUnsold = d.dealStatus === "unsold";
+    const isExcess = d.dealStatus === "excess_payment";
+
+    if (isUnsold || isExcess || pending <= 0) {
+      result[d._id] = 0;
+    } else {
+      const take = Math.min(remaining, pending);
+      result[d._id] = take;
+      remaining -= take;
+    }
   });
-  // Dump any leftover (e.g. overpayment) onto the last deal
-  if (remaining > 0 && selectedDeals.length > 0) {
-    const lastId = selectedDeals[selectedDeals.length - 1]._id;
-    result[lastId] = (result[lastId] || 0) + remaining;
+
+  // Pass 2 — spread leftover across open/uncapped deals
+  if (remaining > 0) {
+    const openDeals = selectedDeals.filter(
+      (d) =>
+        d.dealStatus === "unsold" ||
+        d.dealStatus === "excess_payment" ||
+        (d.paymentPending || 0) <= 0
+    );
+    if (openDeals.length > 0) {
+      const share = Math.floor((remaining / openDeals.length) * 100) / 100;
+      const leftover = parseFloat((remaining - share * openDeals.length).toFixed(2));
+      openDeals.forEach((d, i) => {
+        result[d._id] = (result[d._id] || 0) + share + (i === 0 ? leftover : 0);
+      });
+    } else {
+      const lastId = selectedDeals[selectedDeals.length - 1]._id;
+      result[lastId] = (result[lastId] || 0) + remaining;
+    }
   }
+
   return result;
 }
 
@@ -51,52 +77,107 @@ function groupByMonth(receipts) {
   return Object.values(map).sort((a, b) => b.key.localeCompare(a.key));
 }
 
-// ── Add Payment / Split Modal ──────────────────────────────────────────────
-const AddPaymentModal = ({ onClose, onSuccess }) => {
-  const { getEligibleDeals, createPaymentReceipt, formatCurrency, tsFromDate } =
+// ── Shared Payment Form (used by both Add and Edit modals) ────────────────
+const PaymentForm = ({ initial, onClose, onSuccess, mode = "add" }) => {
+  const { getEligibleDeals, createPaymentReceipt, formatCurrency, tsFromDate, dateFromTs } =
     usePhone();
 
-  const [amount, setAmount] = useState("");
+  // Core fields
+  const [amount, setAmount] = useState(initial ? String(initial.amount) : "");
   const [date, setDate] = useState(() => {
-    const d = new Date();
-    return d.toISOString().split("T")[0];
+    if (initial?.date) return dateFromTs(initial.date);
+    return new Date().toISOString().split("T")[0];
   });
-  const [method, setMethod] = useState("");
-  const [note, setNote] = useState("");
+  const [method, setMethod] = useState(initial?.method || "");
+  // Strip auto-generated note prefix — just the user note portion
+  const [note, setNote] = useState(() => {
+    if (!initial?.note) return "";
+    const match = initial.note.match(/\. Note: (.+)$/);
+    return match ? match[1] : "";
+  });
 
+  // Deal selection & allocation
   const [eligibleDeals, setEligibleDeals] = useState([]);
   const [loadingDeals, setLoadingDeals] = useState(false);
   const [search, setSearch] = useState("");
   const [showAllDeals, setShowAllDeals] = useState(false);
 
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [allocations, setAllocations] = useState({}); // dealId -> amount string
-  const [autoSplit, setAutoSplit] = useState(true);
+  // Seed selected deals from existing allocations
+  const [selectedIds, setSelectedIds] = useState(
+    initial?.allocations?.map((a) => a.dealId?.toString?.() || String(a.dealId)) || []
+  );
+  const [allocations, setAllocations] = useState(() => {
+    const seed = {};
+    if (initial?.allocations) {
+      initial.allocations.forEach((a) => {
+        seed[a.dealId?.toString?.() || String(a.dealId)] = String(a.amount);
+      });
+    }
+    return seed;
+  });
+  const [autoSplit, setAutoSplit] = useState(!initial); // off when editing
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [confirmEdit, setConfirmEdit] = useState(false);
+
+  // In edit mode, adjust each deal's payment figures by adding back whatever
+  // this receipt originally allocated — so the UI shows "true" pending
+  // before this receipt is factored in, and auto-split has accurate room.
+  const adjustDealForEdit = useCallback(
+    (deal) => {
+      if (mode !== "edit" || !initial?.allocations) return deal;
+      const originalAlloc = initial.allocations.find(
+        (a) => (a.dealId?.toString?.() || String(a.dealId)) === String(deal._id)
+      );
+      if (!originalAlloc) return deal;
+      const restoredPending = (deal.paymentPending || 0) + originalAlloc.amount;
+      const restoredReceived = Math.max(0, (deal.totalPaymentsReceived || 0) - originalAlloc.amount);
+      let restoredStatus = deal.dealStatus;
+      if (deal.sellingPrice) {
+        if (restoredReceived > deal.sellingPrice) restoredStatus = "excess_payment";
+        else if (restoredReceived >= deal.sellingPrice) restoredStatus = "complete";
+        else restoredStatus = "pending_payment";
+      }
+      return { ...deal, paymentPending: restoredPending, totalPaymentsReceived: restoredReceived, dealStatus: restoredStatus };
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [mode, initial]
+  );
 
   const loadDeals = useCallback(async () => {
     setLoadingDeals(true);
     try {
       const params = {};
-      if (showAllDeals) params.includeUnsold = "true";
+      if (showAllDeals) {
+        params.includeUnsold = "true";
+        params.includeCompleted = "true";
+      }
       if (search.trim()) params.search = search.trim();
       const data = await getEligibleDeals(params);
-      setEligibleDeals(data.deals || []);
+      setEligibleDeals((prev) => {
+        const fetched = (data.deals || []).map(adjustDealForEdit);
+        const fetchedIds = new Set(fetched.map((d) => d._id));
+        const preserved = prev.filter(
+          (d) => !fetchedIds.has(d._id) && selectedIds.includes(d._id)
+        );
+        return [...fetched, ...preserved];
+      });
     } catch (e) {
       setError(e.message || "Failed to load deals");
     } finally {
       setLoadingDeals(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showAllDeals, search]);
+  }, [showAllDeals, search, adjustDealForEdit]);
 
   useEffect(() => {
     loadDeals();
   }, [loadDeals]);
 
-  // Re-run auto allocation whenever amount or selection changes (if autoSplit on)
+  // Re-run auto allocation when amount, selection, or deal data changes.
+  // eligibleDeals already have adjusted paymentPending (adjustDealForEdit),
+  // so pass them directly — no further per-deal correction needed.
   useEffect(() => {
     if (!autoSplit) return;
     const amt = parseFloat(amount);
@@ -105,8 +186,9 @@ const AddPaymentModal = ({ onClose, onSuccess }) => {
       return;
     }
     const selectedDeals = selectedIds
-      .map((id) => eligibleDeals.find((d) => d._id === id))
+      .map((id) => eligibleDeals.find((d) => d._id === id || d._id?.toString() === id))
       .filter(Boolean);
+
     const result = autoAllocate(amt, selectedDeals);
     const stringified = {};
     Object.entries(result).forEach(([k, v]) => {
@@ -114,13 +196,18 @@ const AddPaymentModal = ({ onClose, onSuccess }) => {
     });
     setAllocations(stringified);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [amount, selectedIds, autoSplit]);
+  }, [amount, selectedIds, autoSplit, eligibleDeals]);
 
   const toggleDeal = (deal) => {
+    const id = deal._id;
+    setEligibleDeals((prev) =>
+      prev.some((d) => d._id === id) ? prev : [...prev, adjustDealForEdit(deal)]
+    );
     setSelectedIds((ids) =>
-      ids.includes(deal._id) ? ids.filter((id) => id !== deal._id) : [...ids, deal._id]
+      ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]
     );
   };
+
 
   const allocatedTotal = Object.values(allocations).reduce(
     (s, v) => s + (parseFloat(v) || 0),
@@ -129,6 +216,13 @@ const AddPaymentModal = ({ onClose, onSuccess }) => {
   const enteredAmount = parseFloat(amount) || 0;
   const diff = Math.round((enteredAmount - allocatedTotal) * 100) / 100;
 
+  // Build allocs once — shared by validation and the actual save call
+  const allocs = selectedIds.map((id) => ({
+    dealId: id,
+    amount: parseFloat(allocations[id] || 0),
+  }));
+
+  // Validate and either proceed (add) or open confirm modal (edit)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -143,26 +237,49 @@ const AddPaymentModal = ({ onClose, onSuccess }) => {
       );
       return;
     }
-
-    const allocs = selectedIds.map((id) => ({
-      dealId: id,
-      amount: parseFloat(allocations[id] || 0),
-    }));
-
     if (allocs.some((a) => !a.amount || a.amount <= 0)) {
       setError("Every selected deal needs an allocation amount greater than 0.");
       return;
     }
 
+    // Edit mode: require explicit CONFIRM before touching any records
+    if (mode === "edit") {
+      setConfirmEdit(true);
+      return;
+    }
+
+    await doSubmit();
+  };
+
+  // Actual API call — called directly (add) or after confirm modal (edit)
+  const doSubmit = async () => {
     setSaving(true);
     try {
-      await createPaymentReceipt({
+      const payload = {
         amount: enteredAmount,
         date: tsFromDate(date),
         note,
         method,
         allocations: allocs,
-      });
+      };
+
+      if (mode === "edit" && initial?._id) {
+        const token = JSON.parse(window.localStorage.getItem("userInfo")).token;
+        const res = await fetch(`/api/phones/payments/${initial._id}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || `Request failed (${res.status})`);
+        }
+      } else {
+        await createPaymentReceipt(payload);
+      }
       onSuccess();
     } catch (err) {
       setError(err.message || "Failed to save payment");
@@ -171,9 +288,25 @@ const AddPaymentModal = ({ onClose, onSuccess }) => {
     }
   };
 
+  const title = mode === "edit" ? "Edit Payment" : "Add Payment Received";
+
   return (
-    <Modal title="Add Payment Received" onClose={onClose} wide={true}>
-      {saving && <FullScreenSpinner message="Saving payment…" />}
+    <>
+      {confirmEdit && (
+        <ConfirmModal
+          title="Update this payment?"
+          body="Type CONFIRM to update this payment and re-apply allocations across the selected deals."
+          confirmTextRequired={true}
+          loading={saving}
+          onCancel={() => setConfirmEdit(false)}
+          onConfirm={async () => {
+            await doSubmit();
+            setConfirmEdit(false);
+          }}
+        />
+      )}
+    <Modal title={title} onClose={onClose} wide={true}>
+      {saving && <FullScreenSpinner message="Updating payment…" />}
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="bg-rose-50 border border-rose-100 text-rose-600 text-sm px-3 py-2 rounded-lg">
@@ -181,7 +314,7 @@ const AddPaymentModal = ({ onClose, onSuccess }) => {
           </div>
         )}
 
-        {/* Top: amount / date / method */}
+        {/* Amount / date / method */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Field label="Amount Received (₹)" required>
             <Input
@@ -223,7 +356,7 @@ const AddPaymentModal = ({ onClose, onSuccess }) => {
         <div>
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-bold uppercase tracking-widest text-slate-500">
-              Select Deals to Apply Payment To
+              {mode === "edit" ? "Re-allocate to Deals" : "Select Deals to Apply Payment To"}
             </p>
             <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer">
               <input
@@ -231,7 +364,7 @@ const AddPaymentModal = ({ onClose, onSuccess }) => {
                 checked={showAllDeals}
                 onChange={(e) => setShowAllDeals(e.target.checked)}
               />
-              Show all deals (incl. unsold &amp; completed)
+              Show all deals (incl. completed &amp; unsold)
             </label>
           </div>
 
@@ -250,64 +383,114 @@ const AddPaymentModal = ({ onClose, onSuccess }) => {
             ) : (
               <div className="divide-y divide-slate-100">
                 {eligibleDeals.map((d) => {
-                  const checked = selectedIds.includes(d._id);
+                  const id = d._id;
+                  const checked = selectedIds.includes(id);
+                  const originalAlloc = initial?.allocations?.find(
+                    (a) => (a.dealId?.toString?.() || String(a.dealId)) === id
+                  );
+                  const wasOriginallyAllocated = !!originalAlloc;
+                  const thisAlloc = parseFloat(allocations[id] || 0);
+
+                  // Project deal status after applying current allocation input
+                  const projectedReceived = checked
+                    ? (d.totalPaymentsReceived || 0) + thisAlloc
+                    : d.totalPaymentsReceived || 0;
+                  let projectedStatus = d.dealStatus;
+                  if (d.sellingPrice) {
+                    if (projectedReceived > d.sellingPrice) projectedStatus = "excess_payment";
+                    else if (projectedReceived >= d.sellingPrice) projectedStatus = "complete";
+                    else projectedStatus = "pending_payment";
+                  }
+
                   return (
                     <label
-                      key={d._id}
-                      className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors
+                      key={id}
+                      className={`flex items-start gap-3 px-3 py-3 cursor-pointer transition-colors
                         ${checked ? "bg-indigo-50" : "hover:bg-slate-50"}`}
                     >
                       <input
                         type="checkbox"
                         checked={checked}
                         onChange={() => toggleDeal(d)}
-                        className="shrink-0"
+                        className="shrink-0 mt-1"
                       />
                       <div className="flex-1 min-w-0">
+                        {/* Deal name */}
                         <p className="text-sm font-medium text-slate-700 truncate">
                           {d.product}
-                          {d.soldTo && <span className="text-slate-400"> → {d.soldTo}</span>}
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          {d.dealStatus === "unsold" ? (
-                            <span className="text-slate-400">Unsold</span>
-                          ) : (
-                            <>
-                              Selling: {formatCurrency(d.sellingPrice)} · Received:{" "}
-                              {formatCurrency(d.totalPaymentsReceived)}
-                            </>
+                          {d.soldTo && <span className="text-slate-400"> &rarr; {d.soldTo}</span>}
+                          {wasOriginallyAllocated && mode === "edit" && (
+                            <span className="ml-2 text-xs text-violet-600 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded">
+                              prev. allocated
+                            </span>
                           )}
                         </p>
-                      </div>
-                      {d.dealStatus !== "unsold" && (
-                        <span
-                          className={`text-xs font-semibold shrink-0 ${
-                            d.paymentPending > 0 ? "text-amber-600" : "text-emerald-600"
-                          }`}
-                        >
-                          {d.paymentPending > 0
-                            ? `Pending ${formatCurrency(d.paymentPending)}`
-                            : "Fully Paid"}
-                        </span>
-                      )}
 
-                      {/* Allocation input — only shown once selected */}
-                      {checked && (
+                        {/* Selling price + before/this-receipt context */}
+                        {d.dealStatus !== "unsold" && d.sellingPrice ? (
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            Sell {formatCurrency(d.sellingPrice)}
+                            {mode === "edit" && wasOriginallyAllocated ? (
+                              <>
+                                {" \u00b7 "}Before: {formatCurrency(d.totalPaymentsReceived)}
+                                {" \u00b7 "}
+                                <p className="text-violet-500">
+                                  This receipt: {formatCurrency(originalAlloc.amount)}
+                                </p>
+                              </>
+                            ) : (
+                              <> &middot; Received: {formatCurrency(d.totalPaymentsReceived)}</>
+                            )}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-slate-400 mt-0.5">Unsold</p>
+                        )}
+
+                        {/* Live projected outcome */}
+                        {checked && d.sellingPrice && (
+                          <p className="text-xs mt-1 font-semibold">
+                            {projectedStatus === "complete" && (
+                              <span className="text-emerald-600">&check; Fully paid after this</span>
+                            )}
+                            {projectedStatus === "excess_payment" && (
+                              <span className="text-rose-500">
+                                &frasl; Overpaid by {formatCurrency(projectedReceived - d.sellingPrice)}
+                              </span>
+                            )}
+                            {projectedStatus === "pending_payment" && (
+                              <span className="text-amber-500">
+                                Still pending {formatCurrency(d.sellingPrice - projectedReceived)}
+                              </span>
+                            )}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Right side: input when checked, pending status when unchecked */}
+                      {checked ? (
                         <div className="w-28 shrink-0">
                           <Input
                             type="number"
                             min="0"
-                            placeholder="₹ split"
-                            value={allocations[d._id] || ""}
+                            placeholder="split"
+                            value={allocations[id] || ""}
                             onClick={(e) => e.stopPropagation()}
                             onChange={(e) => {
                               setAutoSplit(false);
-                              setAllocations((a) => ({ ...a, [d._id]: e.target.value }));
+                              setAllocations((a) => ({ ...a, [id]: e.target.value }));
                             }}
                             onWheel={(e) => e.target.blur()}
                             className="text-right text-sm"
                           />
                         </div>
+                      ) : (
+                        d.dealStatus !== "unsold" && d.sellingPrice && (
+                          <span className="text-xs font-medium shrink-0 mt-0.5 text-slate-400">
+                            {(projectedReceived - d.sellingPrice) > 0
+                              ? `Pending ${formatCurrency(d.paymentPending)}`
+                              : "Fully Paid"}
+                          </span>
+                        )
                       )}
                     </label>
                   );
@@ -317,19 +500,27 @@ const AddPaymentModal = ({ onClose, onSuccess }) => {
           </div>
         </div>
 
-        {/* Allocation summary */}
-        {selectedIds.length > 0 && (
+        {/* Allocation summary bar — always visible when amount is entered, updates live on (de)select */}
+        {enteredAmount > 0 && (
           <div
             className={`rounded-lg px-4 py-3 text-sm flex items-center justify-between gap-3
-              ${Math.abs(diff) < 0.01 ? "bg-emerald-50 border border-emerald-100" : "bg-amber-50 border border-amber-100"}`}
+              ${Math.abs(diff) < 0.01 && selectedIds.length > 0
+                ? "bg-emerald-50 border border-emerald-100"
+                : "bg-amber-50 border border-amber-100"}`}
           >
             <span className="text-slate-600">
-              Allocated: <span className="font-semibold">{formatCurrency(allocatedTotal)}</span>{" "}
+              Allocated:{" "}
+              <span className="font-semibold">{formatCurrency(allocatedTotal)}</span>{" "}
               of <span className="font-semibold">{formatCurrency(enteredAmount)}</span>
+              {selectedIds.length === 0 && (
+                <span className="ml-2 text-amber-500 font-medium">— select at least one deal</span>
+              )}
             </span>
-            {Math.abs(diff) >= 0.01 && (
+            {selectedIds.length > 0 && Math.abs(diff) >= 0.01 && (
               <span className="font-semibold text-amber-600 shrink-0">
-                {diff > 0 ? `${formatCurrency(diff)} unallocated` : `Over by ${formatCurrency(Math.abs(diff))}`}
+                {diff > 0
+                  ? `${formatCurrency(diff)} unallocated`
+                  : `Over by ${formatCurrency(Math.abs(diff))}`}
               </span>
             )}
             <button
@@ -337,7 +528,7 @@ const AddPaymentModal = ({ onClose, onSuccess }) => {
               onClick={() => setAutoSplit(true)}
               className="text-xs text-indigo-600 hover:text-indigo-800 font-medium underline shrink-0"
             >
-              Re-auto-split
+              Auto-split
             </button>
           </div>
         )}
@@ -347,16 +538,19 @@ const AddPaymentModal = ({ onClose, onSuccess }) => {
             Cancel
           </Btn>
           <Btn type="submit" variant="primary" className="flex-1" disabled={saving}>
-            {saving ? "Saving…" : "Save Payment"}
+            {saving
+              ? mode === "edit" ? "Updating…" : "Saving…"
+              : mode === "edit" ? "Update Payment" : "Save Payment"}
           </Btn>
         </div>
       </form>
     </Modal>
+    </>
   );
 };
 
-// ── Receipt card ────────────────────────────────────────────────────────────
-const ReceiptCard = ({ receipt, onDelete, deleting, formatCurrency, formatDate }) => {
+// ── Receipt card ─────────────────────────────────────────────────────────────
+const ReceiptCard = ({ receipt, onDelete, onEdit, deleting, formatCurrency, formatDate }) => {
   const [expanded, setExpanded] = useState(false);
   const isSplit = receipt.allocations.length > 1;
   const fullyApplied =
@@ -380,7 +574,6 @@ const ReceiptCard = ({ receipt, onDelete, deleting, formatCurrency, formatDate }
           </p>
         </div>
 
-        {/* Status badges */}
         <div className="flex flex-col items-end gap-1 shrink-0">
           {isSplit ? (
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-violet-50 text-violet-700 border border-violet-200">
@@ -433,7 +626,17 @@ const ReceiptCard = ({ receipt, onDelete, deleting, formatCurrency, formatDate }
               {receipt.note}
             </div>
           )}
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Btn
+              variant="secondary"
+              className="text-xs py-1.5"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(receipt);
+              }}
+            >
+              ✎ Edit / Re-split
+            </Btn>
             <Btn
               variant="ghost"
               className="text-xs py-1.5 border border-slate-200 text-red-400 hover:text-white hover:bg-red-400"
@@ -443,7 +646,7 @@ const ReceiptCard = ({ receipt, onDelete, deleting, formatCurrency, formatDate }
               }}
               disabled={deleting}
             >
-              {deleting ? "Deleting…" : "Delete Payment"}
+              {deleting ? "Deleting…" : "Delete"}
             </Btn>
           </div>
         </div>
@@ -452,7 +655,7 @@ const ReceiptCard = ({ receipt, onDelete, deleting, formatCurrency, formatDate }
   );
 };
 
-// ── Capsule filter button (reused styling from PhoneDeals) ─────────────────
+// ── Capsule filter button ─────────────────────────────────────────────────────
 const Capsule = ({ active, onClick, children, activeColor = "gray" }) => {
   const activeClasses = {
     indigo: "bg-indigo-600 text-white border-indigo-600 shadow-sm",
@@ -466,19 +669,15 @@ const Capsule = ({ active, onClick, children, activeColor = "gray" }) => {
     <button
       onClick={onClick}
       className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors whitespace-nowrap
-        ${
-          active
-            ? activeClasses[activeColor]
-            : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
-        }`}
+        ${active ? activeClasses[activeColor] : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"}`}
     >
       {children}
     </button>
   );
 };
 
-// ── Month group ──────────────────────────────────────────────────────────
-const MonthGroup = ({ group, onDelete, deletingId, formatCurrency, formatDate, allExpanded }) => {
+// ── Month group ──────────────────────────────────────────────────────────────
+const MonthGroup = ({ group, onDelete, onEdit, deletingId, formatCurrency, formatDate, allExpanded }) => {
   const [open, setOpen] = useState(true);
 
   useEffect(() => {
@@ -520,6 +719,7 @@ const MonthGroup = ({ group, onDelete, deletingId, formatCurrency, formatDate, a
               key={r._id}
               receipt={r}
               onDelete={onDelete}
+              onEdit={onEdit}
               deleting={deletingId === r._id}
               formatCurrency={formatCurrency}
               formatDate={formatDate}
@@ -531,24 +731,22 @@ const MonthGroup = ({ group, onDelete, deletingId, formatCurrency, formatDate, a
   );
 };
 
-// ── Main PhonePayments ──────────────────────────────────────────────────────
+// ── Main PhonePayments ────────────────────────────────────────────────────────
 const PhonePayments = () => {
   const { getPayments, deletePaymentReceipt, formatCurrency, formatDate } = usePhone();
 
   const [receipts, setReceipts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [editReceipt, setEditReceipt] = useState(null);
   const [toast, setToast] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [allExpanded, setAllExpanded] = useState(null);
 
-  // Status filter: all | split | single | partial | full
   const [statusFilter, setStatusFilter] = useState("all");
-
-  // Month-picker strip
   const [stripYear, setStripYear] = useState(_now.getFullYear());
-  const [selectedMonthKey, setSelectedMonthKey] = useState(null); // "YYYY-M" or null
+  const [selectedMonthKey, setSelectedMonthKey] = useState(null);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -593,26 +791,19 @@ const PhonePayments = () => {
 
   const clearMonthFilter = () => setSelectedMonthKey(null);
 
-  // ── Apply status filter ───────────────────────────────────────────────
   const isFullyApplied = (r) =>
     Math.abs(r.amount - r.allocations.reduce((s, a) => s + a.amount, 0)) < 0.01;
 
   const statusFiltered = receipts.filter((r) => {
     switch (statusFilter) {
-      case "split":
-        return r.allocations.length > 1;
-      case "single":
-        return r.allocations.length === 1;
-      case "partial":
-        return !isFullyApplied(r);
-      case "full":
-        return isFullyApplied(r);
-      default:
-        return true;
+      case "split": return r.allocations.length > 1;
+      case "single": return r.allocations.length === 1;
+      case "partial": return !isFullyApplied(r);
+      case "full": return isFullyApplied(r);
+      default: return true;
     }
   });
 
-  // ── Apply month filter ────────────────────────────────────────────────
   const monthFiltered = selectedMonthKey
     ? statusFiltered.filter((r) => {
         const d = new Date(r.date);
@@ -623,7 +814,6 @@ const PhonePayments = () => {
 
   const groups = groupByMonth(monthFiltered);
 
-  // ── Totals (based on currently visible set) ─────────────────────────────
   const totalReceived = monthFiltered.reduce((s, r) => s + r.amount, 0);
   const splitCount = monthFiltered.filter((r) => r.allocations.length > 1).length;
   const partialCount = monthFiltered.filter((r) => !isFullyApplied(r)).length;
@@ -656,17 +846,30 @@ const PhonePayments = () => {
       )}
 
       {showAdd && (
-        <AddPaymentModal
+        <PaymentForm
           onClose={() => setShowAdd(false)}
           onSuccess={() => {
             setShowAdd(false);
-            showToast("Payment recorded and split across selected deals", "success");
+            showToast("Payment recorded and split across selected deals");
             fetchReceipts();
           }}
+          mode="add"
         />
       )}
 
-      {/* Header */}
+      {editReceipt && (
+        <PaymentForm
+          initial={editReceipt}
+          onClose={() => setEditReceipt(null)}
+          onSuccess={() => {
+            setEditReceipt(null);
+            showToast("Payment updated successfully");
+            fetchReceipts();
+          }}
+          mode="edit"
+        />
+      )}
+
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Payments Received</h2>
@@ -688,9 +891,7 @@ const PhonePayments = () => {
         </div>
       </div>
 
-      {/* Month / Year quick-select strip */}
       <div className="bg-white border border-slate-200 rounded-xl mb-4 overflow-hidden">
-        {/* Year row */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 bg-slate-50">
           <button
             onClick={() => setStripYear((y) => y - 1)}
@@ -711,7 +912,6 @@ const PhonePayments = () => {
             ›
           </button>
         </div>
-        {/* Month pills */}
         <div className="grid grid-cols-6 md:grid-cols-12 gap-1 p-2">
           {MONTH_NAMES.map((name, idx) => {
             const key = `${stripYear}-${idx + 1}`;
@@ -723,12 +923,11 @@ const PhonePayments = () => {
                 key={key}
                 onClick={() => selectMonth(stripYear, idx + 1)}
                 className={`px-1 py-2 rounded-lg text-xs font-semibold transition-colors text-center
-                  ${
-                    isSelected
-                      ? "bg-slate-300 text-white shadow-sm"
-                      : isCurrentMonth
-                        ? "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-indigo-100"
-                        : "text-slate-600 hover:bg-slate-100"
+                  ${isSelected
+                    ? "bg-slate-300 text-white shadow-sm"
+                    : isCurrentMonth
+                      ? "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-indigo-100"
+                      : "text-slate-600 hover:bg-slate-100"
                   }`}
               >
                 {name}
@@ -736,7 +935,6 @@ const PhonePayments = () => {
             );
           })}
         </div>
-        {/* Active month / clear */}
         {selectedMonthKey && (
           <div className="px-3 py-2 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
             <span className="text-xs text-slate-500">
@@ -753,7 +951,6 @@ const PhonePayments = () => {
         )}
       </div>
 
-      {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         <SummaryCard label="Total Received" value={formatCurrency(totalReceived)} accent="emerald" />
         <SummaryCard
@@ -770,7 +967,6 @@ const PhonePayments = () => {
         />
       </div>
 
-      {/* Status capsule filters */}
       <div className="mb-5">
         <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
           {statusCapsules.map((c) => (
@@ -786,16 +982,13 @@ const PhonePayments = () => {
         </div>
       </div>
 
-      {/* Grouped receipts list */}
       {loading ? (
         <div className="text-center py-16 text-slate-400 animate-enter">Loading payments…</div>
       ) : groups.length === 0 ? (
         <div className="text-center py-16 text-slate-400 animate-enter">
           <p className="text-4xl mb-3">💰</p>
           <p className="font-medium text-slate-500">No payments found</p>
-          <p className="text-sm mt-1">
-            Try adjusting your filters or add a new payment
-          </p>
+          <p className="text-sm mt-1">Try adjusting your filters or add a new payment</p>
         </div>
       ) : (
         <div className="space-y-1 animate-enter">
@@ -804,6 +997,7 @@ const PhonePayments = () => {
               key={group.key}
               group={group}
               onDelete={setConfirmDelete}
+              onEdit={setEditReceipt}
               deletingId={deletingId}
               formatCurrency={formatCurrency}
               formatDate={formatDate}

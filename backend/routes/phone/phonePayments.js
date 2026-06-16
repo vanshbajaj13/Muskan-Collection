@@ -183,7 +183,98 @@ router.post("/", protect, protectVansh, async (req, res) => {
   }
 });
 
-// ── DELETE a receipt — removes it and all its allocated payments from deals ─
+// ── PATCH /api/phones/payments/:id — edit & re-split a receipt ───────────
+// 1. Remove all old allocated payment sub-docs from previously-touched deals
+// 2. Apply the new allocations to the new (possibly different) set of deals
+// 3. Update the receipt document
+// All in one transaction — nothing is left half-applied on error.
+router.patch("/:id", protect, protectVansh, async (req, res) => {
+  const session = await mongoose.startSession();
+  try {
+    const existing = await PhonePayment.findById(req.params.id);
+    if (!existing) return res.status(404).json({ message: "Payment not found" });
+
+    const { amount, date, note, method, allocations } = req.body;
+
+    if (!amount || !date || !allocations || allocations.length === 0) {
+      return res.status(400).json({ error: "amount, date, and allocations are required" });
+    }
+
+    const totalAlloc = allocations.reduce((s, a) => s + Number(a.amount), 0);
+    if (Math.abs(totalAlloc - Number(amount)) > 0.01) {
+      return res.status(400).json({
+        error: `Allocation total (₹${totalAlloc}) does not match received amount (₹${amount})`,
+      });
+    }
+
+    let savedReceipt;
+
+    await session.withTransaction(async () => {
+      // Step 1 — strip old payment sub-docs from previously allocated deals
+      const oldDealIds = existing.allocations.map((a) => a.dealId);
+      for (const dealId of oldDealIds) {
+        await PhoneDeal.findByIdAndUpdate(
+          dealId,
+          { $pull: { payments: { receiptId: existing._id } } },
+          { session }
+        );
+      }
+
+      // Step 2 — fetch deal snapshots for new allocations
+      const newDealIds = allocations.map((a) => a.dealId);
+      const deals = await PhoneDeal.find({ _id: { $in: newDealIds } }).session(session);
+      const dealMap = {};
+      deals.forEach((d) => (dealMap[d._id.toString()] = d));
+
+      const enrichedAllocs = allocations.map((a) => {
+        const d = dealMap[a.dealId.toString()];
+        return {
+          dealId: a.dealId,
+          amount: Number(a.amount),
+          product: d ? d.product : "",
+          soldTo: d ? d.soldTo : "",
+        };
+      });
+
+      // Step 3 — update the receipt document in place
+      existing.amount = Number(amount);
+      existing.date = parseInt(date);
+      existing.note = buildReceiptNote(Number(amount), enrichedAllocs, note);
+      existing.method = method !== undefined ? method : existing.method;
+      existing.allocations = enrichedAllocs;
+      await existing.save({ session });
+
+      // Step 4 — push new payment sub-docs into each newly-allocated deal
+      for (const a of enrichedAllocs) {
+        await PhoneDeal.findByIdAndUpdate(
+          a.dealId,
+          {
+            $push: {
+              payments: {
+                amount: a.amount,
+                date: parseInt(date),
+                note: buildDealPaymentNote(Number(amount), a.amount, enrichedAllocs, note),
+                receiptId: existing._id,
+              },
+            },
+          },
+          { session }
+        );
+      }
+
+      savedReceipt = existing;
+    });
+
+    res.json(savedReceipt);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message || "Internal Server Error" });
+  } finally {
+    session.endSession();
+  }
+});
+
+// ── DELETE a receipt — removes it and all its allocated payments from deals
 router.delete("/:id", protect, protectVansh, async (req, res) => {
   const session = await mongoose.startSession();
   try {
