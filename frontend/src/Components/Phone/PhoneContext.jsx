@@ -152,6 +152,33 @@ export const PhoneProvider = ({ children }) => {
     });
   };
 
+  // ── Payment Receipt helpers (unified payment tracking) ─────────────────────
+
+  const getPayments = (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/api/phones/payments?${qs}`, { headers: authHeaders() });
+  };
+
+  const getEligibleDeals = (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/api/phones/payments/eligible-deals?${qs}`, {
+      headers: authHeaders(),
+    });
+  };
+
+  const createPaymentReceipt = (data) =>
+    request("/api/phones/payments", {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify(data),
+    });
+
+  const deletePaymentReceipt = (id) =>
+    request(`/api/phones/payments/${id}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+
   // ── Personal Expense helpers ──────────────────────────────────────────────
 
   const getExpenses = (params = {}) => {
@@ -246,6 +273,7 @@ export const PhoneProvider = ({ children }) => {
         dropdowns, loadingDropdowns, fetchDropdowns, opts,
         getDeals, createDeal, updateDeal, deleteDeal,
         addPayment, removePayment, getDealStats,
+        getPayments, getEligibleDeals, createPaymentReceipt, deletePaymentReceipt,
         getExpenses, createExpense, updateExpense, deleteExpense,
         addDropdown, renameDropdown, deleteDropdown,
         formatCurrency, formatDate, tsFromDate, dateFromTs,

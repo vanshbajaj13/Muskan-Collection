@@ -6,9 +6,11 @@ import ExpenseTracker from "./ExpenseTracker";
 import PhoneDashboard from "./PhoneDashboard";
 import MenuBtn from "../MenuBtn";
 import PhoneSalesReport from "./PhoneSalesReport";
+import PhonePayments from "./PhonePayments";
 
 const TABS = [
   { key: "deals", label: "Deals", component: <PhoneDeals /> },
+  { key: "payments", label: "Payments", component: <PhonePayments /> },
   { key: "dashboard", label: "Dashboard", component: <PhoneDashboard /> },
   { key: "report", label: "Report", component: <PhoneSalesReport /> },
   { key: "expenses", label: "Expenses", component: <ExpenseTracker /> },

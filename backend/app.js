@@ -21,6 +21,7 @@ const salesReport = require("./routes/salesReport");
 const phoneDeals = require("./routes/phone/phoneDeals");
 const phoneExpenses = require("./routes/phone/personalExpenses");
 const phoneDropdowns = require("./routes/phone/phoneDropdowns");
+const phonePaymentsRouter = require("./routes/phone/phonePayments");
 
 // family planner  ← NEW
 const familyIncome = require("./routes/family/familyIncome");
@@ -64,6 +65,7 @@ app.use("/api/salesreport", salesReport);
 app.use("/api/phones/deals", phoneDeals);
 app.use("/api/phones/expenses", phoneExpenses);
 app.use("/api/phones/dropdowns", phoneDropdowns);
+app.use("/api/phones/payments", phonePaymentsRouter);
 
 // family planner  ← NEW
 app.use("/api/family/income", familyIncome);

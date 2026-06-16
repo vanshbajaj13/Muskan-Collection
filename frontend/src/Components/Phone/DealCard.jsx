@@ -519,8 +519,16 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                       <span className="text-slate-400 text-xs">
                         {formatDate(p.date)}
                       </span>
+                      {p.receiptId && (
+                        <span
+                          className="text-xs font-medium text-violet-600 bg-violet-50 border border-violet-200 px-1.5 py-0.5 rounded"
+                          title="Part of a split payment — see Payments tab for full breakdown"
+                        >
+                          Split payment
+                        </span>
+                      )}
                       {p.note && (
-                        <span className="text-slate-500 text-xs">{p.note}</span>
+                        <span className="text-slate-500 text-xs truncate">{p.note}</span>
                       )}
                       <button
                         className="ml-auto text-slate-300 hover:text-rose-400 transition-colors"

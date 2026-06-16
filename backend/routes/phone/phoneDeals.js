@@ -84,36 +84,84 @@ router.delete("/:id", protect, protectVansh, async (req, res) => {
   }
 });
 
-// ── ADD payment to deal ───────────────────────────────────────────────────
+// ── ADD payment to deal (unified — also creates a PhonePayment receipt) ───
 router.post("/:id/payment", protect, protectVansh, async (req, res) => {
   try {
     const { amount, date, note } = req.body;
     if (!amount || !date) {
       return res.status(400).json({ error: "amount and date are required" });
     }
-    const deal = await PhoneDeal.findByIdAndUpdate(
-      req.params.id,
-      { $push: { payments: { amount, date, note: note || "" } } },
-      { new: true }
-    );
+
+    const deal = await PhoneDeal.findById(req.params.id);
     if (!deal) return res.status(404).json({ message: "Deal not found" });
+
+    const { PhonePayment } = require("../../Models/phone/phonePayment");
+
+    const receipt = new PhonePayment({
+      amount: parseFloat(amount),
+      date: parseInt(date),
+      note: note
+        ? `Received ₹${Number(amount).toLocaleString("en-IN")} for ${deal.product}. Note: ${note}`
+        : `Received ₹${Number(amount).toLocaleString("en-IN")} for ${deal.product}`,
+      method: "",
+      allocations: [
+        {
+          dealId: deal._id,
+          amount: parseFloat(amount),
+          product: deal.product,
+          soldTo: deal.soldTo,
+        },
+      ],
+    });
+    await receipt.save();
+
+    deal.payments.push({
+      amount: parseFloat(amount),
+      date: parseInt(date),
+      note: note || "",
+      receiptId: receipt._id,
+    });
+    await deal.save();
+
     res.json(deal);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-// ── REMOVE a specific payment from a deal ────────────────────────────────
+// ── REMOVE a specific payment from a deal (also cleans up linked receipt) ─
 router.delete("/:id/payment/:paymentId", protect, protectVansh, async (req, res) => {
   try {
-    const deal = await PhoneDeal.findByIdAndUpdate(
-      req.params.id,
-      { $pull: { payments: { _id: req.params.paymentId } } },
-      { new: true }
-    );
+    const deal = await PhoneDeal.findById(req.params.id);
     if (!deal) return res.status(404).json({ message: "Deal not found" });
+
+    const payment = deal.payments.find((p) => p._id.toString() === req.params.paymentId);
+    const receiptId = payment?.receiptId;
+
+    deal.payments = deal.payments.filter((p) => p._id.toString() !== req.params.paymentId);
+    await deal.save();
+
+    // If this payment was part of a multi-allocation receipt, also remove it
+    // from the receipt's allocations / delete the receipt if it becomes empty.
+    if (receiptId) {
+      const { PhonePayment } = require("../../Models/phone/phonePayment");
+      const receipt = await PhonePayment.findById(receiptId);
+      if (receipt) {
+        receipt.allocations = receipt.allocations.filter(
+          (a) => a.dealId.toString() !== req.params.id
+        );
+        if (receipt.allocations.length === 0) {
+          await PhonePayment.findByIdAndDelete(receiptId);
+        } else {
+          await receipt.save();
+        }
+      }
+    }
+
     res.json(deal);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });

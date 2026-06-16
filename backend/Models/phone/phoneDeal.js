@@ -6,6 +6,7 @@ const paymentSchema = new mongoose.Schema(
     amount: { type: Number, required: true },
     date: { type: Number, required: true }, // timestamp
     note: { type: String, default: "" },
+    receiptId: { type: mongoose.Schema.Types.ObjectId, ref: "PhonePayment", default: null }, // links to unified payment receipt, null for legacy/manual entries
   },
   { _id: true }
 );
