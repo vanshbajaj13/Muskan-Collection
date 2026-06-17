@@ -107,45 +107,92 @@ export const FamilyPlannerProvider = ({ children }) => {
     Authorization: `Bearer ${token()}`,
   });
 
+  // ── Hardened fetch wrapper ───────────────────────────────────────────────
+  // Fixes the "silent failure" bug: iOS Safari/PWA can suspend an in-flight
+  // fetch (screen lock, app switch, wifi↔cellular handoff) so it never
+  // resolves or rejects. Without a timeout, the calling try/catch/finally
+  // never runs — no error, no toast, spinner just hangs or clears on resume.
+  // This wrapper aborts after TIMEOUT_MS and retries once on network-level
+  // failures only (not on HTTP error responses, which are real server answers).
+  const TIMEOUT_MS = 15000;
+
+  const requestRaw = async (url, options = {}) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  const request = async (url, options = {}, { retry = true } = {}) => {
+    try {
+      return await requestRaw(url, options);
+    } catch (err) {
+      // Network-level failure (timeout, offline, connection dropped) —
+      // NOT an HTTP error response, since those don't throw. Safe to retry once.
+      if (retry) {
+        return await requestRaw(url, options);
+      }
+      if (err?.name === "AbortError") {
+        throw new Error("Request timed out. Please check your connection and try again.");
+      }
+      throw new Error("Network error. Please check your connection and try again.");
+    }
+  };
+
+  // Parses a JSON body safely; throws a useful error on non-OK / non-JSON responses
+  // instead of letting `await res.json()` throw a confusing parse error, and
+  // instead of silently proceeding past a failed DELETE with no body check.
+  const parseJson = async (res, fallbackMsg) => {
+    if (!res.ok) {
+      let msg = fallbackMsg;
+      try {
+        const e = await res.json();
+        msg = e.error || e.message || fallbackMsg;
+      } catch {
+        // Response wasn't JSON (e.g. HTML error page from a proxy/cold start) — ignore
+      }
+      throw new Error(msg);
+    }
+    try {
+      return await res.json();
+    } catch {
+      throw new Error("Server returned an unexpected response. Please try again.");
+    }
+  };
+
+  // fetchAll uses Promise.allSettled instead of Promise.all so that one slow
+  // or failed endpoint (e.g. suspended by iOS mid-request) doesn't prevent
+  // the other five from loading and updating their own state.
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [incRes, expRes, bizRes, debtRes, savRes, ddRes] =
-        await Promise.all([
-          fetch("/api/family/income", { headers: authHeaders() }),
-          fetch("/api/family/expenses", { headers: authHeaders() }),
-          fetch("/api/family/business", { headers: authHeaders() }),
-          fetch("/api/family/debts", { headers: authHeaders() }),
-          fetch("/api/family/savings", { headers: authHeaders() }),
-          fetch("/api/family/dropdowns", { headers: authHeaders() }),
-        ]);
+      const endpoints = [
+        { url: "/api/family/income", apply: (d) => setIncomes(d.incomes || []) },
+        { url: "/api/family/expenses", apply: (d) => setExpenses(d.expenses || []) },
+        { url: "/api/family/business", apply: (d) => setBusinessEntries(d.entries || []) },
+        { url: "/api/family/debts", apply: (d) => setDebts(d.debts || []) },
+        { url: "/api/family/savings", apply: (d) => setSavingsGoals(d.goals || []) },
+        { url: "/api/family/dropdowns", apply: (d) => setDropdowns(d || {}) },
+      ];
 
-      if (incRes.ok) {
-        const d = await incRes.json();
-        setIncomes(d.incomes || []);
-      }
-      if (expRes.ok) {
-        const d = await expRes.json();
-        setExpenses(d.expenses || []);
-      }
-      if (bizRes.ok) {
-        const d = await bizRes.json();
-        setBusinessEntries(d.entries || []);
-      }
-      if (debtRes.ok) {
-        const d = await debtRes.json();
-        setDebts(d.debts || []);
-      }
-      if (savRes.ok) {
-        const d = await savRes.json();
-        setSavingsGoals(d.goals || []);
-      }
-      if (ddRes.ok) {
-        const d = await ddRes.json();
-        setDropdowns(d || {});
-      }
-    } catch (e) {
-      console.error(e);
+      const results = await Promise.allSettled(
+        endpoints.map((ep) => request(ep.url, { headers: authHeaders() })),
+      );
+
+      results.forEach((result, i) => {
+        const { apply, url } = endpoints[i];
+        if (result.status === "fulfilled" && result.value.ok) {
+          result.value
+            .json()
+            .then(apply)
+            .catch((e) => console.error(`Failed to parse response from ${url}`, e));
+        } else if (result.status === "rejected") {
+          console.error(`Failed to load ${url}`, result.reason);
+        }
+      });
     } finally {
       setLoading(false);
     }
@@ -157,75 +204,75 @@ export const FamilyPlannerProvider = ({ children }) => {
 
   // ── Income CRUD ───────────────────────────────────────────────────────────
   const createIncome = async (data) => {
-    const res = await fetch("/api/family/income", {
+    const res = await request("/api/family/income", {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed");
-    const created = await res.json();
+    const created = await parseJson(res, "Failed to add income");
     setIncomes((prev) => [created, ...prev]);
     return created;
   };
   const updateIncome = async (id, data) => {
-    const res = await fetch(`/api/family/income/${id}`, {
+    const res = await request(`/api/family/income/${id}`, {
       method: "PATCH",
       headers: authHeaders(),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed");
-    const updated = await res.json();
+    const updated = await parseJson(res, "Failed to update income");
     setIncomes((prev) => prev.map((i) => (i._id === id ? updated : i)));
     return updated;
   };
   const deleteIncome = async (id) => {
-    await fetch(`/api/family/income/${id}`, {
+    const res = await request(`/api/family/income/${id}`, {
       method: "DELETE",
       headers: authHeaders(),
     });
+    // Previously this never checked res.ok, so a failed delete on the
+    // server still vanished the item from local state — it would then
+    // reappear on the next fetchAll(), looking like a random glitch.
+    await parseJson(res, "Failed to delete income");
     setIncomes((prev) => prev.filter((i) => i._id !== id));
   };
 
   // ── Expense CRUD ──────────────────────────────────────────────────────────
   const createExpense = async (data) => {
-    const res = await fetch("/api/family/expenses", {
+    const res = await request("/api/family/expenses", {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed");
-    const created = await res.json();
+    const created = await parseJson(res, "Failed to add expense");
     setExpenses((prev) => [created, ...prev]);
     return created;
   };
   const updateExpense = async (id, data) => {
-    const res = await fetch(`/api/family/expenses/${id}`, {
+    const res = await request(`/api/family/expenses/${id}`, {
       method: "PATCH",
       headers: authHeaders(),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed");
-    const updated = await res.json();
+    const updated = await parseJson(res, "Failed to update expense");
     setExpenses((prev) => prev.map((e) => (e._id === id ? updated : e)));
     return updated;
   };
   const deleteExpense = async (id) => {
-    await fetch(`/api/family/expenses/${id}`, {
+    const res = await request(`/api/family/expenses/${id}`, {
       method: "DELETE",
       headers: authHeaders(),
     });
+    await parseJson(res, "Failed to delete expense");
     setExpenses((prev) => prev.filter((e) => e._id !== id));
   };
 
   // ── Business CRUD ─────────────────────────────────────────────────────────
   const upsertBusiness = async (data) => {
-    const res = await fetch("/api/family/business", {
+    const res = await request("/api/family/business", {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed");
-    const entry = await res.json();
+    const entry = await parseJson(res, "Failed to save business entry");
     setBusinessEntries((prev) => {
       const exists = prev.find((b) => b._id === entry._id);
       return exists
@@ -235,151 +282,141 @@ export const FamilyPlannerProvider = ({ children }) => {
     return entry;
   };
   const deleteBusiness = async (id) => {
-    await fetch(`/api/family/business/${id}`, {
+    const res = await request(`/api/family/business/${id}`, {
       method: "DELETE",
       headers: authHeaders(),
     });
+    await parseJson(res, "Failed to delete business entry");
     setBusinessEntries((prev) => prev.filter((b) => b._id !== id));
   };
 
   // ── Debt CRUD ─────────────────────────────────────────────────────────────
   const createDebt = async (data) => {
-    const res = await fetch("/api/family/debts", {
+    const res = await request("/api/family/debts", {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed");
-    const created = await res.json();
+    const created = await parseJson(res, "Failed to add debt");
     setDebts((prev) => [created, ...prev]);
     return created;
   };
   const updateDebt = async (id, data) => {
-    const res = await fetch(`/api/family/debts/${id}`, {
+    const res = await request(`/api/family/debts/${id}`, {
       method: "PATCH",
       headers: authHeaders(),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed");
-    const updated = await res.json();
+    const updated = await parseJson(res, "Failed to update debt");
     setDebts((prev) => prev.map((d) => (d._id === id ? updated : d)));
     return updated;
   };
   const deleteDebt = async (id) => {
-    await fetch(`/api/family/debts/${id}`, {
+    const res = await request(`/api/family/debts/${id}`, {
       method: "DELETE",
       headers: authHeaders(),
     });
+    await parseJson(res, "Failed to delete debt");
     setDebts((prev) => prev.filter((d) => d._id !== id));
   };
   const addRepayment = async (debtId, data) => {
-    const res = await fetch(`/api/family/debts/${debtId}/repayment`, {
+    const res = await request(`/api/family/debts/${debtId}/repayment`, {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed");
-    const updated = await res.json();
+    const updated = await parseJson(res, "Failed to add repayment");
     setDebts((prev) => prev.map((d) => (d._id === debtId ? updated : d)));
     return updated;
   };
   const removeRepayment = async (debtId, repId) => {
-    const res = await fetch(`/api/family/debts/${debtId}/repayment/${repId}`, {
+    const res = await request(`/api/family/debts/${debtId}/repayment/${repId}`, {
       method: "DELETE",
       headers: authHeaders(),
     });
-    if (!res.ok) throw new Error("Failed");
-    const updated = await res.json();
+    const updated = await parseJson(res, "Failed to remove repayment");
     setDebts((prev) => prev.map((d) => (d._id === debtId ? updated : d)));
+    return updated;
   };
 
   // ── Savings CRUD ──────────────────────────────────────────────────────────
   const createGoal = async (data) => {
-    const res = await fetch("/api/family/savings", {
+    const res = await request("/api/family/savings", {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed");
-    const created = await res.json();
+    const created = await parseJson(res, "Failed to add goal");
     setSavingsGoals((prev) => [created, ...prev]);
     return created;
   };
   const updateGoal = async (id, data) => {
-    const res = await fetch(`/api/family/savings/${id}`, {
+    const res = await request(`/api/family/savings/${id}`, {
       method: "PATCH",
       headers: authHeaders(),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed");
-    const updated = await res.json();
+    const updated = await parseJson(res, "Failed to update goal");
     setSavingsGoals((prev) => prev.map((g) => (g._id === id ? updated : g)));
     return updated;
   };
   const deleteGoal = async (id) => {
-    await fetch(`/api/family/savings/${id}`, {
+    const res = await request(`/api/family/savings/${id}`, {
       method: "DELETE",
       headers: authHeaders(),
     });
+    await parseJson(res, "Failed to delete goal");
     setSavingsGoals((prev) => prev.filter((g) => g._id !== id));
   };
   const addContribution = async (goalId, data) => {
-    const res = await fetch(`/api/family/savings/${goalId}/contribution`, {
+    const res = await request(`/api/family/savings/${goalId}/contribution`, {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error("Failed");
-    const updated = await res.json();
+    const updated = await parseJson(res, "Failed to add contribution");
     setSavingsGoals((prev) =>
       prev.map((g) => (g._id === goalId ? updated : g)),
     );
     return updated;
   };
   const removeContribution = async (goalId, contribId) => {
-    const res = await fetch(
+    const res = await request(
       `/api/family/savings/${goalId}/contribution/${contribId}`,
       {
         method: "DELETE",
         headers: authHeaders(),
       },
     );
-    if (!res.ok) throw new Error("Failed");
-    const updated = await res.json();
+    const updated = await parseJson(res, "Failed to remove contribution");
     setSavingsGoals((prev) =>
       prev.map((g) => (g._id === goalId ? updated : g)),
     );
+    return updated;
   };
 
   // ── Dropdown management ───────────────────────────────────────────────────
   const addDropdown = async (type, value) => {
-    const res = await fetch("/api/family/dropdowns", {
+    const res = await request("/api/family/dropdowns", {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify({ type, value }),
     });
-    if (!res.ok) {
-      const e = await res.json();
-      throw new Error(e.error || "Failed");
-    }
-    const opt = await res.json();
+    const opt = await parseJson(res, "Failed to add option");
     setDropdowns((prev) => ({
       ...prev,
       [type]: [...(prev[type] || []), { _id: opt._id, value: opt.value }],
     }));
+    return opt;
   };
 
   const renameDropdown = async (type, id, newValue) => {
-    const res = await fetch(`/api/family/dropdowns/${id}`, {
+    const res = await request(`/api/family/dropdowns/${id}`, {
       method: "PATCH",
       headers: authHeaders(),
       body: JSON.stringify({ value: newValue }),
     });
-    if (!res.ok) {
-      const e = await res.json();
-      throw new Error(e.error || "Failed");
-    }
-    const opt = await res.json();
+    const opt = await parseJson(res, "Failed to rename option");
 
     // Update local dropdown list
     setDropdowns((prev) => ({
@@ -409,10 +446,14 @@ export const FamilyPlannerProvider = ({ children }) => {
   };
 
   const deleteDropdown = async (type, id) => {
-    await fetch(`/api/family/dropdowns/${id}`, {
+    const res = await request(`/api/family/dropdowns/${id}`, {
       method: "DELETE",
       headers: authHeaders(),
     });
+    // Previously this never checked res.ok before removing the option
+    // from local state — a failed delete would still vanish it from the
+    // UI, only for it to reappear on the next fetchAll().
+    await parseJson(res, "Failed to delete option");
     setDropdowns((prev) => ({
       ...prev,
       [type]: (prev[type] || []).filter((o) => o._id !== id),

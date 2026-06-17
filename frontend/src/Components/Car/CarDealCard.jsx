@@ -7,6 +7,7 @@ const CarDealCard = ({ deal, onEdit, onDelete }) => {
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const cardRef = React.useRef(null);
 
   const handleDelete = async () => {
     setDeleting(true);
@@ -15,6 +16,24 @@ const CarDealCard = ({ deal, onEdit, onDelete }) => {
     } finally {
       setDeleting(false);
       setConfirmDelete(false);
+    }
+  };
+
+  const handleToggle = () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next) {
+      // Wait a tick so the expanded content has actually rendered and the
+      // card's height has grown before we measure/scroll to it — otherwise
+      // we'd scroll to where the (still-collapsed) card currently ends.
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          cardRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+          });
+        }, 50);
+      });
     }
   };
 
@@ -34,53 +53,67 @@ const CarDealCard = ({ deal, onEdit, onDelete }) => {
       )}
 
       <div
+        ref={cardRef}
         className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
         style={{ borderLeft: `3px solid ${isSold ? "#16a34a" : "#d97706"}` }}
       >
-        {/* Compact header */}
+        {/* Header — mobile-first single column, full detail at a glance */}
         <div
-          className="flex items-center gap-3 px-4 py-3.5 cursor-pointer select-none"
-          onClick={() => setExpanded(!expanded)}
+          className="px-4 py-3.5 cursor-pointer select-none active:bg-slate-50 transition-colors"
+          onClick={handleToggle}
         >
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-base font-bold text-slate-800">
+          {/* Row 1: identity + chevron */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-base font-bold text-slate-800 truncate">
                 {deal.carNumber}
               </span>
               <StatusBadge status={deal.dealStatus} />
             </div>
-            <p className="text-sm text-slate-500 truncate mt-0.5">
-              {deal.carDescription ||
-                [deal.make, deal.model, deal.year].filter(Boolean).join(" ") ||
-                "—"}
-            </p>
-            <p className="text-lg text-slate-400 font-bold mt-0.5">
-              Bought{formatDate(deal.purchaseDate)}
-              {deal.boughtFrom && ` · ${deal.boughtFrom}`}
-            </p>
+            <svg
+              className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${expanded ? "rotate-180" : ""}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
           </div>
 
-          <div className="flex flex-col items-end gap-1 shrink-0">
+          {/* Row 2: car description — wraps fully, never truncated */}
+          <p className="text-lg text-slate-500 mt-0.5">
+            {[deal.make,deal.carDescription, deal.model, deal.year]
+              .filter(Boolean)
+              .join(" · ") || "—"}
+          </p>
+
+          {/* Row 3: profit, prominent and unmissable on mobile */}
+          <div className="mt-2.5">
             <ProfitChip value={deal.netProfit} />
-            <p className="text-lg text-slate-400 font-bold mt-0.5">
-              Sold {formatDate(deal.saleDate)}
-              {deal.soldTo && ` · ${deal.soldTo}`}
-            </p>
           </div>
 
-          <svg
-            className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${expanded ? "rotate-180" : ""}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19 9l-7 7-7-7"
+          {/* Row 4: purchase / sale timeline, stacked for narrow screens */}
+          <div className="mt-2.5 space-y-1.5">
+            <TimelineRow
+              dotColor="bg-amber-500"
+              label="Bought"
+              date={formatDate(deal.purchaseDate)}
+              party={deal.boughtFrom}
             />
-          </svg>
+            {isSold && (
+              <TimelineRow
+                dotColor="bg-green-500"
+                label="Sold"
+                date={formatDate(deal.saleDate)}
+                party={deal.soldTo}
+              />
+            )}
+          </div>
         </div>
 
         {/* Expanded details */}
@@ -270,6 +303,20 @@ const CarDealCard = ({ deal, onEdit, onDelete }) => {
     </>
   );
 };
+
+const TimelineRow = ({ dotColor, label, date, party }) => (
+  <div className="flex items-center gap-2 text-lg font-semibold">
+    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} />
+    <span className="font-semibold text-slate-500 shrink-0">{label}</span>
+    <span className="text-slate-400">{date}</span>
+    {party && (
+      <>
+        <span className="text-slate-300">·</span>
+        <span className="text-slate-500 truncate">{party}</span>
+      </>
+    )}
+  </div>
+);
 
 const FlowRow = ({ label, value, bold, indent, color, highlight }) => {
   const highlightCls =
