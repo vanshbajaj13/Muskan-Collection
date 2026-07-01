@@ -13,6 +13,90 @@ const Inventory = () => {
   const [productSizesChartData, setProductSizesChartData] = useState([]);
   const [categoryChartData, setCategoryChartData] = useState([]);
 
+  // --- New Stock Added (date range) state ---
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const firstOfMonthStr = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth(),
+    1,
+  )
+    .toISOString()
+    .slice(0, 10);
+  const [stockFilterMode, setStockFilterMode] = useState("month"); // "month" | "range"
+  const [selectedMonth, setSelectedMonth] = useState(todayStr.slice(0, 7)); // YYYY-MM
+  const [startDate, setStartDate] = useState(firstOfMonthStr);
+  const [endDate, setEndDate] = useState(todayStr);
+  const [stockReport, setStockReport] = useState(null); // { summary, rows }
+  const [stockReportLoading, setStockReportLoading] = useState(false);
+  const [stockReportError, setStockReportError] = useState("");
+  const [showStockRows, setShowStockRows] = useState(false);
+
+  const getRangeForFetch = () => {
+    if (stockFilterMode === "month") {
+      const [y, m] = selectedMonth.split("-").map(Number);
+      const from = new Date(y, m - 1, 1, 0, 0, 0, 0);
+      const to = new Date(y, m, 0, 23, 59, 59, 999); // last day of month
+      return { from: from.toISOString(), to: to.toISOString() };
+    }
+    const from = new Date(startDate + "T00:00:00.000");
+    const to = new Date(endDate + "T23:59:59.999");
+    return { from: from.toISOString(), to: to.toISOString() };
+  };
+
+  const fetchStockAddedReport = async () => {
+    setStockReportLoading(true);
+    setStockReportError("");
+    try {
+      const { from, to } = getRangeForFetch();
+      const response = await fetch(
+        `/api/item/stock-added?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${
+              JSON.parse(window.localStorage.getItem("userInfo")).token
+            }`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        setStockReportError("Failed to fetch stock added report");
+        setStockReport(null);
+        return;
+      }
+
+      const data = await response.json();
+      setStockReport(data);
+    } catch (error) {
+      console.log(error);
+      setStockReportError("Something went wrong fetching the report");
+      setStockReport(null);
+    } finally {
+      setStockReportLoading(false);
+    }
+  };
+
+  // Group stock-added rows by brand, with per-brand subtotals
+  const groupStockRowsByBrand = (rows) => {
+    const groups = rows.reduce((acc, row) => {
+      let group = acc.find((g) => g.brand === row.brand);
+      if (!group) {
+        group = { brand: row.brand, rows: [], totalQty: 0, totalAmount: 0 };
+        acc.push(group);
+      }
+      group.rows.push(row);
+      group.totalQty += row.quantityAdded;
+      group.totalAmount += row.amount;
+      return acc;
+    }, []);
+
+    // Sort groups by total amount desc, and rows within each group by date
+    groups.forEach((g) =>
+      g.rows.sort((a, b) => new Date(a.date) - new Date(b.date)),
+    );
+    return groups.sort((a, b) => b.totalAmount - a.totalAmount);
+  };
+
   // Function to rearrange data and calculate total value for each brand
   const rearrangeBrandData = (data) => {
     const groupedData = data.reduce((acc, item) => {
@@ -327,6 +411,311 @@ const Inventory = () => {
             : "  Calculating......."}
         </div>
       </div>
+      {/* New Stock Added (date range / month) */}
+      <div className="mb-8 p-5 sm:p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+            <svg
+              className="w-4 h-4 text-blue-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+              />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-800">
+            New Stock Added
+          </h3>
+        </div>
+
+        {/* Filter controls */}
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
+            {["month", "range"].map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setStockFilterMode(mode)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors duration-200 ${
+                  stockFilterMode === mode
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {mode === "month" ? "By Month" : "By Date Range"}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {stockFilterMode === "month" ? (
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="p-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition"
+              />
+            ) : (
+              <>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="p-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition"
+                />
+                <span className="text-gray-400 text-sm">to</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="p-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 transition"
+                />
+              </>
+            )}
+          </div>
+
+          <button
+            onClick={fetchStockAddedReport}
+            disabled={stockReportLoading}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white text-sm font-medium rounded-lg shadow-sm transition-all duration-150 disabled:opacity-50 disabled:active:scale-100"
+          >
+            {stockReportLoading ? (
+              <span className="flex items-center gap-2">
+                <svg
+                  className="animate-spin h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
+                </svg>
+                Loading...
+              </span>
+            ) : (
+              "Get Report"
+            )}
+          </button>
+        </div>
+
+        {stockReportError && (
+          <div className="text-red-600 text-sm mb-3 p-2 bg-red-50 rounded-lg animate-enter">
+            {stockReportError}
+          </div>
+        )}
+
+        {/* Results */}
+        <div
+          className={`grid transition-all duration-300 ease-in-out ${
+            stockReport
+              ? "grid-rows-[1fr] opacity-100 mt-1"
+              : "grid-rows-[0fr] opacity-0"
+          } overflow-hidden`}
+        >
+          <div className="min-h-0 overflow-hidden">
+            {stockReport && (
+              <div className="animate-enter">
+                <div className="flex flex-wrap gap-3 mb-4">
+                  <div className="flex-1 min-w-[140px] p-3 rounded-xl bg-gray-50 border border-gray-100">
+                    <div className="text-xs text-gray-500 mb-1">
+                      Products Added
+                    </div>
+                    <div className="text-xl font-bold text-gray-800">
+                      {stockReport.summary.totalQuantity}
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-[140px] p-3 rounded-xl bg-gray-50 border border-gray-100">
+                    <div className="text-xs text-gray-500 mb-1">
+                      Total Amount
+                    </div>
+                    <div className="text-xl font-bold text-gray-800">
+                      ₹{stockReport.summary.totalAmount.toLocaleString("en-IN")}
+                    </div>
+                  </div>
+                </div>
+
+                {stockReport.rows.length > 0 && (
+                  <button
+                    onClick={() => setShowStockRows((prev) => !prev)}
+                    className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 text-sm font-medium mb-2 transition-colors"
+                  >
+                    {showStockRows ? "Hide" : "View"} products bought in this
+                    period
+                    <svg
+                      className={`w-3.5 h-3.5 transition-transform duration-300 ${showStockRows ? "rotate-180" : ""}`}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+                )}
+
+                {/* Collapsible table */}
+                <div
+                  className={`grid transition-all duration-300 ease-in-out ${
+                    showStockRows
+                      ? "grid-rows-[1fr] opacity-100"
+                      : "grid-rows-[0fr] opacity-0"
+                  } overflow-hidden`}
+                >
+                  <div className="min-h-0 overflow-hidden">
+                    {stockReport.rows.length > 0 && (
+                      <div className="overflow-x-auto rounded-lg border border-gray-100">
+                        <table className="min-w-full text-sm">
+                          <thead>
+                            <tr className="bg-gray-50">
+                              <th className="p-2.5 text-left font-medium text-gray-500 text-xs uppercase tracking-wide">
+                                Date
+                              </th>
+                              <th className="p-2.5 text-left font-medium text-gray-500 text-xs uppercase tracking-wide">
+                                Code
+                              </th>
+                              <th className="p-2.5 text-left font-medium text-gray-500 text-xs uppercase tracking-wide">
+                                Product
+                              </th>
+                              <th className="p-2.5 text-left font-medium text-gray-500 text-xs uppercase tracking-wide">
+                                Size
+                              </th>
+                              <th className="p-2.5 text-right font-medium text-gray-500 text-xs uppercase tracking-wide">
+                                Qty
+                              </th>
+                              <th className="p-2.5 text-right font-medium text-gray-500 text-xs uppercase tracking-wide">
+                                MRP
+                              </th>
+                              <th className="p-2.5 text-right font-medium text-gray-500 text-xs uppercase tracking-wide">
+                                Amount
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100">
+                            {groupStockRowsByBrand(stockReport.rows).map(
+                              (group) => (
+                                <React.Fragment key={group.brand}>
+                                  {/* Brand group header */}
+                                  <tr className="bg-blue-50/60">
+                                    <td
+                                      colSpan={7}
+                                      className="p-2 px-2.5 text-xs font-semibold text-blue-700 uppercase tracking-wide"
+                                    >
+                                      {group.brand}{" "}
+                                      <span className="text-blue-400 font-normal">
+                                        ({group.rows.length} item
+                                        {group.rows.length > 1 ? "s" : ""})
+                                      </span>
+                                      <span className="text-blue-400 font-normal">
+                                        {" - "}₹
+                                        {group.totalAmount.toLocaleString(
+                                          "en-IN",
+                                        )}
+                                      </span>
+                                    </td>
+                                  </tr>
+
+                                  {group.rows.map((row, idx) => (
+                                    <tr
+                                      key={`${row.code}-${row.date}-${idx}`}
+                                      className="hover:bg-gray-50 transition-colors"
+                                    >
+                                      <td className="p-2.5 text-gray-600">
+                                        {new Date(row.date).toLocaleDateString(
+                                          "en-IN",
+                                        )}
+                                      </td>
+                                      <td className="p-2.5 text-gray-600">
+                                        {row.code}
+                                      </td>
+                                      <td className="p-2.5 text-gray-800 font-medium">
+                                        <span className="inline-flex items-center gap-1.5 flex-wrap">
+                                          {row.product}
+                                          {row.type === "restocked" && (
+                                            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700 uppercase tracking-wide">
+                                              restocked
+                                            </span>
+                                          )}
+                                          {row.corrected && (
+                                            <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700 uppercase tracking-wide">
+                                              corrected
+                                            </span>
+                                          )}
+                                        </span>
+                                      </td>
+                                      <td className="p-2.5 text-gray-600">
+                                        {row.size}
+                                      </td>
+                                      <td className="p-2.5 text-right text-gray-600">
+                                        {row.quantityAdded}
+                                      </td>
+                                      <td className="p-2.5 text-right text-gray-600">
+                                        ₹{row.mrp}
+                                      </td>
+                                      <td className="p-2.5 text-right font-medium text-gray-800">
+                                        ₹{row.amount.toLocaleString("en-IN")}
+                                      </td>
+                                    </tr>
+                                  ))}
+
+                                  {/* Brand subtotal */}
+                                  <tr className="bg-gray-50 font-semibold border-t border-gray-200">
+                                    <td
+                                      colSpan={4}
+                                      className="p-2.5 text-right text-gray-600 text-xs"
+                                    >
+                                      Subtotal — {group.brand}
+                                    </td>
+                                    <td className="p-2.5 text-right text-gray-800">
+                                      {group.totalQty}
+                                    </td>
+                                    <td className="p-2.5" />
+                                    <td className="p-2.5 text-right text-gray-800">
+                                      ₹
+                                      {group.totalAmount.toLocaleString(
+                                        "en-IN",
+                                      )}
+                                    </td>
+                                  </tr>
+                                </React.Fragment>
+                              ),
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {stockReport.rows.length === 0 && (
+                  <div className="text-gray-400 text-sm text-center py-6 bg-gray-50 rounded-lg">
+                    No stock was added in this period.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Doughnut Chart for Brand */}
       <h3 className="text-lg font-semibold mb-2">Inventory by Brand</h3>
       <div className="flex items-center justify-center ">

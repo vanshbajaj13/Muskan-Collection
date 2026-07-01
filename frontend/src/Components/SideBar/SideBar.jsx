@@ -107,6 +107,15 @@ const SideBar = () => {
           </NavLink>
         )}
 
+        {(isAdmin || isDev) && (
+          <NavLink
+            href="/item-activity"
+            className="block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
+          >
+            📜 Item Activity History
+          </NavLink>
+        )}
+
         <NavLink
           href="/sale"
           className="text-green-500 block py-2 px-4 rounded transition duration-300 hover:bg-gray-700"
