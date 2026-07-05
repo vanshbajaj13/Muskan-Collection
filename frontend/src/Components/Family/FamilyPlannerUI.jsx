@@ -298,13 +298,13 @@ export const EmptyState = ({ icon, title, sub, action }) => (
 
 // ── Line item row (for multi-entry lists like stock purchases) ────────────────
 export const LineItemRow = ({ item, index, onChange, onRemove, descPlaceholder = "Description…" }) => (
-  <div className="flex items-center gap-2 animate-enter">
+  <div className="flex items-center gap-2 animate-enter w-full">
     <FPInput
       type="number"
       value={item.amount}
       onChange={(e) => onChange(index, "amount", e.target.value)}
       placeholder="Amount (₹)"
-      className="w-32 shrink-0"
+      className="flex-1"
     />
     <FPInput
       value={item.description}

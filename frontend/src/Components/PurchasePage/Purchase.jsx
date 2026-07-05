@@ -55,7 +55,7 @@ const Purchase = () => {
               return indexA - indexB;
             });
         return { ...s, sizes: newSizes };
-      })
+      }),
     );
   };
 
@@ -279,7 +279,7 @@ const Purchase = () => {
   const handleBrandChange = (e) => {
     const { name, value } = e.target;
     var selectedBrandProducts = dropdownOptions.products.filter(
-      (product) => product.brand === value
+      (product) => product.brand === value,
     );
     selectedBrandProducts = selectedBrandProducts[0]?.products || [];
     setProductOfSelectedBrand(selectedBrandProducts);
@@ -362,6 +362,10 @@ const Purchase = () => {
   const handlePrint = useReactToPrint({
     content: () => componentRef.current,
   });
+  const getMultiSetItemCount = () => {
+    const qty = Number(productDetails.quantityBuy) || 0;
+    return sets.reduce((total, set) => total + set.sizes.length * qty, 0);
+  };
 
   useEffect(() => {
     if (!isModalOpen) return;
@@ -509,7 +513,7 @@ const Purchase = () => {
                               </div>
                             </div>
                           </div>
-                        )
+                        ),
                       )}
                     </div>
                   </div>
@@ -641,7 +645,7 @@ const Purchase = () => {
             <option key={subcategory} value={subcategory}>
               {subcategory}
             </option>
-          ))
+          )),
         )}
       </select>
       {/* Size selection with checkboxes */}
@@ -649,17 +653,27 @@ const Purchase = () => {
         <p className="font-semibold mb-1">Select Size:</p>
         <div className="flex flex-wrap">
           {dropdownOptions.sizes[0].size.map((size, index) => (
-            <div key={index} className="flex items-center mr-4 mb-2">
+            <div
+              key={index}
+              onClick={() => handleSizeChange({ target: { value: size } })}
+              className={`flex items-center mr-4 mb-2 px-2 py-1 border rounded-md cursor-pointer select-none ${
+                productDetails.size.includes(size)
+                  ? "bg-indigo-500 text-white border-indigo-500"
+                  : "bg-white border-gray-300"
+              }`}
+            >
               <input
                 type="checkbox"
                 id={size}
                 name={size}
                 value={size}
                 checked={productDetails.size.includes(size)}
-                onChange={handleSizeChange}
-                className="mr-1"
+                onChange={() => {}}
+                className="mr-1 pointer-events-none"
               />
-              <label htmlFor={size}>{size}</label>
+              <label htmlFor={size} className="pointer-events-none">
+                {size}
+              </label>
             </div>
           ))}
         </div>
@@ -711,18 +725,26 @@ const Purchase = () => {
                 </div>
                 <div className="flex flex-wrap ">
                   {dropdownOptions.sizes[0]?.size.map((size) => (
-                    <div key={size} className="flex items-center mr-4 mb-2">
+                    <div
+                      key={size}
+                      onClick={() => handleSetSizeChange(setIdx, size)}
+                      className={`flex items-center mr-4 mb-2 px-2 py-1 border rounded-md cursor-pointer select-none ${
+                        set.sizes.includes(size)
+                          ? "bg-indigo-500 text-white border-indigo-500"
+                          : "bg-white border-gray-300"
+                      }`}
+                    >
                       <input
                         type="checkbox"
                         id={`set-${setIdx}-${size}`}
                         value={size}
                         checked={set.sizes.includes(size)}
-                        onChange={() => handleSetSizeChange(setIdx, size)}
-                        className="mr-1"
+                        onChange={() => {}}
+                        className="mr-1 pointer-events-none"
                       />
                       <label
                         htmlFor={`set-${setIdx}-${size}`}
-                        className="text-sm"
+                        className="text-sm pointer-events-none"
                       >
                         {size}
                       </label>
@@ -755,7 +777,17 @@ const Purchase = () => {
                     : "bg-gray-400 cursor-not-allowed"
                 }`}
               >
-                {multiSetLoading ? "Adding Sets..." : "Add Sets to Inventory"}
+                {multiSetLoading
+                  ? `Adding Sets... ${
+                      getMultiSetItemCount() > 0
+                        ? ` (${getMultiSetItemCount()} items)`
+                        : ""
+                    }`
+                  : `Add Sets to Inventory${
+                      getMultiSetItemCount() > 0
+                        ? ` (${getMultiSetItemCount()} items)`
+                        : ""
+                    }`}
               </button>
             </div>
           </div>
@@ -818,7 +850,18 @@ const Purchase = () => {
             : "bg-gray-500 text-gray-500 opacity-50 cursor-not-allowed"
         }`}
       >
-        {isLoading ? "Adding..." : "Add to Inventory"}
+        {isLoading
+          ? `Adding... ${
+              productDetails.size.length > 0
+                ? ` (${productDetails.size.length * (Number(productDetails.quantityBuy) || 0)} items)`
+                : ""
+            }`
+          : `Add to Inventory 
+        ${
+          productDetails.size.length > 0
+            ? ` (${productDetails.size.length * (Number(productDetails.quantityBuy) || 0)} items)`
+            : ""
+        }`}
       </button>
       <button
         onClick={() =>

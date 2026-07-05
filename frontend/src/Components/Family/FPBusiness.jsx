@@ -320,10 +320,26 @@ export default function FPBusiness() {
             <thead>
               <tr className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
                 <th className="px-4 py-2.5 text-left">Month</th>
-                <th className="px-4 py-2.5 text-right">Revenue</th>
-                <th className="px-4 py-2.5 text-right">Stock Exp.</th>
-                <th className="px-4 py-2.5 text-right">Other Exp.</th>
-                <th className="px-4 py-2.5 text-right">Net Profit</th>
+                <th className="px-4 py-2.5 text-right">Revenue 
+                <p className="text-green-400">
+                (IN)
+                </p>
+                </th>
+                <th className="px-4 py-2.5 text-right">Stock Exp.
+                <p className="text-red-400">
+                (OUT)
+                </p>
+                </th>
+                <th className="px-4 py-2.5 text-right">Other Exp.
+                <p className="text-red-400">
+                (OUT)
+                </p>
+                </th>
+                <th className="px-4 py-2.5 text-right">Net Profit
+                <p className="text-slate-400">
+                (OUT)
+                </p>
+                </th>
                 <th className="px-4 py-2.5 text-center">Actions</th>
               </tr>
             </thead>
