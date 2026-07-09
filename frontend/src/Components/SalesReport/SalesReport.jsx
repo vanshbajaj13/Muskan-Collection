@@ -35,6 +35,9 @@ const SalesReport = () => {
   const [showCategory, setShowCategory] = useState(false);
   const [showSoldBy, setShowSoldBy] = useState(false);
 
+  // NEW: Mask mode — when on, only code, product, and selling price are shown
+  const [isMasked, setIsMasked] = useState(false);
+
   const [sales,   setSales]   = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState(false);
@@ -77,22 +80,14 @@ const SalesReport = () => {
   const totalProfit  = totalRevenue - totalMRP;
 
   // ── Group by date, then by customer within each date ──────────────────────
-  //
-  // Within a single day we collect all sales for a given phone number together,
-  // preserving the order in which that customer FIRST appeared.
-  // Walk-ins (no phone) each become their own single-item "group".
-  //
-  // Result shape per date:
-  //   [ { phone, customerName, colorIdx, sales: [...] }, ... ]
-  //
   const buildDayGroups = (daySales) => {
-    const phoneOrder = [];      // tracks insertion order of unique phones
-    const phoneMap   = {};      // phone -> { customerName, sales: [] }
+    const phoneOrder = [];
+    const phoneMap   = {};
 
     daySales.forEach((sale) => {
       const key = sale.customerPhoneNo
         ? String(sale.customerPhoneNo)
-        : `walkin_${sale._id}`;          // unique key per walk-in
+        : `walkin_${sale._id}`;
 
       if (!phoneMap[key]) {
         phoneMap[key] = {
@@ -105,8 +100,6 @@ const SalesReport = () => {
       phoneMap[key].sales.push(sale);
     });
 
-    // Assign a color index to each REAL customer (not walk-ins).
-    // Walk-ins always get WALKIN_STYLE.
     let colorCounter = 0;
     return phoneOrder.map((key) => {
       const group = phoneMap[key];
@@ -199,39 +192,61 @@ const SalesReport = () => {
                 {loading ? "Loading…" : "Generate Report"}
               </button>
               {fetched && sales.length > 0 && (
-                <button
-                  onClick={handlePrint}
-                  className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-6 rounded"
-                >
-                  🖨 Print / Save PDF
-                </button>
+                <>
+                  <button
+                    onClick={handlePrint}
+                    className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-2 px-6 rounded"
+                  >
+                    🖨 Print / Save PDF
+                  </button>
+                  {/* NEW: Mask toggle button */}
+                  <button
+                    onClick={() => setIsMasked((m) => !m)}
+                    className={`text-sm font-medium py-2 px-6 rounded border transition-colors ${
+                      isMasked
+                        ? "bg-gray-900 text-white border-gray-900 hover:bg-gray-800"
+                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    {isMasked ? "🕶 Unmask" : "🕶 Mask"}
+                  </button>
+                </>
               )}
             </div>
 
-            {/* Row 2: column toggles + profit toggle */}
-            <div className="flex flex-wrap gap-5 items-center pt-3 border-t border-gray-100">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                Columns
-              </span>
-              <ColToggle label="Time"     checked={showTime}     onChange={() => setShowTime(!showTime)} />
-              <ColToggle label="Brand"    checked={showBrand}    onChange={() => setShowBrand(!showBrand)} />
-              <ColToggle label="Size"     checked={showSize}     onChange={() => setShowSize(!showSize)} />
-              <ColToggle label="Category" checked={showCategory} onChange={() => setShowCategory(!showCategory)} />
-              <ColToggle label="Sold By"  checked={showSoldBy}   onChange={() => setShowSoldBy(!showSoldBy)} />
-
-              <span className="mx-2 text-gray-300">|</span>
-
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox" checked={showProfit}
-                  onChange={(e) => setShowProfit(e.target.checked)}
-                  className="w-4 h-4 accent-indigo-600"
-                />
-                <span className="text-xs font-medium text-gray-600">
-                  Show MRP &amp; Profit / Loss
+            {/* Row 2: column toggles + profit toggle — hidden while masked */}
+            {!isMasked && (
+              <div className="flex flex-wrap gap-5 items-center pt-3 border-t border-gray-100">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  Columns
                 </span>
-              </label>
-            </div>
+                <ColToggle label="Time"     checked={showTime}     onChange={() => setShowTime(!showTime)} />
+                <ColToggle label="Brand"    checked={showBrand}    onChange={() => setShowBrand(!showBrand)} />
+                <ColToggle label="Size"     checked={showSize}     onChange={() => setShowSize(!showSize)} />
+                <ColToggle label="Category" checked={showCategory} onChange={() => setShowCategory(!showCategory)} />
+                <ColToggle label="Sold By"  checked={showSoldBy}   onChange={() => setShowSoldBy(!showSoldBy)} />
+
+                <span className="mx-2 text-gray-300">|</span>
+
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox" checked={showProfit}
+                    onChange={(e) => setShowProfit(e.target.checked)}
+                    className="w-4 h-4 accent-indigo-600"
+                  />
+                  <span className="text-xs font-medium text-gray-600">
+                    Show MRP &amp; Profit / Loss
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {isMasked && (
+              <div className="pt-3 border-t border-gray-100 text-xs text-gray-500 flex items-center gap-2">
+                <span>🕶</span>
+                <span>Masked view — showing only Code, Product, and Selling Price.</span>
+              </div>
+            )}
           </div>
 
           {error && (
@@ -244,20 +259,55 @@ const SalesReport = () => {
         {/* ── Report output ── */}
         {fetched && (
           <div>
-            {/* Print-only header */}
-            <div className="print-show mb-4">
-              <h2 className="text-lg font-bold">Sales Report</h2>
-              <p className="text-xs text-gray-600">
-                Period: {new Date(fromDate).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" })}
-                {" – "}
-                {new Date(toDate).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" })}
-                &emsp;|&emsp;Generated: {new Date().toLocaleString("en-IN")}
-              </p>
-            </div>
+            {/* Print-only header — hidden while masked so print doesn't leak dates */}
+            {!isMasked && (
+              <div className="print-show mb-4">
+                <h2 className="text-lg font-bold">Sales Report</h2>
+                <p className="text-xs text-gray-600">
+                  Period: {new Date(fromDate).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" })}
+                  {" – "}
+                  {new Date(toDate).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" })}
+                  &emsp;|&emsp;Generated: {new Date().toLocaleString("en-IN")}
+                </p>
+              </div>
+            )}
 
             {sales.length === 0 ? (
               <div className="text-center py-16 text-gray-400 text-sm">
                 No sales found for the selected period.
+              </div>
+            ) : isMasked ? (
+              /* ══════════════════════════════════════════════════════════
+                 MASKED VIEW — flat list, only Code / Product / Selling Price
+                 No dates, no customer info, no brand/size/category/profit,
+                 no revenue summary cards.
+                 ══════════════════════════════════════════════════════════ */
+              <div className="overflow-x-auto border border-gray-300 rounded">
+                <table className="w-full border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-gray-800 text-white uppercase tracking-wide">
+                      <th className="px-3 py-2 text-left w-10">#</th>
+                      <th className="px-3 py-2 text-left">Code</th>
+                      <th className="px-3 py-2 text-left">Product</th>
+                      <th className="px-3 py-2 text-right">Selling Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sales.map((sale, idx) => (
+                      <tr
+                        key={sale._id}
+                        className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                      >
+                        <td className="border-b border-gray-200 px-3 py-2 text-gray-400">{idx + 1}</td>
+                        <td className="border-b border-gray-200 px-3 py-2 font-mono font-medium">{sale.code}</td>
+                        <td className="border-b border-gray-200 px-3 py-2">{sale.product}</td>
+                        <td className="border-b border-gray-200 px-3 py-2 text-right font-semibold">
+                          ₹{(sale.sellingPrice || 0).toLocaleString("en-IN")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
               <>
@@ -351,19 +401,17 @@ const SalesReport = () => {
 
                               return (
                                 <React.Fragment key={group.key}>
-                                  {/* Customer sub-header row — only for real customers */}
                                   {!group.isWalkin && (
                                     <tr className={`${style.header} border-t-2 border-gray-300`}>
                                       <td
                                         colSpan={
-                                          /* count visible columns */
-                                          2 + /* # + price */
+                                          2 +
                                           (showTime ? 1 : 0) +
                                           (showBrand ? 1 : 0) +
                                           (showCategory ? 1 : 0) +
                                           (showSize ? 1 : 0) +
                                           (showProfit ? 2 : 0) +
-                                          1 /* product */ +
+                                          1 +
                                           (showSoldBy ? 1 : 0)
                                         }
                                         className={`px-3 py-1.5 ${style.label} font-semibold text-xs`}
@@ -385,7 +433,6 @@ const SalesReport = () => {
                                     </tr>
                                   )}
 
-                                  {/* Walk-in spacer every new group (subtle top border) */}
                                   {group.isWalkin && gIdx > 0 && (
                                     <tr>
                                       <td
@@ -395,7 +442,6 @@ const SalesReport = () => {
                                     </tr>
                                   )}
 
-                                  {/* Sale rows */}
                                   {group.sales.map((sale, sIdx) => {
                                     const pl = (sale.sellingPrice||0) - (sale.mrp||0);
                                     return (
@@ -450,18 +496,17 @@ const SalesReport = () => {
                                     );
                                   })}
 
-                                  {/* Customer subtotal footer (only for multi-item customers) */}
                                   {!group.isWalkin && group.sales.length > 1 && (
                                     <tr className={`${style.header} text-xs font-semibold`}>
                                       <td
                                         colSpan={
-                                          1 + /* # */
+                                          1 +
                                           (showTime ? 1 : 0) +
                                           (showBrand ? 1 : 0) +
                                           (showCategory ? 1 : 0) +
                                           (showSize ? 1 : 0) +
-                                          1 /* code */ +
-                                          1 /* product */
+                                          1 +
+                                          1
                                         }
                                         className={`px-3 py-1 ${style.label} text-right`}
                                       >
@@ -484,18 +529,17 @@ const SalesReport = () => {
                             })}
                           </tbody>
 
-                          {/* Day total footer */}
                           <tfoot>
                             <tr className="bg-gray-800 text-white text-xs font-semibold">
                               <td
                                 colSpan={
-                                  1 + /* # */
+                                  1 +
                                   (showTime ? 1 : 0) +
                                   (showBrand ? 1 : 0) +
                                   (showCategory ? 1 : 0) +
                                   (showSize ? 1 : 0) +
-                                  1 /* code */ +
-                                  1 /* product */
+                                  1 +
+                                  1
                                 }
                                 className="px-3 py-2 text-right text-gray-300"
                               >
