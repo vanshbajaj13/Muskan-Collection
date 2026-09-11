@@ -15,11 +15,20 @@ const EMPTY = {
   charges: "",
   chargesDescription: "",
   withGST: false,
+  itemReceivedDate: "",
+  imeiNumber: "",
+  purchaseBillUrl: "",
+  gstCharge: "",
+  r1Filed: false,
+  r1FiledDate: "",
   commissionAmount: "",
   commissionTo: "",
   soldTo: "",
   sellingPrice: "",
   saleDate: "",
+  sellingBillUrl: "",
+  r2Filed: false,
+  r2FiledDate: "",
   notes: "",
 };
 
@@ -29,6 +38,11 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
   const [showSaleFields, setShowSaleFields] = useState(false);
   const [pendingPayload, setPendingPayload] = useState(null);
   const initializedRef = useRef(false);
+  // Tracks whether the GST charge box currently holds the auto-suggested
+  // (18% of gross profit) value, or a value the user typed themselves.
+  // Starts true (auto) for new deals; for an existing deal with a stored
+  // gstCharge we treat it as user-chosen so we don't silently overwrite it.
+  const [gstManuallyEdited, setGstManuallyEdited] = useState(false);
 
   useEffect(() => {
     if (initial && !initializedRef.current) {
@@ -39,16 +53,28 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
         purchaseDate: dateFromTs(initial.purchaseDate),
         cashbackDate: dateFromTs(initial.cashbackDate),
         saleDate: dateFromTs(initial.saleDate),
+        itemReceivedDate: dateFromTs(initial.itemReceivedDate),
+        r1FiledDate: dateFromTs(initial.r1FiledDate),
+        r2FiledDate: dateFromTs(initial.r2FiledDate),
         buyingPrice: initial.buyingPrice ?? "",
         cashback: initial.cashback || "",
         cashbackExpected: initial.cashbackExpected || false,
         charges: initial.charges || "",
+        imeiNumber: initial.imeiNumber || "",
+        purchaseBillUrl: initial.purchaseBillUrl || "",
+        sellingBillUrl: initial.sellingBillUrl || "",
+        gstCharge: initial.gstCharge || "",
+        r1Filed: initial.r1Filed || false,
+        r2Filed: initial.r2Filed || false,
         commissionAmount: initial.commissionAmount || "",
         sellingPrice: initial.sellingPrice ?? "",
       });
       setShowSaleFields(
         !!(initial.soldTo || initial.sellingPrice || initial.saleDate),
       );
+      // Existing deal already has a saved GST charge — treat it as
+      // user-chosen so the auto-calc effect doesn't stomp on it.
+      setGstManuallyEdited(!!(initial.gstCharge && initial.gstCharge > 0));
     }
   }, [initial, dateFromTs]);
 
@@ -61,10 +87,21 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
       purchaseDate: tsFromDate(form.purchaseDate),
       cashbackDate: form.cashbackDate ? tsFromDate(form.cashbackDate) : null,
       saleDate: form.saleDate ? tsFromDate(form.saleDate) : null,
+      itemReceivedDate: form.itemReceivedDate
+        ? tsFromDate(form.itemReceivedDate)
+        : null,
+      r1FiledDate: form.r1FiledDate ? tsFromDate(form.r1FiledDate) : null,
+      r2FiledDate: form.r2FiledDate ? tsFromDate(form.r2FiledDate) : null,
       buyingPrice: parseFloat(form.buyingPrice) || 0,
       cashback: parseFloat(form.cashback) || 0,
       cashbackExpected: form.cashbackExpected,
       charges: parseFloat(form.charges) || 0,
+      imeiNumber: form.imeiNumber || "",
+      purchaseBillUrl: form.purchaseBillUrl || "",
+      sellingBillUrl: form.withGST ? form.sellingBillUrl || "" : "",
+      gstCharge: form.withGST ? parseFloat(form.gstCharge) || 0 : 0,
+      r1Filed: form.withGST ? form.r1Filed : false,
+      r2Filed: form.withGST ? form.r2Filed : false,
       commissionAmount: parseFloat(form.commissionAmount) || 0,
       sellingPrice:
         form.sellingPrice !== "" ? parseFloat(form.sellingPrice) : null,
@@ -86,9 +123,31 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
       ? parseFloat(form.sellingPrice) - effectiveCost
       : null;
 
+  const suggestedGstCharge =
+    form.withGST &&
+    form.sellingPrice !== null &&
+    form.sellingPrice > 0 &&
+    form.buyingPrice !== null &&
+    form.buyingPrice > 0
+      ? Math.round((form.sellingPrice - form.buyingPrice) * 0.18)
+      : 0;
+
+  // Keep the GST charge box in sync with 18% of gross profit as the
+  // person edits the deal — but only while they haven't typed a value
+  // in themselves. Once they touch the box, it's theirs until they hit
+  // "Reset to 18%".
+  useEffect(() => {
+    if (!form.withGST) return;
+    if (gstManuallyEdited) return;
+    set("gstCharge", suggestedGstCharge || "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.withGST, suggestedGstCharge, gstManuallyEdited]);
+
   const netProfit =
     grossProfit !== null
-      ? grossProfit - (parseFloat(form.commissionAmount) || 0)
+      ? grossProfit -
+        (parseFloat(form.commissionAmount) || 0) -
+        (form.withGST ? parseFloat(form.gstCharge) || 0 : 0)
       : null;
 
   return (
@@ -186,6 +245,37 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
                 placeholder="Type or select…"
               />
             </Field>
+
+            <Field
+              label="Item Received Date"
+              hint="When the item physically arrived"
+            >
+              <Input
+                type="date"
+                value={form.itemReceivedDate}
+                onChange={(e) => set("itemReceivedDate", e.target.value)}
+              />
+            </Field>
+
+            <Field label="IMEI Number">
+              <Input
+                placeholder="e.g. 356789104567890"
+                value={form.imeiNumber}
+                onChange={(e) => set("imeiNumber", e.target.value)}
+              />
+            </Field>
+
+            <Field
+              label="Purchase Bill URL"
+              hint="Drive link to the purchase bill"
+            >
+              <Input
+                type="url"
+                placeholder="https://drive.google.com/…"
+                value={form.purchaseBillUrl}
+                onChange={(e) => set("purchaseBillUrl", e.target.value)}
+              />
+            </Field>
           </div>
 
           <label className="flex items-center gap-2 mt-3 cursor-pointer select-none">
@@ -197,6 +287,43 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
             />
             <span className="text-sm text-slate-600">Purchased with GST</span>
           </label>
+
+          {form.withGST && (
+            <div className="mt-3 flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-indigo-800">
+                  R1 Filed?
+                </p>
+                <p className="text-xs text-indigo-500 mt-0.5">
+                  GST return on the purchase side.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 ml-4 shrink-0">
+                {form.r1Filed && (
+                  <Input
+                    type="date"
+                    value={form.r1FiledDate}
+                    onChange={(e) => set("r1FiledDate", e.target.value)}
+                    className="w-36"
+                  />
+                )}
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <div
+                    onClick={() => set("r1Filed", !form.r1Filed)}
+                    className={`w-11 h-6 rounded-full relative transition-colors duration-200 cursor-pointer ${
+                      form.r1Filed ? "bg-indigo-500" : "bg-slate-300"
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                        form.r1Filed ? "translate-x-5" : "translate-x-0.5"
+                      }`}
+                    />
+                  </div>
+                </label>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* ── Cashback ─────────────────────────────────────────────── */}
@@ -304,6 +431,48 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
           </div>
         </section>
 
+        {/* ── GST Charge (only for GST deals) ─────────────────────────── */}
+        {form.withGST && (
+          <section>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-indigo-500 mb-3 pb-1 border-b border-slate-100">
+              GST
+            </h3>
+            <div className="grid grid-cols-2 gap-3 items-center">
+              <Field
+                label="GST Charge (₹)"
+                hint={
+                  grossProfit !== null
+                    ? `18% of gross profit ≈ ₹${suggestedGstCharge.toLocaleString("en-IN")}`
+                    : "18% of gross profit, once sold"
+                }
+              >
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  value={form.gstCharge}
+                  onChange={(e) => {
+                    setGstManuallyEdited(true);
+                    set("gstCharge", e.target.value);
+                  }}
+                  onWheel={(e) => e.target.blur()}
+                />
+              </Field>
+              <Btn
+                type="button"
+                variant="secondary"
+                className="text-xs h-fit"
+                onClick={() => {
+                  setGstManuallyEdited(false);
+                  set("gstCharge", suggestedGstCharge || "");
+                }}
+              >
+                Reset to 18%
+              </Btn>
+            </div>
+          </section>
+        )}
+
         {/* ── Sale Details (collapsible) ────────────────────────────── */}
         <section>
           <button
@@ -355,6 +524,57 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
                   onWheel={(e) => e.target.blur()}
                 />
               </Field>
+
+              {form.withGST && (
+                <Field
+                  label="Selling Bill URL"
+                  hint="Drive link to the selling bill"
+                >
+                  <Input
+                    type="url"
+                    placeholder="https://drive.google.com/…"
+                    value={form.sellingBillUrl}
+                    onChange={(e) => set("sellingBillUrl", e.target.value)}
+                  />
+                </Field>
+              )}
+            </div>
+          )}
+
+          {showSaleFields && form.withGST && (
+            <div className="mt-3 flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-indigo-800">
+                  R2 Filed?
+                </p>
+                <p className="text-xs text-indigo-500 mt-0.5">
+                  GST return on the selling side.
+                </p>
+              </div>
+              <div className="flex items-center gap-3 ml-4 shrink-0">
+                {form.r2Filed && (
+                  <Input
+                    type="date"
+                    value={form.r2FiledDate}
+                    onChange={(e) => set("r2FiledDate", e.target.value)}
+                    className="w-36"
+                  />
+                )}
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <div
+                    onClick={() => set("r2Filed", !form.r2Filed)}
+                    className={`w-11 h-6 rounded-full relative transition-colors duration-200 cursor-pointer ${
+                      form.r2Filed ? "bg-indigo-500" : "bg-slate-300"
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                        form.r2Filed ? "translate-x-5" : "translate-x-0.5"
+                      }`}
+                    />
+                  </div>
+                </label>
+              </div>
             </div>
           )}
         </section>
@@ -370,34 +590,133 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
           </Field>
         </section>
 
-        {/* ── Live profit preview ───────────────────────────────────── */}
+        {/* ── Live Profit Breakdown ─────────────────────────────────────── */}
         {(form.buyingPrice || form.sellingPrice) && (
-          <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 text-sm">
-            <p className="font-semibold text-slate-600 mb-2 text-xs uppercase tracking-wide">
-              Live Preview
-            </p>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-slate-600">
-              <span>Effective Cost</span>
-              <span className="font-semibold text-right">
-                ₹{effectiveCost.toLocaleString("en-IN")}
-              </span>
+          <div className="w-full shrink-0">
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm">
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
+                Profit Breakdown
+              </p>
+
+              {/* Selling price */}
+              <div className="flex justify-between items-center py-1.5">
+                <span className="text-slate-600">Selling Price</span>
+                <span className="font-semibold text-slate-800">
+                  ₹
+                  {(parseFloat(form.sellingPrice) || 0).toLocaleString("en-IN")}
+                </span>
+              </div>
+
+              {/* Buying price */}
+              <div className="flex justify-between items-center py-1.5">
+                <span className="text-slate-500">− Buying Price</span>
+                <span className="font-medium text-rose-500">
+                  − ₹
+                  {(parseFloat(form.buyingPrice) || 0).toLocaleString("en-IN")}
+                </span>
+              </div>
+
+              {/* Charges */}
+              {(parseFloat(form.charges) || 0) > 0 && (
+                <div className="flex justify-between items-center py-1.5">
+                  <span className="text-slate-500 truncate mr-2">
+                    − Charges
+                    {form.chargesDescription && (
+                      <span className="text-slate-400 text-xs ml-1">
+                        ({form.chargesDescription})
+                      </span>
+                    )}
+                  </span>
+
+                  <span className="font-medium text-rose-400 shrink-0">
+                    − ₹{(parseFloat(form.charges) || 0).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              )}
+
+              {/* Cashback */}
+              {(parseFloat(form.cashback) || 0) > 0 && (
+                <div className="flex justify-between items-center py-1.5">
+                  <span className="text-slate-500">+ Cashback</span>
+                  <span className="font-medium text-emerald-500">
+                    + ₹
+                    {(parseFloat(form.cashback) || 0).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              )}
+
+              {/* Gross Profit */}
               {grossProfit !== null && (
-                <>
-                  <span>Gross Profit</span>
-                  <span
-                    className={`font-semibold text-right ${grossProfit >= 0 ? "text-emerald-600" : "text-rose-500"}`}
-                  >
-                    {grossProfit >= 0 ? "+" : ""}₹
-                    {grossProfit.toLocaleString("en-IN")}
+                <div className="border-t border-slate-200 mt-1 pt-2 flex justify-between items-center">
+                  <span className="text-slate-700 font-semibold text-xs uppercase tracking-wide">
+                    Gross Profit
                   </span>
-                  <span>Net Profit (after commission)</span>
+
                   <span
-                    className={`font-semibold text-right ${netProfit >= 0 ? "text-emerald-600" : "text-rose-500"}`}
+                    className={`font-semibold ${
+                      grossProfit >= 0 ? "text-emerald-600" : "text-rose-500"
+                    }`}
                   >
-                    {netProfit >= 0 ? "+" : ""}₹
-                    {netProfit.toLocaleString("en-IN")}
+                    {grossProfit >= 0 ? "+" : "−"} ₹
+                    {Math.abs(grossProfit).toLocaleString("en-IN")}
                   </span>
-                </>
+                </div>
+              )}
+
+              {/* GST */}
+              {form.withGST && (parseFloat(form.gstCharge) || 0) > 0 && (
+                <div className="flex justify-between items-center py-1.5 mt-0.5">
+                  <span className="text-slate-500">− GST (18%)</span>
+                  <span className="font-medium text-rose-400">
+                    − ₹
+                    {(parseFloat(form.gstCharge) || 0).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              )}
+
+              {/* Commission */}
+              {(parseFloat(form.commissionAmount) || 0) > 0 && (
+                <div className="flex justify-between items-center py-1.5">
+                  <span className="text-slate-500">− Commission</span>
+                  <span className="font-medium text-rose-400">
+                    − ₹
+                    {(parseFloat(form.commissionAmount) || 0).toLocaleString(
+                      "en-IN",
+                    )}
+                  </span>
+                </div>
+              )}
+
+              {/* Net Profit */}
+              {netProfit !== null && (
+                <div className="border-t border-slate-200 mt-1 pt-2 flex justify-between items-center">
+                  <span className="text-slate-700 font-semibold text-xs uppercase tracking-wide">
+                    Net Profit
+                  </span>
+
+                  <span
+                    className={`font-bold ${
+                      netProfit >= 0 ? "text-emerald-600" : "text-rose-600"
+                    }`}
+                  >
+                    {netProfit >= 0 ? "+" : "−"} ₹
+                    {Math.abs(netProfit).toLocaleString("en-IN")}
+                  </span>
+                </div>
+              )}
+
+              {/* Formula */}
+              {netProfit !== null && (
+                <div className="mt-3 pt-2 border-t border-slate-200">
+                  <p className="text-[10px] leading-relaxed text-slate-400">
+                    Selling Price − Buying Price − Commission
+                    {form.withGST ? " − GST" : ""}
+                    {" = "}
+                    <span className="font-semibold text-slate-500">
+                      Net Profit
+                    </span>
+                  </p>
+                </div>
               )}
             </div>
           </div>

@@ -68,7 +68,9 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
       showCardToast("Payment removed", "success");
       onRefresh();
     } catch (err) {
-      showCardToast(err.message || "Failed to remove payment. Please try again.");
+      showCardToast(
+        err.message || "Failed to remove payment. Please try again.",
+      );
     } finally {
       setRemovingPayment(null);
       setConfirmDeletePayment(null);
@@ -169,8 +171,28 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
             )}
             {deal.cashbackStatus === "received" && (
               <span className="ml-1 text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-              Cashback ✓
-            </span>
+                Cashback ✓
+              </span>
+            )}
+            {deal.r1Status === "pending" && (
+              <span className="text-xs text-indigo-600 font-medium bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
+                R1 pending
+              </span>
+            )}
+            {deal.r1Status === "filed" && (
+              <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                R1 ✓
+              </span>
+            )}
+            {deal.r2Status === "pending" && (
+              <span className="text-xs text-indigo-600 font-medium bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
+                R2 pending
+              </span>
+            )}
+            {deal.r2Status === "filed" && (
+              <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                R2 ✓
+              </span>
             )}
           </div>
 
@@ -227,17 +249,97 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
         {/* ── Expanded details ────────────────────────────────────── */}
         {expanded && (
           <div className="border-t border-slate-100 px-4 pt-4 pb-4">
-
             {/* ── Two-column layout: deal info + profit breakdown ── */}
             <div className="flex flex-col md:flex-row gap-4 mb-4">
-
               {/* Left: deal meta info */}
               <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                <Row label="Purchase Date" value={formatDate(deal.purchaseDate)} />
+                <Row
+                  label="Purchase Date"
+                  value={formatDate(deal.purchaseDate)}
+                />
+                <Row
+                  label="Item Received"
+                  value={formatDate(deal.itemReceivedDate)}
+                />
                 <Row label="Credit Card" value={deal.creditCard || "—"} />
                 <Row label="With GST" value={deal.withGST ? "Yes" : "No"} />
+                <Row label="IMEI Number" value={deal.imeiNumber || "—"} />
+                <Row
+                  label="Purchase Bill"
+                  value={
+                    deal.purchaseBillUrl ? (
+                      <a
+                        href={deal.purchaseBillUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-indigo-500 hover:underline"
+                      >
+                        View Bill
+                      </a>
+                    ) : (
+                      "—"
+                    )
+                  }
+                />
+                {deal.withGST && (
+                  <Row
+                    label="R1 Filed"
+                    value={
+                      deal.r1Filed ? (
+                        <span className="text-emerald-600 font-semibold">
+                          Yes
+                          {deal.r1FiledDate
+                            ? ` · ${formatDate(deal.r1FiledDate)}`
+                            : ""}
+                        </span>
+                      ) : (
+                        <span className="text-indigo-500 font-semibold">
+                          Pending
+                        </span>
+                      )
+                    }
+                  />
+                )}
                 <Row label="Sold To" value={deal.soldTo || "—"} />
                 <Row label="Sale Date" value={formatDate(deal.saleDate)} />
+                {deal.withGST && (
+                  <Row
+                    label="Selling Bill"
+                    value={
+                      deal.sellingBillUrl ? (
+                        <a
+                          href={deal.sellingBillUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-indigo-500 hover:underline"
+                        >
+                          View Bill
+                        </a>
+                      ) : (
+                        "—"
+                      )
+                    }
+                  />
+                )}
+                {deal.withGST && deal.sellingPrice && (
+                  <Row
+                    label="R2 Filed"
+                    value={
+                      deal.r2Filed ? (
+                        <span className="text-emerald-600 font-semibold">
+                          Yes
+                          {deal.r2FiledDate
+                            ? ` · ${formatDate(deal.r2FiledDate)}`
+                            : ""}
+                        </span>
+                      ) : (
+                        <span className="text-indigo-500 font-semibold">
+                          Pending
+                        </span>
+                      )
+                    }
+                  />
+                )}
                 <Row
                   label="Cashback"
                   value={
@@ -262,7 +364,11 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                 <Row
                   label="Total Received"
                   value={
-                    <span className={totalPaid > 0 ? "text-emerald-600 font-semibold" : ""}>
+                    <span
+                      className={
+                        totalPaid > 0 ? "text-emerald-600 font-semibold" : ""
+                      }
+                    >
                       {formatCurrency(totalPaid)}
                     </span>
                   }
@@ -348,6 +454,16 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                       <ProfitChip value={deal.grossProfit} />
                     </div>
 
+                    {/* GST charge (only for GST deals with a charge set) */}
+                    {deal.withGST && deal.gstCharge > 0 && (
+                      <div className="flex justify-between items-center py-1.5 mt-0.5">
+                        <span className="text-slate-500">− GST (18%)</span>
+                        <span className="font-medium text-rose-400">
+                          − {formatCurrency(deal.gstCharge)}
+                        </span>
+                      </div>
+                    )}
+
                     {/* Commission (only if present) */}
                     {deal.commissionAmount > 0 && (
                       <div className="flex justify-between items-center py-1.5 mt-0.5">
@@ -365,8 +481,9 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                       </div>
                     )}
 
-                    {/* Net Profit — only show separately if commission exists */}
-                    {deal.commissionAmount > 0 && (
+                    {/* Net Profit — only show separately if commission or GST exists */}
+                    {(deal.commissionAmount > 0 ||
+                      (deal.withGST && deal.gstCharge > 0)) && (
                       <div className="border-t border-slate-200 mt-1 pt-2 flex justify-between items-center">
                         <span className="text-slate-700 font-bold text-xs uppercase tracking-wide">
                           Net Profit
@@ -412,8 +529,8 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                       <span className="font-bold text-slate-800">
                         {formatCurrency(
                           (deal.buyingPrice || 0) +
-                          (deal.charges || 0) -
-                          (deal.cashback || 0)
+                            (deal.charges || 0) -
+                            (deal.cashback || 0),
                         )}
                       </span>
                     </div>
@@ -547,7 +664,9 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                         </span>
                       )}
                       {p.note && (
-                        <span className="text-slate-500 text-xs truncate">{p.note}</span>
+                        <span className="text-slate-500 text-xs truncate">
+                          {p.note}
+                        </span>
                       )}
                       <button
                         className="ml-auto text-slate-300 hover:text-rose-400 transition-colors"

@@ -24,6 +24,8 @@ const INITIAL_FILTERS = {
   withGST: "",
   hasCashback: "",
   hasCommission: "",
+  r1Status: "",
+  r2Status: "",
 };
 
 const MONTH_NAMES = [
@@ -332,6 +334,8 @@ const PhoneDeals = () => {
     if (filters.hasCommission === "yes" && !(d.commissionAmount > 0))
       return false;
     if (filters.hasCommission === "no" && d.commissionAmount > 0) return false;
+    if (filters.r1Status && d.r1Status !== filters.r1Status) return false;
+    if (filters.r2Status && d.r2Status !== filters.r2Status) return false;
     return true;
   });
 
@@ -362,6 +366,26 @@ const PhoneDeals = () => {
     { key: "yes", label: "Cashback Received", color: "emerald" },
     { key: "expected", label: "Cashback Pending", color: "amber" },
     { key: "no", label: "No Cashback", color: "gray" },
+  ];
+
+  const r1Capsules = [
+    { key: "", label: "All R1", color: "slate" },
+    { key: "filed", label: "R1 Filed", color: "emerald" },
+    { key: "pending", label: "R1 Pending", color: "indigo" },
+    { key: "not_applicable", label: "N/A", color: "gray" },
+  ];
+
+  const r2Capsules = [
+    { key: "", label: "All R2", color: "slate" },
+    { key: "filed", label: "R2 Filed", color: "emerald" },
+    { key: "pending", label: "R2 Pending", color: "indigo" },
+    { key: "not_applicable", label: "N/A", color: "gray" },
+  ];
+
+  const gstCapsules = [
+    { key: "", label: "All", color: "slate" },
+    { key: "true", label: "With GST", color: "indigo" },
+    { key: "false", label: "Without GST", color: "gray" },
   ];
 
   return (
@@ -575,6 +599,42 @@ const PhoneDeals = () => {
               active={filters.hasCashback === c.key}
               activeColor={c.color}
               onClick={() => setFilters((f) => ({ ...f, hasCashback: c.key }))}
+            >
+              {c.label}
+            </Capsule>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+          {gstCapsules.map((c) => (
+            <Capsule
+              key={c.key || "all-gst"}
+              active={filters.withGST === c.key}
+              activeColor={c.color}
+              onClick={() => setFilters((f) => ({ ...f, withGST: c.key }))}
+            >
+              {c.label}
+            </Capsule>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+          {r1Capsules.map((c) => (
+            <Capsule
+              key={c.key || "all-r1"}
+              active={filters.r1Status === c.key}
+              activeColor={c.color}
+              onClick={() => setFilters((f) => ({ ...f, r1Status: c.key }))}
+            >
+              {c.label}
+            </Capsule>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+          {r2Capsules.map((c) => (
+            <Capsule
+              key={c.key || "all-r2"}
+              active={filters.r2Status === c.key}
+              activeColor={c.color}
+              onClick={() => setFilters((f) => ({ ...f, r2Status: c.key }))}
             >
               {c.label}
             </Capsule>

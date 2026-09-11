@@ -432,7 +432,7 @@ export const ComboBox = ({
         onChange={(e) => { onChange(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
         placeholder={placeholder}
-        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-slate-800
+        className="w-full text-[16px] border border-slate-200 rounded-lg px-3 py-2  text-lg  text-slate-800
           focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent
           bg-white placeholder-slate-300 pr-8"
         style={{ fontSize: "16px" }}
