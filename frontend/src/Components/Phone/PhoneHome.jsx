@@ -7,12 +7,14 @@ import PhoneDashboard from "./PhoneDashboard";
 import MenuBtn from "../MenuBtn";
 import PhoneSalesReport from "./PhoneSalesReport";
 import PhonePayments from "./PhonePayments";
+import AuditLog from "./AuditLog";
 
 const TABS = [
   { key: "deals", label: "Deals", component: <PhoneDeals /> },
   { key: "payments", label: "Payments", component: <PhonePayments /> },
   { key: "dashboard", label: "Dashboard", component: <PhoneDashboard /> },
   { key: "report", label: "Report", component: <PhoneSalesReport /> },
+  { key: "audit", label: "Audit Log", component: <AuditLog /> },
   { key: "expenses", label: "Expenses", component: <ExpenseTracker /> },
   { key: "dropdowns", label: "Options", component: <DropdownManager /> },
 ];

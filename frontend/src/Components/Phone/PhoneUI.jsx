@@ -235,18 +235,21 @@ export const Toast = ({ message, type = "success", onClose }) => {
     info: "bg-indigo-500",
     warning: "bg-amber-500",
   };
-  return (
+
+  return ReactDOM.createPortal(
     <div
-      className={`${colors[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 min-w-64`}
+      className={`${colors[type]} fixed top-5 right-5 z-[999999] text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 min-w-64`}
     >
       <span className="text-sm flex-1">{message}</span>
+
       <button
         onClick={onClose}
         className="text-white/70 hover:text-white text-lg leading-none"
       >
         ✕
       </button>
-    </div>
+    </div>,
+    document.body
   );
 };
 

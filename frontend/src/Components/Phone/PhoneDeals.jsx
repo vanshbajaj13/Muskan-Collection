@@ -197,6 +197,7 @@ const PhoneDeals = () => {
   const [toast, setToast] = useState(null);
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Month-picker: tracks which year is visible in the strip
   const [stripYear, setStripYear] = useState(_now.getFullYear());
@@ -576,69 +577,165 @@ const PhoneDeals = () => {
         </div>
       </div>
 
-      {/* Quick capsule filters: status & cashback */}
-      <div className="mb-5 space-y-2">
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-          {/* <span className="text-xs text-slate-400 font-medium shrink-0">Status:</span> */}
-          {statusCapsules.map((c) => (
-            <Capsule
-              key={c.key}
-              active={filters.status === c.key}
-              activeColor={c.color}
-              onClick={() => setFilters((f) => ({ ...f, status: c.key }))}
-            >
-              {c.label}
-            </Capsule>
-          ))}
-        </div>
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-          {/* <span className="text-xs text-slate-400 font-medium shrink-0">Cashback:</span> */}
-          {cashbackCapsules.map((c) => (
-            <Capsule
-              key={c.key || "all"}
-              active={filters.hasCashback === c.key}
-              activeColor={c.color}
-              onClick={() => setFilters((f) => ({ ...f, hasCashback: c.key }))}
-            >
-              {c.label}
-            </Capsule>
-          ))}
-        </div>
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-          {gstCapsules.map((c) => (
-            <Capsule
-              key={c.key || "all-gst"}
-              active={filters.withGST === c.key}
-              activeColor={c.color}
-              onClick={() => setFilters((f) => ({ ...f, withGST: c.key }))}
-            >
-              {c.label}
-            </Capsule>
-          ))}
-        </div>
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-          {r1Capsules.map((c) => (
-            <Capsule
-              key={c.key || "all-r1"}
-              active={filters.r1Status === c.key}
-              activeColor={c.color}
-              onClick={() => setFilters((f) => ({ ...f, r1Status: c.key }))}
-            >
-              {c.label}
-            </Capsule>
-          ))}
-        </div>
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-          {r2Capsules.map((c) => (
-            <Capsule
-              key={c.key || "all-r2"}
-              active={filters.r2Status === c.key}
-              activeColor={c.color}
-              onClick={() => setFilters((f) => ({ ...f, r2Status: c.key }))}
-            >
-              {c.label}
-            </Capsule>
-          ))}
+      {/* Quick capsule filters: collapsible */}
+      <div className="mb-5">
+        {/* Filter header */}
+        <button
+          onClick={() => setFiltersOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-sm font-semibold text-slate-700 shrink-0">
+              Filters
+            </span>
+
+            {/* Show selected filters when collapsed */}
+            {!filtersOpen && (
+              <div className="flex items-center gap-1.5 min-w-0 overflow-x-auto hide-scrollbar">
+                <Capsule
+                  active={true}
+                  activeColor={
+                    statusCapsules.find((c) => c.key === filters.status)
+                      ?.color || "slate"
+                  }
+                >
+                  {statusCapsules.find((c) => c.key === filters.status)
+                    ?.label || "All Status"}
+                </Capsule>
+
+                <Capsule
+                  active={true}
+                  activeColor={
+                    cashbackCapsules.find((c) => c.key === filters.hasCashback)
+                      ?.color || "slate"
+                  }
+                >
+                  {cashbackCapsules.find((c) => c.key === filters.hasCashback)
+                    ?.label || "All"}
+                </Capsule>
+
+                <Capsule
+                  active={true}
+                  activeColor={
+                    gstCapsules.find((c) => c.key === filters.withGST)?.color ||
+                    "slate"
+                  }
+                >
+                  {gstCapsules.find((c) => c.key === filters.withGST)?.label ||
+                    "All"}
+                </Capsule>
+
+                <Capsule
+                  active={true}
+                  activeColor={
+                    r1Capsules.find((c) => c.key === filters.r1Status)?.color ||
+                    "slate"
+                  }
+                >
+                  {r1Capsules.find((c) => c.key === filters.r1Status)?.label ||
+                    "All R1"}
+                </Capsule>
+
+                <Capsule
+                  active={true}
+                  activeColor={
+                    r2Capsules.find((c) => c.key === filters.r2Status)?.color ||
+                    "slate"
+                  }
+                >
+                  {r2Capsules.find((c) => c.key === filters.r2Status)?.label ||
+                    "All R2"}
+                </Capsule>
+              </div>
+            )}
+          </div>
+
+          <span className="text-slate-400 text-xs shrink-0 ml-3">
+            {filtersOpen ? "▲" : "▼"}
+          </span>
+        </button>
+
+        {/* Expanded filters */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            filtersOpen
+              ? "max-h-96 opacity-100 translate-y-0 mt-3"
+              : "max-h-0 opacity-0 -translate-y-2 mt-0"
+          }`}
+        >
+          <div className="space-y-2">
+            {/* Status */}
+            <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+              {statusCapsules.map((c) => (
+                <Capsule
+                  key={c.key}
+                  active={filters.status === c.key}
+                  activeColor={c.color}
+                  onClick={() => setFilters((f) => ({ ...f, status: c.key }))}
+                >
+                  {c.label}
+                </Capsule>
+              ))}
+            </div>
+
+            {/* Cashback */}
+            <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+              {cashbackCapsules.map((c) => (
+                <Capsule
+                  key={c.key || "all"}
+                  active={filters.hasCashback === c.key}
+                  activeColor={c.color}
+                  onClick={() =>
+                    setFilters((f) => ({ ...f, hasCashback: c.key }))
+                  }
+                >
+                  {c.label}
+                </Capsule>
+              ))}
+            </div>
+
+            {/* GST */}
+            <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+              {gstCapsules.map((c) => (
+                <Capsule
+                  key={c.key || "all-gst"}
+                  active={filters.withGST === c.key}
+                  activeColor={c.color}
+                  onClick={() => setFilters((f) => ({ ...f, withGST: c.key }))}
+                >
+                  {c.label}
+                </Capsule>
+              ))}
+            </div>
+
+            {/* R1 */}
+            <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+              {r1Capsules.map((c) => (
+                <Capsule
+                  key={c.key || "all-r1"}
+                  active={filters.r1Status === c.key}
+                  activeColor={c.color}
+                  onClick={() => setFilters((f) => ({ ...f, r1Status: c.key }))}
+                >
+                  {c.label}
+                </Capsule>
+              ))}
+            </div>
+
+            {/* R2 */}
+            <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+              {r2Capsules.map((c) => (
+                <Capsule
+                  key={c.key || "all-r2"}
+                  active={filters.r2Status === c.key}
+                  activeColor={c.color}
+                  onClick={() => setFilters((f) => ({ ...f, r2Status: c.key }))}
+                >
+                  {c.label}
+                </Capsule>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

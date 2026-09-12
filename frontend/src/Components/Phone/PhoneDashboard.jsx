@@ -36,7 +36,20 @@ const _defaultFrom = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padSta
 const _lastDay = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).getDate();
 const _defaultTo = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-${String(_lastDay).padStart(2, "0")}`;
 
-const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 // Dashboard filter keys (status & cashback added for quick capsule filters)
 const INITIAL_FILTERS = {
@@ -70,9 +83,10 @@ const Capsule = ({ active, onClick, children, activeColor = "gray" }) => {
     <button
       onClick={onClick}
       className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors whitespace-nowrap
-        ${active
-          ? activeClasses[activeColor]
-          : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+        ${
+          active
+            ? activeClasses[activeColor]
+            : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
         }`}
     >
       {children}
@@ -118,6 +132,7 @@ const PhoneDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [stripYear, setStripYear] = useState(_now.getFullYear());
 
   // Jump to a specific month/year in the date filters
@@ -193,7 +208,11 @@ const PhoneDashboard = () => {
 
     // Apply non-date filters to rawDeals
     const filtered = rawDeals.filter((d) => {
-      if (filters.status && filters.status !== "all" && d.dealStatus !== filters.status)
+      if (
+        filters.status &&
+        filters.status !== "all" &&
+        d.dealStatus !== filters.status
+      )
         return false;
       if (filters.product && d.product !== filters.product) return false;
       if (filters.account && d.purchaseAccount !== filters.account)
@@ -208,8 +227,16 @@ const PhoneDashboard = () => {
       if (filters.withGST === "true" && !d.withGST) return false;
       if (filters.withGST === "false" && d.withGST) return false;
       if (filters.hasCashback === "yes" && !(d.cashback > 0)) return false;
-      if (filters.hasCashback === "expected" && !(d.cashbackExpected && !(d.cashback > 0))) return false;
-      if (filters.hasCashback === "no" && (d.cashback > 0 || d.cashbackExpected)) return false;
+      if (
+        filters.hasCashback === "expected" &&
+        !(d.cashbackExpected && !(d.cashback > 0))
+      )
+        return false;
+      if (
+        filters.hasCashback === "no" &&
+        (d.cashback > 0 || d.cashbackExpected)
+      )
+        return false;
       if (filters.hasCommission === "yes" && !(d.commissionAmount > 0))
         return false;
       if (filters.hasCommission === "no" && d.commissionAmount > 0)
@@ -297,9 +324,8 @@ const PhoneDashboard = () => {
         (d) => d.dealStatus === "pending_payment",
       ).length,
       complete: filtered.filter((d) => d.dealStatus === "complete").length,
-      excess_payment: filtered.filter(
-        (d) => d.dealStatus === "excess_payment",
-      ).length,
+      excess_payment: filtered.filter((d) => d.dealStatus === "excess_payment")
+        .length,
     };
 
     setStats({
@@ -528,7 +554,9 @@ const PhoneDashboard = () => {
           <span className="text-sm font-bold text-slate-700 tracking-wide">
             {stripYear}
             {stripYear === new Date().getFullYear() && (
-              <span className="ml-2 text-xs text-slate-500 font-normal">current year</span>
+              <span className="ml-2 text-xs text-slate-500 font-normal">
+                current year
+              </span>
             )}
           </span>
           <button
@@ -543,17 +571,20 @@ const PhoneDashboard = () => {
           {MONTH_NAMES.map((name, idx) => {
             const key = `${stripYear}-${idx + 1}`;
             const isSelected = selectedMonthKey === key;
-            const isCurrentMonth = stripYear === new Date().getFullYear() && idx === new Date().getMonth();
+            const isCurrentMonth =
+              stripYear === new Date().getFullYear() &&
+              idx === new Date().getMonth();
             return (
               <button
                 key={key}
                 onClick={() => selectMonth(stripYear, idx + 1)}
                 className={`px-1 py-2 rounded-lg text-xs font-semibold transition-colors text-center
-                  ${isSelected
-                    ? "bg-slate-300 text-white shadow-sm"
-                    : isCurrentMonth
-                    ? "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-indigo-100"
-                    : "text-slate-600 hover:bg-slate-100"
+                  ${
+                    isSelected
+                      ? "bg-slate-300 text-white shadow-sm"
+                      : isCurrentMonth
+                        ? "bg-slate-50 text-slate-600 border border-slate-200 hover:bg-indigo-100"
+                        : "text-slate-600 hover:bg-slate-100"
                   }`}
               >
                 {name}
@@ -577,95 +608,258 @@ const PhoneDashboard = () => {
         )}
       </div>
 
-      {/* Quick capsule filters: status & cashback */}
-      <div className="mb-5 space-y-2">
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-          {[
-            { key: "all", label: "All Status", color: "slate" },
-            { key: "unsold", label: "Unsold", color: "gray" },
-            { key: "pending_payment", label: "Payment Pending", color: "amber" },
-            { key: "complete", label: "Complete", color: "emerald" },
-            { key: "excess_payment", label: "Excess Payment", color: "rose" },
-          ].map((c) => (
-            <Capsule
-              key={c.key}
-              active={filters.status === c.key}
-              activeColor={c.color}
-              onClick={() => setFilters((f) => ({ ...f, status: c.key }))}
-            >
-              {c.label}
-            </Capsule>
-          ))}
-        </div>
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-          {[
-            { key: "", label: "All", color: "slate" },
-            { key: "yes", label: "Cashback Received", color: "emerald" },
-            { key: "expected", label: "Cashback Pending", color: "amber" },
-            { key: "no", label: "No Cashback", color: "gray" },
-          ].map((c) => (
-            <Capsule
-              key={c.key || "all"}
-              active={filters.hasCashback === c.key}
-              activeColor={c.color}
-              onClick={() => setFilters((f) => ({ ...f, hasCashback: c.key }))}
-            >
-              {c.label}
-            </Capsule>
-          ))}
-        </div>
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-          {[
-            { key: "", label: "All", color: "slate" },
-            { key: "true", label: "With GST", color: "indigo" },
-            { key: "false", label: "Without GST", color: "gray" },
-          ].map((c) => (
-            <Capsule
-              key={c.key || "all-gst"}
-              active={filters.withGST === c.key}
-              activeColor={c.color}
-              onClick={() => setFilters((f) => ({ ...f, withGST: c.key }))}
-            >
-              {c.label}
-            </Capsule>
-          ))}
-        </div>
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-          {[
-            { key: "", label: "All R1", color: "slate" },
-            { key: "filed", label: "R1 Filed", color: "emerald" },
-            { key: "pending", label: "R1 Pending", color: "indigo" },
-            { key: "not_applicable", label: "N/A", color: "gray" },
-          ].map((c) => (
-            <Capsule
-              key={c.key || "all-r1"}
-              active={filters.r1Status === c.key}
-              activeColor={c.color}
-              onClick={() => setFilters((f) => ({ ...f, r1Status: c.key }))}
-            >
-              {c.label}
-            </Capsule>
-          ))}
-        </div>
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
-          {[
-            { key: "", label: "All R2", color: "slate" },
-            { key: "filed", label: "R2 Filed", color: "emerald" },
-            { key: "pending", label: "R2 Pending", color: "indigo" },
-            { key: "not_applicable", label: "N/A", color: "gray" },
-          ].map((c) => (
-            <Capsule
-              key={c.key || "all-r2"}
-              active={filters.r2Status === c.key}
-              activeColor={c.color}
-              onClick={() => setFilters((f) => ({ ...f, r2Status: c.key }))}
-            >
-              {c.label}
-            </Capsule>
-          ))}
+      {/* Quick capsule filters: collapsible */}
+      <div className="mb-5">
+        {/* Filter header */}
+        <button
+          onClick={() => setFiltersOpen((v) => !v)}
+          className="w-full flex items-center justify-between px-4 py-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-sm font-semibold text-slate-700 shrink-0">
+              Filters
+            </span>
+
+            {/* Selected filters shown when collapsed */}
+            {!filtersOpen && (
+              <div className="flex items-center gap-1.5 min-w-0 overflow-x-auto hide-scrollbar">
+                <Capsule
+                  active={true}
+                  activeColor={
+                    filters.status === "all"
+                      ? "slate"
+                      : filters.status === "unsold"
+                        ? "gray"
+                        : filters.status === "pending_payment"
+                          ? "amber"
+                          : filters.status === "complete"
+                            ? "emerald"
+                            : "rose"
+                  }
+                >
+                  {filters.status === "all"
+                    ? "All Status"
+                    : filters.status === "unsold"
+                      ? "Unsold"
+                      : filters.status === "pending_payment"
+                        ? "Payment Pending"
+                        : filters.status === "complete"
+                          ? "Complete"
+                          : "Excess Payment"}
+                </Capsule>
+
+                <Capsule
+                  active={true}
+                  activeColor={
+                    filters.hasCashback === ""
+                      ? "slate"
+                      : filters.hasCashback === "yes"
+                        ? "emerald"
+                        : filters.hasCashback === "expected"
+                          ? "amber"
+                          : "gray"
+                  }
+                >
+                  {filters.hasCashback === ""
+                    ? "All"
+                    : filters.hasCashback === "yes"
+                      ? "Cashback Received"
+                      : filters.hasCashback === "expected"
+                        ? "Cashback Pending"
+                        : "No Cashback"}
+                </Capsule>
+
+                <Capsule
+                  active={true}
+                  activeColor={
+                    filters.withGST === ""
+                      ? "slate"
+                      : filters.withGST === "true"
+                        ? "indigo"
+                        : "gray"
+                  }
+                >
+                  {filters.withGST === ""
+                    ? "All"
+                    : filters.withGST === "true"
+                      ? "With GST"
+                      : "Without GST"}
+                </Capsule>
+
+                <Capsule
+                  active={true}
+                  activeColor={
+                    filters.r1Status === ""
+                      ? "slate"
+                      : filters.r1Status === "filed"
+                        ? "emerald"
+                        : filters.r1Status === "pending"
+                          ? "indigo"
+                          : "gray"
+                  }
+                >
+                  {filters.r1Status === ""
+                    ? "All R1"
+                    : filters.r1Status === "filed"
+                      ? "R1 Filed"
+                      : filters.r1Status === "pending"
+                        ? "R1 Pending"
+                        : "N/A"}
+                </Capsule>
+
+                <Capsule
+                  active={true}
+                  activeColor={
+                    filters.r2Status === ""
+                      ? "slate"
+                      : filters.r2Status === "filed"
+                        ? "emerald"
+                        : filters.r2Status === "pending"
+                          ? "indigo"
+                          : "gray"
+                  }
+                >
+                  {filters.r2Status === ""
+                    ? "All R2"
+                    : filters.r2Status === "filed"
+                      ? "R2 Filed"
+                      : filters.r2Status === "pending"
+                        ? "R2 Pending"
+                        : "N/A"}
+                </Capsule>
+              </div>
+            )}
+          </div>
+
+          <span className="text-slate-400 text-xs shrink-0 ml-3">
+            {filtersOpen ? "▲" : "▼"}
+          </span>
+        </button>
+
+        {/* Expanded filters */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-in-out ${
+            filtersOpen
+              ? "max-h-96 opacity-100 translate-y-0 mt-3"
+              : "max-h-0 opacity-0 -translate-y-2 mt-0"
+          }`}
+        >
+          <div className="space-y-2">
+            {/* Status */}
+            <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+              {[
+                { key: "all", label: "All Status", color: "slate" },
+                { key: "unsold", label: "Unsold", color: "gray" },
+                {
+                  key: "pending_payment",
+                  label: "Payment Pending",
+                  color: "amber",
+                },
+                { key: "complete", label: "Complete", color: "emerald" },
+                {
+                  key: "excess_payment",
+                  label: "Excess Payment",
+                  color: "rose",
+                },
+              ].map((c) => (
+                <Capsule
+                  key={c.key}
+                  active={filters.status === c.key}
+                  activeColor={c.color}
+                  onClick={() => setFilters((f) => ({ ...f, status: c.key }))}
+                >
+                  {c.label}
+                </Capsule>
+              ))}
+            </div>
+
+            {/* Cashback */}
+            <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+              {[
+                { key: "", label: "All", color: "slate" },
+                {
+                  key: "yes",
+                  label: "Cashback Received",
+                  color: "emerald",
+                },
+                {
+                  key: "expected",
+                  label: "Cashback Pending",
+                  color: "amber",
+                },
+                { key: "no", label: "No Cashback", color: "gray" },
+              ].map((c) => (
+                <Capsule
+                  key={c.key || "all"}
+                  active={filters.hasCashback === c.key}
+                  activeColor={c.color}
+                  onClick={() =>
+                    setFilters((f) => ({ ...f, hasCashback: c.key }))
+                  }
+                >
+                  {c.label}
+                </Capsule>
+              ))}
+            </div>
+
+            {/* GST */}
+            <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+              {[
+                { key: "", label: "All", color: "slate" },
+                { key: "true", label: "With GST", color: "indigo" },
+                { key: "false", label: "Without GST", color: "gray" },
+              ].map((c) => (
+                <Capsule
+                  key={c.key || "all-gst"}
+                  active={filters.withGST === c.key}
+                  activeColor={c.color}
+                  onClick={() => setFilters((f) => ({ ...f, withGST: c.key }))}
+                >
+                  {c.label}
+                </Capsule>
+              ))}
+            </div>
+
+            {/* R1 */}
+            <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+              {[
+                { key: "", label: "All R1", color: "slate" },
+                { key: "filed", label: "R1 Filed", color: "emerald" },
+                { key: "pending", label: "R1 Pending", color: "indigo" },
+                { key: "not_applicable", label: "N/A", color: "gray" },
+              ].map((c) => (
+                <Capsule
+                  key={c.key || "all-r1"}
+                  active={filters.r1Status === c.key}
+                  activeColor={c.color}
+                  onClick={() => setFilters((f) => ({ ...f, r1Status: c.key }))}
+                >
+                  {c.label}
+                </Capsule>
+              ))}
+            </div>
+
+            {/* R2 */}
+            <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
+              {[
+                { key: "", label: "All R2", color: "slate" },
+                { key: "filed", label: "R2 Filed", color: "emerald" },
+                { key: "pending", label: "R2 Pending", color: "indigo" },
+                { key: "not_applicable", label: "N/A", color: "gray" },
+              ].map((c) => (
+                <Capsule
+                  key={c.key || "all-r2"}
+                  active={filters.r2Status === c.key}
+                  activeColor={c.color}
+                  onClick={() => setFilters((f) => ({ ...f, r2Status: c.key }))}
+                >
+                  {c.label}
+                </Capsule>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-
 
       {error ? (
         <div className="text-center py-24 text-rose-400">{error}</div>
