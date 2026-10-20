@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { usePhone } from "./PhoneContext";
 import { Field, Input, Textarea, Btn, ConfirmModal, ComboBox } from "./PhoneUI";
+import { gstOnMargin, GST_METHOD_LABEL } from "./gstUtils";
 
 const EMPTY = {
   purchaseDate: "",
@@ -129,10 +130,10 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
     form.sellingPrice > 0 &&
     form.buyingPrice !== null &&
     form.buyingPrice > 0
-      ? Math.round((form.sellingPrice - form.buyingPrice) * 0.18)
+      ? gstOnMargin(form.sellingPrice - form.buyingPrice)
       : 0;
 
-  // Keep the GST charge box in sync with 18% of gross profit as the
+  // Keep the GST charge box in sync with the suggested GST (see gstUtils) as the
   // person edits the deal — but only while they haven't typed a value
   // in themselves. Once they touch the box, it's theirs until they hit
   // "Reset to 18%".
@@ -442,8 +443,8 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
                 label="GST Charge (₹)"
                 hint={
                   grossProfit !== null
-                    ? `18% of gross profit ≈ ₹${suggestedGstCharge.toLocaleString("en-IN")}`
-                    : "18% of gross profit, once sold"
+                    ? `${GST_METHOD_LABEL} (selling − buying) ≈ ₹${suggestedGstCharge.toLocaleString("en-IN")}`
+                    : `${GST_METHOD_LABEL}, once sold`
                 }
               >
                 <Input
@@ -467,7 +468,7 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
                   set("gstCharge", suggestedGstCharge || "");
                 }}
               >
-                Reset to 18%
+                Reset to suggested
               </Btn>
             </div>
           </section>
@@ -545,7 +546,7 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
             <div className="mt-3 flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-indigo-800">
-                  R2 Filed?
+                  R3B Filed?
                 </p>
                 <p className="text-xs text-indigo-500 mt-0.5">
                   GST return on the selling side.
@@ -666,7 +667,7 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
               {/* GST */}
               {form.withGST && (parseFloat(form.gstCharge) || 0) > 0 && (
                 <div className="flex justify-between items-center py-1.5 mt-0.5">
-                  <span className="text-slate-500">− GST (18%)</span>
+                  <span className="text-slate-500">− GST</span>
                   <span className="font-medium text-rose-400">
                     − ₹
                     {(parseFloat(form.gstCharge) || 0).toLocaleString("en-IN")}

@@ -9,10 +9,17 @@ import {
   ConfirmModal,
   Toast,
 } from "./PhoneUI";
+import { idealGst, GST_METHOD_LABEL } from "./gstUtils";
 
 const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
-  const { formatCurrency, formatDate, addPayment, removePayment, tsFromDate } =
-    usePhone();
+  const {
+    formatCurrency,
+    formatDate,
+    addPayment,
+    removePayment,
+    updateDeal,
+    tsFromDate,
+  } = usePhone();
   const [expanded, setExpanded] = useState(false);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
@@ -26,10 +33,31 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
   const [confirmDeletePayment, setConfirmDeletePayment] = useState(null); // stores paymentId
   const [deleting, setDeleting] = useState(false);
   const [cardToast, setCardToast] = useState(null);
+  const [togglingFiling, setTogglingFiling] = useState(null); // "r1" | "r3b" | null
 
   const showCardToast = (message, type = "error") => {
     setCardToast({ message, type });
     setTimeout(() => setCardToast(null), 3500);
+  };
+
+  // Manually flip a GST return between Filed / Pending for this deal.
+  // "r3b" is stored in the legacy r2Filed / r2FiledDate fields.
+  const toggleFiling = async (type, filed) => {
+    const key = type === "r1" ? "r1" : "r2";
+    const label = type === "r1" ? "R1" : "R3B";
+    setTogglingFiling(type);
+    try {
+      await updateDeal(deal._id, {
+        [`${key}Filed`]: filed,
+        [`${key}FiledDate`]: filed ? Date.now() : null,
+      });
+      showCardToast(`${label} marked ${filed ? "filed" : "pending"}`, "success");
+      onRefresh();
+    } catch (err) {
+      showCardToast(err.message || `Failed to update ${label} status.`);
+    } finally {
+      setTogglingFiling(null);
+    }
   };
 
   const totalPaid = (deal.payments || []).reduce((s, p) => s + p.amount, 0);
@@ -186,12 +214,12 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
             )}
             {deal.r2Status === "pending" && (
               <span className="text-xs text-indigo-600 font-medium bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
-                R2 pending
+                R3B pending
               </span>
             )}
             {deal.r2Status === "filed" && (
               <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-                R2 ✓
+                R3B ✓
               </span>
             )}
           </div>
@@ -285,18 +313,28 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                   <Row
                     label="R1 Filed"
                     value={
-                      deal.r1Filed ? (
-                        <span className="text-emerald-600 font-semibold">
-                          Yes
-                          {deal.r1FiledDate
-                            ? ` · ${formatDate(deal.r1FiledDate)}`
-                            : ""}
-                        </span>
-                      ) : (
-                        <span className="text-indigo-500 font-semibold">
-                          Pending
-                        </span>
-                      )
+                      <span className="flex flex-wrap items-center gap-x-2">
+                        {deal.r1Filed ? (
+                          <span className="text-emerald-600 font-semibold">
+                            Yes
+                            {deal.r1FiledDate
+                              ? ` · ${formatDate(deal.r1FiledDate)}`
+                              : ""}
+                          </span>
+                        ) : (
+                          <span className="text-indigo-500 font-semibold">
+                            Pending
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => toggleFiling("r1", !deal.r1Filed)}
+                          disabled={togglingFiling === "r1"}
+                          className="text-xs font-medium text-slate-400 hover:text-indigo-600 underline disabled:opacity-40"
+                        >
+                          {deal.r1Filed ? "Mark pending" : "Mark filed"}
+                        </button>
+                      </span>
                     }
                   />
                 )}
@@ -323,20 +361,30 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                 )}
                 {deal.withGST && deal.sellingPrice && (
                   <Row
-                    label="R2 Filed"
+                    label="R3B Filed"
                     value={
-                      deal.r2Filed ? (
-                        <span className="text-emerald-600 font-semibold">
-                          Yes
-                          {deal.r2FiledDate
-                            ? ` · ${formatDate(deal.r2FiledDate)}`
-                            : ""}
-                        </span>
-                      ) : (
-                        <span className="text-indigo-500 font-semibold">
-                          Pending
-                        </span>
-                      )
+                      <span className="flex flex-wrap items-center gap-x-2">
+                        {deal.r2Filed ? (
+                          <span className="text-emerald-600 font-semibold">
+                            Yes
+                            {deal.r2FiledDate
+                              ? ` · ${formatDate(deal.r2FiledDate)}`
+                              : ""}
+                          </span>
+                        ) : (
+                          <span className="text-indigo-500 font-semibold">
+                            Pending
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => toggleFiling("r3b", !deal.r2Filed)}
+                          disabled={togglingFiling === "r3b"}
+                          className="text-xs font-medium text-slate-400 hover:text-indigo-600 underline disabled:opacity-40"
+                        >
+                          {deal.r2Filed ? "Mark pending" : "Mark filed"}
+                        </button>
+                      </span>
                     }
                   />
                 )}
@@ -457,12 +505,22 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                     {/* GST charge (only for GST deals with a charge set) */}
                     {deal.withGST && deal.gstCharge > 0 && (
                       <div className="flex justify-between items-center py-1.5 mt-0.5">
-                        <span className="text-slate-500">− GST (18%)</span>
+                        <span className="text-slate-500">− GST paid</span>
                         <span className="font-medium text-rose-400">
                           − {formatCurrency(deal.gstCharge)}
                         </span>
                       </div>
                     )}
+
+                    {/* How the GST actually paid compares with a straight 18% */}
+                    {deal.withGST &&
+                      deal.sellingPrice > 0 &&
+                      idealGst(deal) !== (deal.gstCharge || 0) && (
+                        <p className="text-xs text-slate-400 text-right -mt-0.5 pb-1">
+                          Ideal GST ({GST_METHOD_LABEL}) would be{" "}
+                          {formatCurrency(idealGst(deal))}
+                        </p>
+                      )}
 
                     {/* Commission (only if present) */}
                     {deal.commissionAmount > 0 && (

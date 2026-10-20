@@ -1,4 +1,5 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const router = express.Router();
 const { PhoneDeal } = require("../../Models/phone/phoneDeal");
 const protect = require("../../middlewares/authMiddleWare");
@@ -160,6 +161,70 @@ router.delete("/:id/payment/:paymentId", protect, protectVansh, async (req, res)
     }
 
     res.json(deal);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// ── BULK: mark GST returns (R1 / R3B) as filed or pending for many deals ──
+// Body: { returnType: "r1" | "r3b", filed: boolean, dealIds: [id, ...], filedDate?: number }
+//  - "r3b" is stored in the existing r2Filed / r2FiledDate fields (only the
+//    label changed to R3B, so no data migration is needed).
+//  - Only GST deals are touched; R3B additionally requires the deal to be sold.
+//  - Updates go through findByIdAndUpdate one-by-one (NOT updateMany) so every
+//    change is picked up by the audit-log hooks.
+router.post("/meta/gst-filing", protect, protectVansh, async (req, res) => {
+  try {
+    const { returnType, filed, dealIds, filedDate } = req.body;
+
+    if (!["r1", "r3b"].includes(returnType)) {
+      return res.status(400).json({ error: "returnType must be 'r1' or 'r3b'" });
+    }
+    if (typeof filed !== "boolean") {
+      return res.status(400).json({ error: "filed must be true or false" });
+    }
+    if (!Array.isArray(dealIds) || dealIds.length === 0) {
+      return res.status(400).json({ error: "dealIds must be a non-empty array" });
+    }
+    if (dealIds.length > 500) {
+      return res.status(400).json({ error: "Too many deals in one request (max 500)" });
+    }
+
+    const fileKey = returnType === "r1" ? "r1Filed" : "r2Filed";
+    const dateKey = returnType === "r1" ? "r1FiledDate" : "r2FiledDate";
+    const stamp = filed ? Number(filedDate) || Date.now() : null;
+
+    let updated = 0;
+    const skipped = [];
+
+    for (const id of dealIds) {
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        skipped.push({ id, reason: "invalid id" });
+        continue;
+      }
+      const deal = await PhoneDeal.findById(id);
+      if (!deal) {
+        skipped.push({ id, reason: "deal not found" });
+        continue;
+      }
+      if (!deal.withGST) {
+        skipped.push({ id, reason: "not a GST deal" });
+        continue;
+      }
+      if (returnType === "r3b" && !deal.sellingPrice) {
+        skipped.push({ id, reason: "not sold yet" });
+        continue;
+      }
+      await PhoneDeal.findByIdAndUpdate(
+        id,
+        { $set: { [fileKey]: filed, [dateKey]: stamp } },
+        { new: true, runValidators: true }
+      );
+      updated += 1;
+    }
+
+    res.json({ updated, skipped });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal Server Error" });

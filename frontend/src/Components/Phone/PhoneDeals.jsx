@@ -3,6 +3,7 @@ import { usePhone } from "./PhoneContext";
 import DealCard from "./DealCard";
 import DealForm from "./DealForm";
 import PhoneFilters from "./PhoneFilters";
+import GstFilingModal from "./GstFilingModal";
 import { Modal, Btn, Toast, FullScreenSpinner } from "./PhoneUI";
 
 const _now = new Date();
@@ -204,6 +205,7 @@ const PhoneDeals = () => {
 
   const [showAdd, setShowAdd] = useState(false);
   const [editDeal, setEditDeal] = useState(null);
+  const [showGstFiling, setShowGstFiling] = useState(false);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -377,9 +379,9 @@ const PhoneDeals = () => {
   ];
 
   const r2Capsules = [
-    { key: "", label: "All R2", color: "slate" },
-    { key: "filed", label: "R2 Filed", color: "emerald" },
-    { key: "pending", label: "R2 Pending", color: "indigo" },
+    { key: "", label: "All R3B", color: "slate" },
+    { key: "filed", label: "R3B Filed", color: "emerald" },
+    { key: "pending", label: "R3B Pending", color: "indigo" },
     { key: "not_applicable", label: "N/A", color: "gray" },
   ];
 
@@ -424,6 +426,16 @@ const PhoneDeals = () => {
         </Modal>
       )}
 
+      {showGstFiling && (
+        <GstFilingModal
+          onClose={() => setShowGstFiling(false)}
+          onDone={(msg) => {
+            showToast(msg);
+            fetchDeals(filters.dateFrom, filters.dateTo);
+          }}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -439,6 +451,9 @@ const PhoneDeals = () => {
             onClick={() => setAllExpanded((v) => (v === false ? true : false))}
           >
             {allExpanded === false ? "Expand All" : "Collapse All"}
+          </Btn>
+          <Btn variant="secondary" onClick={() => setShowGstFiling(true)}>
+            GST Filing
           </Btn>
           <Btn variant="primary" onClick={() => setShowAdd(true)}>
             + New Deal
@@ -644,7 +659,7 @@ const PhoneDeals = () => {
                   }
                 >
                   {r2Capsules.find((c) => c.key === filters.r2Status)?.label ||
-                    "All R2"}
+                    "All R3B"}
                 </Capsule>
               </div>
             )}
@@ -722,7 +737,7 @@ const PhoneDeals = () => {
               ))}
             </div>
 
-            {/* R2 */}
+            {/* R3B (stored as r2Filed) */}
             <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
               {r2Capsules.map((c) => (
                 <Capsule

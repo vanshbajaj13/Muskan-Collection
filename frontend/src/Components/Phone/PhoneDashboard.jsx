@@ -3,7 +3,9 @@ import { Bar, Doughnut } from "react-chartjs-2";
 import "chart.js/auto";
 import { usePhone } from "./PhoneContext";
 import PhoneFilters from "./PhoneFilters";
-import { FullScreenSpinner } from "./PhoneUI";
+import { FullScreenSpinner, Toast } from "./PhoneUI";
+import GstFilingModal from "./GstFilingModal";
+import { summarizeGst, GST_METHOD_LABEL } from "./gstUtils";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const INR = (n) => `₹${Number(n || 0).toLocaleString("en-IN")}`;
@@ -134,6 +136,9 @@ const PhoneDashboard = () => {
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [stripYear, setStripYear] = useState(_now.getFullYear());
+  const [showGstFiling, setShowGstFiling] = useState(false);
+  const [gstTableOpen, setGstTableOpen] = useState(false);
+  const [toast, setToast] = useState(null);
 
   // Jump to a specific month/year in the date filters
   const selectMonth = (year, month) => {
@@ -254,7 +259,12 @@ const PhoneDashboard = () => {
 
     if (!hasClientFilters) {
       // No client-side filters active — use server stats directly
-      setStats(allDealsStats);
+      // (GST breakdown is computed from the same date-filtered deals)
+      setStats(
+        allDealsStats
+          ? { ...allDealsStats, gst: summarizeGst(rawDeals) }
+          : allDealsStats,
+      );
       return;
     }
 
@@ -345,6 +355,7 @@ const PhoneDashboard = () => {
       cashbackByCard,
       profitByMonth,
       profitByProduct,
+      gst: summarizeGst(filtered),
     });
   }, [rawDeals, allDealsStats, filters]);
 
@@ -522,6 +533,28 @@ const PhoneDashboard = () => {
   return (
     <div>
       {loading && <FullScreenSpinner message="Loading analytics…" />}
+
+      {toast && (
+        <div className="fixed top-4 right-4 z-50">
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            onClose={() => setToast(null)}
+          />
+        </div>
+      )}
+
+      {showGstFiling && (
+        <GstFilingModal
+          onClose={() => setShowGstFiling(false)}
+          onDone={(msg) => {
+            setToast({ message: msg, type: "success" });
+            setTimeout(() => setToast(null), 3500);
+            fetchStats();
+            fetchDeals();
+          }}
+        />
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
@@ -720,11 +753,11 @@ const PhoneDashboard = () => {
                   }
                 >
                   {filters.r2Status === ""
-                    ? "All R2"
+                    ? "All R3B"
                     : filters.r2Status === "filed"
-                      ? "R2 Filed"
+                      ? "R3B Filed"
                       : filters.r2Status === "pending"
-                        ? "R2 Pending"
+                        ? "R3B Pending"
                         : "N/A"}
                 </Capsule>
               </div>
@@ -839,12 +872,12 @@ const PhoneDashboard = () => {
               ))}
             </div>
 
-            {/* R2 */}
+            {/* R3B (stored as r2Filed) */}
             <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1">
               {[
-                { key: "", label: "All R2", color: "slate" },
-                { key: "filed", label: "R2 Filed", color: "emerald" },
-                { key: "pending", label: "R2 Pending", color: "indigo" },
+                { key: "", label: "All R3B", color: "slate" },
+                { key: "filed", label: "R3B Filed", color: "emerald" },
+                { key: "pending", label: "R3B Pending", color: "indigo" },
                 { key: "not_applicable", label: "N/A", color: "gray" },
               ].map((c) => (
                 <Capsule
@@ -928,6 +961,154 @@ const PhoneDashboard = () => {
                 accent="rose"
               />
             </div>
+
+            {/* ── GST: actually paid vs ideal 18% ─────────────────────── */}
+            {stats.gst && stats.gst.gstDealCount > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500">
+                    GST
+                  </h3>
+                  <button
+                    onClick={() => setShowGstFiling(true)}
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                  >
+                    Manage R1 / R3B filing →
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Card
+                    label="GST Paid (Actual)"
+                    value={INR(stats.gst.actualPaid)}
+                    accent="indigo"
+                    sub={
+                      stats.gst.effectiveRate !== null
+                        ? `${stats.gst.effectiveRate.toFixed(1)}% of real margin`
+                        : "No sold GST deals"
+                    }
+                  />
+                  <Card
+                    label="GST Ideal"
+                    value={INR(stats.gst.ideal)}
+                    accent="slate"
+                    sub={`${GST_METHOD_LABEL} · ${INR(stats.gst.taxableMargin)} margin`}
+                  />
+                  <Card
+                    label={
+                      stats.gst.gap >= 0
+                        ? "GST Saved vs Ideal"
+                        : "GST Paid Above Ideal"
+                    }
+                    value={INR(Math.abs(stats.gst.gap))}
+                    accent={stats.gst.gap > 0 ? "amber" : "emerald"}
+                    sub="Ideal − Actual"
+                  />
+                  <Card
+                    label="Returns Pending"
+                    value={`R1: ${stats.gst.r1Pending} · R3B: ${stats.gst.r3bPending}`}
+                    accent={
+                      stats.gst.r1Pending + stats.gst.r3bPending > 0
+                        ? "rose"
+                        : "emerald"
+                    }
+                    sub={`${stats.gst.r1Filed} R1 · ${stats.gst.r3bFiled} R3B filed`}
+                  />
+                </div>
+
+                <p className="text-xs text-slate-400">
+                  Ideal = {GST_METHOD_LABEL}, where margin = real selling price −
+                  buying price, on sold GST deals. Actual = the GST charge saved
+                  on each deal.
+                </p>
+
+                {stats.gst.noGstRecordedCount > 0 && (
+                  <p className="text-xs text-amber-600">
+                    {stats.gst.noGstRecordedCount} sold GST deal
+                    {stats.gst.noGstRecordedCount !== 1 ? "s have" : " has"} no
+                    GST charge recorded — they count as ₹0 paid.
+                  </p>
+                )}
+
+                {stats.gst.rows.length > 0 && (
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <button
+                      onClick={() => setGstTableOpen((v) => !v)}
+                      className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 transition-colors"
+                    >
+                      <span className="text-sm font-semibold text-slate-700">
+                        GST by deal ({stats.gst.rows.length})
+                      </span>
+                      <span className="text-slate-400 text-xs">
+                        {gstTableOpen ? "▲" : "▼"}
+                      </span>
+                    </button>
+                    {gstTableOpen && (
+                      <div className="overflow-x-auto border-t border-slate-100">
+                        <table className="w-full text-xs">
+                          <thead className="bg-slate-50 text-slate-400 uppercase tracking-wide">
+                            <tr>
+                              <th className="text-left font-medium px-3 py-2">
+                                Deal
+                              </th>
+                              <th className="text-right font-medium px-3 py-2">
+                                Margin
+                              </th>
+                              <th className="text-right font-medium px-3 py-2">
+                                Paid
+                              </th>
+                              <th className="text-right font-medium px-3 py-2">
+                                Ideal
+                              </th>
+                              <th className="text-right font-medium px-3 py-2">
+                                Diff
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {stats.gst.rows.map((r) => (
+                              <tr key={r.id}>
+                                <td className="px-3 py-2 text-slate-700">
+                                  <span className="font-medium">
+                                    {r.product}
+                                  </span>
+                                  {r.soldTo && (
+                                    <span className="text-slate-400">
+                                      {" "}
+                                      · {r.soldTo}
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-3 py-2 text-right text-slate-600">
+                                  {INR(r.margin)}
+                                </td>
+                                <td className="px-3 py-2 text-right text-slate-600">
+                                  {INR(r.actual)}
+                                </td>
+                                <td className="px-3 py-2 text-right text-slate-600">
+                                  {INR(r.ideal)}
+                                </td>
+                                <td
+                                  className={`px-3 py-2 text-right font-semibold ${
+                                    r.gap > 0
+                                      ? "text-amber-600"
+                                      : r.gap < 0
+                                        ? "text-rose-500"
+                                        : "text-slate-400"
+                                  }`}
+                                >
+                                  {INR(r.gap)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* ── Charts ─────────────────────────────────────────────── */}
             {profitByMonthChartData?.labels?.length > 0 && (

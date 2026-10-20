@@ -145,6 +145,14 @@ export const PhoneProvider = ({ children }) => {
       headers: authHeaders(),
     });
 
+  // Bulk-mark GST returns for many deals. returnType: "r1" | "r3b"
+  const setGstFiling = (data) =>
+    request("/api/phones/deals/meta/gst-filing", {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify(data),
+    });
+
   const getDealStats = (params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return request(`/api/phones/deals/meta/stats?${qs}`, {
@@ -279,7 +287,7 @@ export const PhoneProvider = ({ children }) => {
       value={{
         dropdowns, loadingDropdowns, fetchDropdowns, opts,
         getDeals, createDeal, updateDeal, deleteDeal,
-        addPayment, removePayment, getDealStats,
+        addPayment, removePayment, getDealStats, setGstFiling,
         getPayments, getEligibleDeals, createPaymentReceipt,updatePaymentReceipt, deletePaymentReceipt,
         getExpenses, createExpense, updateExpense, deleteExpense,
         addDropdown, renameDropdown, deleteDropdown,
