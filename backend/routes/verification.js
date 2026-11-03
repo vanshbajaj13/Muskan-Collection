@@ -23,8 +23,10 @@ router.post("/session", protect, async (req, res) => {
 
     const sessionId = generateSessionId();
 
-    // Build query for inventory snapshot
-    let inventoryQuery = {};
+    // Build query for inventory snapshot (only items that are actually in stock)
+    let inventoryQuery = {
+      $expr: { $gt: [{ $subtract: ["$quantityBuy", "$quantitySold"] }, 0] },
+    };
     if (sessionType === "category" && categories && categories.length > 0) {
       inventoryQuery.category = { $in: categories };
     }
@@ -455,7 +457,7 @@ router.delete("/log/:logId", protect, async (req, res) => {
             // Calculate new quantity by subtracting this log's contribution
             const newQuantity = Math.max(
               0,
-              currentItem.verifiedQuantity - (log.newQuantity || 0)
+              currentItem.verifiedQuantity - (log.newQuantity || 0),
             );
 
             // Recalculate variance
@@ -469,8 +471,8 @@ router.delete("/log/:logId", protect, async (req, res) => {
                 variance === 0
                   ? "verified"
                   : variance > 0
-                  ? "overage"
-                  : "discrepancy";
+                    ? "overage"
+                    : "discrepancy";
             }
 
             // Store impact information
@@ -493,7 +495,7 @@ router.delete("/log/:logId", protect, async (req, res) => {
                 verificationStatus: newStatus,
                 // Don't clear notes or verification method as other logs might have contributed
                 verifiedAt: newQuantity > 0 ? currentItem.verifiedAt : null,
-              }
+              },
             );
 
             impactMessage = `Item ${log.itemCode} updated: Removed ${
@@ -520,7 +522,7 @@ router.delete("/log/:logId", protect, async (req, res) => {
               {
                 verifiedQuantity: Math.max(
                   previousLog?.previousQuantity ?? 0,
-                  0
+                  0,
                 ),
                 varianceQuantity:
                   (previousLog.previousQuantity || 0) -
@@ -532,7 +534,7 @@ router.delete("/log/:logId", protect, async (req, res) => {
                     )?.expectedQuantity || 0,
                 verificationStatus:
                   previousLog.previousQuantity > 0 ? "verified" : "pending",
-              }
+              },
             );
 
             impactMessage = `Item ${log.itemCode} has been reverted to previous verification state.`;
@@ -547,7 +549,7 @@ router.delete("/log/:logId", protect, async (req, res) => {
                 verificationStatus: "pending",
                 notes: "",
                 verifiedAt: null,
-              }
+              },
             );
 
             impactMessage = `Item ${log.itemCode} has been reset to pending status (no previous verification found).`;
@@ -592,7 +594,7 @@ router.delete("/log/:logId", protect, async (req, res) => {
       itemCode: log.itemCode,
       performedBy: userId,
       details: `Deleted ${log.action} log - Original: ${JSON.stringify(
-        originalLogData
+        originalLogData,
       )}. Impact: ${impactMessage}`,
       previousQuantity: log.newQuantity, // What was removed
       newQuantity:
@@ -964,10 +966,10 @@ async function updateSessionStatistics(sessionId) {
   try {
     const items = await VerificationItem.find({ sessionId });
     const verifiedItems = items.filter(
-      (item) => item.verificationStatus !== "pending"
+      (item) => item.verificationStatus !== "pending",
     );
     const discrepancies = items.filter((item) =>
-      ["discrepancy", "overage", "not_found"].includes(item.verificationStatus)
+      ["discrepancy", "overage", "not_found"].includes(item.verificationStatus),
     );
 
     const actualValue = items.reduce((total, item) => {
@@ -988,7 +990,7 @@ async function updateSessionStatistics(sessionId) {
         totalDiscrepancies: discrepancies.length,
         actualFinancialValue: actualValue,
         varianceValue: varianceValue,
-      }
+      },
     );
   } catch (error) {
     console.error("Error updating session statistics:", error);
