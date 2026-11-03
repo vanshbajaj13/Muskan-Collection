@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import QrScanner from "react-qr-scanner";
 import LogManagement from "./LogManagement";
@@ -30,6 +30,8 @@ const VerificationSession = () => {
     notes: "",
   });
   const [filterStatus, setFilterStatus] = useState("all");
+  // Ref mirrors filterStatus so debounced/memoized handlers never read a stale value
+  const filterStatusRef = useRef("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
@@ -112,9 +114,11 @@ const VerificationSession = () => {
         addToast("Loading more items...", "info");
       }
 
-      // Build URL with search term if present
+      // Build URL with search term and status filter if present
       const url = `/api/verification/session/${sessionId}/items?page=${page}&limit=10${
         searchTerm ? `&search=${encodeURIComponent(searchTerm)}` : ''
+      }${
+        filterStatusRef.current !== "all" ? `&status=${filterStatusRef.current}` : ''
       }`;
 
       const response = await fetch(url, {
@@ -163,7 +167,9 @@ const VerificationSession = () => {
       setSearchTerm(term);
       
       const response = await fetch(
-        `/api/verification/session/${sessionId}/items?page=1&limit=50&search=${encodeURIComponent(term)}`,
+        `/api/verification/session/${sessionId}/items?page=1&limit=50&search=${encodeURIComponent(term)}${
+          filterStatusRef.current !== "all" ? `&status=${filterStatusRef.current}` : ''
+        }`,
         {
           headers: {
             Authorization: `Bearer ${
@@ -205,6 +211,13 @@ const VerificationSession = () => {
     // Update the input value in real-time for display
     setSearchTerm(value);
     debouncedSearch(value);
+  };
+
+  const handleStatusChange = (e) => {
+    const value = e.target.value;
+    setFilterStatus(value);
+    filterStatusRef.current = value;
+    fetchItems(1, false);
   };
 
   const clearSearch = () => {
@@ -606,7 +619,7 @@ const VerificationSession = () => {
             </label>
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              onChange={handleStatusChange}
               className="p-2 border rounded-md"
             >
               <option value="all">All Items</option>
