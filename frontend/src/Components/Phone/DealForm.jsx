@@ -3,12 +3,15 @@ import { usePhone } from "./PhoneContext";
 import { Field, Input, Textarea, Btn, ConfirmModal, ComboBox } from "./PhoneUI";
 import { gstOnMargin, GST_METHOD_LABEL } from "./gstUtils";
 
+const round2 = (n) => Math.round(n * 100) / 100;
+
 const EMPTY = {
   purchaseDate: "",
   product: "",
   purchasedFrom: "",
   purchaseAccount: "",
-  buyingPrice: "",
+  quantity: 1,
+  buyingPrice: "", // per-unit in the form; saved as total (unit x quantity)
   creditCard: "",
   cashback: "",
   cashbackDate: "",
@@ -48,6 +51,12 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
   useEffect(() => {
     if (initial && !initializedRef.current) {
       initializedRef.current = true;
+      // buyingPrice / sellingPrice are stored as TOTALS; the form edits per-unit prices.
+      const q = Math.max(1, Number(initial.quantity) || 1);
+      const unit = (v) =>
+        v === null || v === undefined || v === ""
+          ? ""
+          : Math.round((Number(v) / q) * 10000) / 10000;
       setForm({
         ...EMPTY,
         ...initial,
@@ -57,7 +66,8 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
         itemReceivedDate: dateFromTs(initial.itemReceivedDate),
         r1FiledDate: dateFromTs(initial.r1FiledDate),
         r2FiledDate: dateFromTs(initial.r2FiledDate),
-        buyingPrice: initial.buyingPrice ?? "",
+        quantity: q,
+        buyingPrice: unit(initial.buyingPrice),
         cashback: initial.cashback || "",
         cashbackExpected: initial.cashbackExpected || false,
         charges: initial.charges || "",
@@ -68,7 +78,7 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
         r1Filed: initial.r1Filed || false,
         r2Filed: initial.r2Filed || false,
         commissionAmount: initial.commissionAmount || "",
-        sellingPrice: initial.sellingPrice ?? "",
+        sellingPrice: unit(initial.sellingPrice),
       });
       setShowSaleFields(
         !!(initial.soldTo || initial.sellingPrice || initial.saleDate),
@@ -80,6 +90,13 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
   }, [initial, dateFromTs]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  // Quantity-aware totals (prices in the form are per unit)
+  const qty = Math.max(1, parseInt(form.quantity, 10) || 1);
+  const buyUnit = parseFloat(form.buyingPrice) || 0;
+  const buyTotal = round2(buyUnit * qty);
+  const sellUnit = form.sellingPrice !== "" ? parseFloat(form.sellingPrice) : NaN;
+  const sellTotal = Number.isNaN(sellUnit) ? null : round2(sellUnit * qty);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -93,7 +110,8 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
         : null,
       r1FiledDate: form.r1FiledDate ? tsFromDate(form.r1FiledDate) : null,
       r2FiledDate: form.r2FiledDate ? tsFromDate(form.r2FiledDate) : null,
-      buyingPrice: parseFloat(form.buyingPrice) || 0,
+      quantity: qty,
+      buyingPrice: buyTotal,
       cashback: parseFloat(form.cashback) || 0,
       cashbackExpected: form.cashbackExpected,
       charges: parseFloat(form.charges) || 0,
@@ -104,8 +122,7 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
       r1Filed: form.withGST ? form.r1Filed : false,
       r2Filed: form.withGST ? form.r2Filed : false,
       commissionAmount: parseFloat(form.commissionAmount) || 0,
-      sellingPrice:
-        form.sellingPrice !== "" ? parseFloat(form.sellingPrice) : null,
+      sellingPrice: sellTotal,
     };
     if (initial) {
       setPendingPayload(payload);
@@ -115,22 +132,14 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
   };
 
   const effectiveCost =
-    (parseFloat(form.buyingPrice) || 0) -
-    (parseFloat(form.cashback) || 0) +
-    (parseFloat(form.charges) || 0);
+    buyTotal - (parseFloat(form.cashback) || 0) + (parseFloat(form.charges) || 0);
 
   const grossProfit =
-    form.sellingPrice !== "" && parseFloat(form.sellingPrice) > 0
-      ? parseFloat(form.sellingPrice) - effectiveCost
-      : null;
+    sellTotal !== null && sellTotal > 0 ? sellTotal - effectiveCost : null;
 
   const suggestedGstCharge =
-    form.withGST &&
-    form.sellingPrice !== null &&
-    form.sellingPrice > 0 &&
-    form.buyingPrice !== null &&
-    form.buyingPrice > 0
-      ? gstOnMargin(form.sellingPrice - form.buyingPrice)
+    form.withGST && sellTotal > 0 && buyTotal > 0
+      ? gstOnMargin(sellTotal - buyTotal)
       : 0;
 
   // Keep the GST charge box in sync with the suggested GST (see gstUtils) as the
@@ -222,7 +231,27 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
               />
             </Field>
 
-            <Field label="Buying Price (₹)" required>
+            <Field label="Quantity" hint="Units bought on this bill">
+              <Input
+                type="number"
+                min="1"
+                step="1"
+                placeholder="1"
+                value={form.quantity}
+                onChange={(e) => set("quantity", e.target.value)}
+                onWheel={(e) => e.target.blur()}
+              />
+            </Field>
+
+            <Field
+              label={qty > 1 ? "Buying Price per unit (₹)" : "Buying Price (₹)"}
+              required
+              hint={
+                qty > 1
+                  ? `Total for ${qty}: ₹${buyTotal.toLocaleString("en-IN")}`
+                  : undefined
+              }
+            >
               <Input
                 type="number"
                 min="0"
@@ -258,7 +287,10 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
               />
             </Field>
 
-            <Field label="IMEI Number">
+            <Field
+              label="IMEI Number"
+              hint={qty > 1 ? "Separate multiple IMEIs with commas" : undefined}
+            >
               <Input
                 placeholder="e.g. 356789104567890"
                 value={form.imeiNumber}
@@ -293,7 +325,7 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
             <div className="mt-3 flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-indigo-800">
-                  R1 Filed?
+                  R3B Filed?
                 </p>
                 <p className="text-xs text-indigo-500 mt-0.5">
                   GST return on the purchase side.
@@ -513,8 +545,12 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
                 />
               </Field>
               <Field
-                label="Selling Price (₹)"
-                hint="Leave blank if payments cover it"
+                label={qty > 1 ? "Selling Price per unit (₹)" : "Selling Price (₹)"}
+                hint={
+                  qty > 1 && sellTotal !== null
+                    ? `Total for ${qty}: ₹${sellTotal.toLocaleString("en-IN")}`
+                    : "Leave blank if payments cover it"
+                }
               >
                 <Input
                   type="number"
@@ -546,7 +582,7 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
             <div className="mt-3 flex items-center justify-between bg-indigo-50 border border-indigo-100 rounded-lg px-4 py-3">
               <div>
                 <p className="text-sm font-semibold text-indigo-800">
-                  R3B Filed?
+                  R1 Filed?
                 </p>
                 <p className="text-xs text-indigo-500 mt-0.5">
                   GST return on the selling side.
@@ -603,17 +639,22 @@ const DealForm = ({ initial, onSave, onCancel, loading }) => {
               <div className="flex justify-between items-center py-1.5">
                 <span className="text-slate-600">Selling Price</span>
                 <span className="font-semibold text-slate-800">
-                  ₹
-                  {(parseFloat(form.sellingPrice) || 0).toLocaleString("en-IN")}
+                  ₹{(sellTotal || 0).toLocaleString("en-IN")}
                 </span>
               </div>
 
               {/* Buying price */}
               <div className="flex justify-between items-center py-1.5">
-                <span className="text-slate-500">− Buying Price</span>
+                <span className="text-slate-500">
+                  − Buying Price
+                  {qty > 1 && (
+                    <span className="text-slate-400 text-xs ml-1">
+                      ({qty} × ₹{buyUnit.toLocaleString("en-IN")})
+                    </span>
+                  )}
+                </span>
                 <span className="font-medium text-rose-500">
-                  − ₹
-                  {(parseFloat(form.buyingPrice) || 0).toLocaleString("en-IN")}
+                  − ₹{buyTotal.toLocaleString("en-IN")}
                 </span>
               </div>
 

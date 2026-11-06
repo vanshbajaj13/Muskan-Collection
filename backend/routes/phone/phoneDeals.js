@@ -64,7 +64,7 @@ router.patch("/:id", protect, protectVansh, async (req, res) => {
     const deal = await PhoneDeal.findByIdAndUpdate(
       req.params.id,
       { $set: req.body },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
     if (!deal) return res.status(404).json({ message: "Deal not found" });
     res.json(deal);
@@ -132,40 +132,49 @@ router.post("/:id/payment", protect, protectVansh, async (req, res) => {
 });
 
 // ── REMOVE a specific payment from a deal (also cleans up linked receipt) ─
-router.delete("/:id/payment/:paymentId", protect, protectVansh, async (req, res) => {
-  try {
-    const deal = await PhoneDeal.findById(req.params.id);
-    if (!deal) return res.status(404).json({ message: "Deal not found" });
+router.delete(
+  "/:id/payment/:paymentId",
+  protect,
+  protectVansh,
+  async (req, res) => {
+    try {
+      const deal = await PhoneDeal.findById(req.params.id);
+      if (!deal) return res.status(404).json({ message: "Deal not found" });
 
-    const payment = deal.payments.find((p) => p._id.toString() === req.params.paymentId);
-    const receiptId = payment?.receiptId;
+      const payment = deal.payments.find(
+        (p) => p._id.toString() === req.params.paymentId,
+      );
+      const receiptId = payment?.receiptId;
 
-    deal.payments = deal.payments.filter((p) => p._id.toString() !== req.params.paymentId);
-    await deal.save();
+      deal.payments = deal.payments.filter(
+        (p) => p._id.toString() !== req.params.paymentId,
+      );
+      await deal.save();
 
-    // If this payment was part of a multi-allocation receipt, also remove it
-    // from the receipt's allocations / delete the receipt if it becomes empty.
-    if (receiptId) {
-      const { PhonePayment } = require("../../Models/phone/phonePayment");
-      const receipt = await PhonePayment.findById(receiptId);
-      if (receipt) {
-        receipt.allocations = receipt.allocations.filter(
-          (a) => a.dealId.toString() !== req.params.id
-        );
-        if (receipt.allocations.length === 0) {
-          await PhonePayment.findByIdAndDelete(receiptId);
-        } else {
-          await receipt.save();
+      // If this payment was part of a multi-allocation receipt, also remove it
+      // from the receipt's allocations / delete the receipt if it becomes empty.
+      if (receiptId) {
+        const { PhonePayment } = require("../../Models/phone/phonePayment");
+        const receipt = await PhonePayment.findById(receiptId);
+        if (receipt) {
+          receipt.allocations = receipt.allocations.filter(
+            (a) => a.dealId.toString() !== req.params.id,
+          );
+          if (receipt.allocations.length === 0) {
+            await PhonePayment.findByIdAndDelete(receiptId);
+          } else {
+            await receipt.save();
+          }
         }
       }
-    }
 
-    res.json(deal);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
+      res.json(deal);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  },
+);
 
 // ── BULK: mark GST returns (R1 / R3B) as filed or pending for many deals ──
 // Body: { returnType: "r1" | "r3b", filed: boolean, dealIds: [id, ...], filedDate?: number }
@@ -179,20 +188,26 @@ router.post("/meta/gst-filing", protect, protectVansh, async (req, res) => {
     const { returnType, filed, dealIds, filedDate } = req.body;
 
     if (!["r1", "r3b"].includes(returnType)) {
-      return res.status(400).json({ error: "returnType must be 'r1' or 'r3b'" });
+      return res
+        .status(400)
+        .json({ error: "returnType must be 'r1' or 'r3b'" });
     }
     if (typeof filed !== "boolean") {
       return res.status(400).json({ error: "filed must be true or false" });
     }
     if (!Array.isArray(dealIds) || dealIds.length === 0) {
-      return res.status(400).json({ error: "dealIds must be a non-empty array" });
+      return res
+        .status(400)
+        .json({ error: "dealIds must be a non-empty array" });
     }
     if (dealIds.length > 500) {
-      return res.status(400).json({ error: "Too many deals in one request (max 500)" });
+      return res
+        .status(400)
+        .json({ error: "Too many deals in one request (max 500)" });
     }
 
-    const fileKey = returnType === "r1" ? "r1Filed" : "r2Filed";
-    const dateKey = returnType === "r1" ? "r1FiledDate" : "r2FiledDate";
+    const fileKey = returnType === "r1" ? "r2Filed" : "r1Filed";
+    const dateKey = returnType === "r1" ? "r2FiledDate" : "r1FiledDate";
     const stamp = filed ? Number(filedDate) || Date.now() : null;
 
     let updated = 0;
@@ -212,14 +227,14 @@ router.post("/meta/gst-filing", protect, protectVansh, async (req, res) => {
         skipped.push({ id, reason: "not a GST deal" });
         continue;
       }
-      if (returnType === "r3b" && !deal.sellingPrice) {
+      if (returnType === "r1" && !deal.sellingPrice) {
         skipped.push({ id, reason: "not sold yet" });
         continue;
       }
       await PhoneDeal.findByIdAndUpdate(
         id,
         { $set: { [fileKey]: filed, [dateKey]: stamp } },
-        { new: true, runValidators: true }
+        { new: true, runValidators: true },
       );
       updated += 1;
     }
@@ -267,21 +282,37 @@ router.get("/meta/stats", protect, protectVansh, async (req, res) => {
 
     // Summary totals (completed/partial deals only — exclude unsold)
     const soldDeals = computed.filter((d) => d.dealStatus !== "unsold");
-    const totalRevenue = soldDeals.reduce((s, d) => s + (d.effectiveSellingPrice || 0), 0);
+    const totalRevenue = soldDeals.reduce(
+      (s, d) => s + (d.effectiveSellingPrice || 0),
+      0,
+    );
     const totalBuyingCost = computed.reduce((s, d) => s + d.buyingPrice, 0);
     const totalCashback = computed.reduce((s, d) => s + d.cashback, 0);
     const totalCharges = computed.reduce((s, d) => s + d.charges, 0);
-    const totalCommission = computed.reduce((s, d) => s + d.commissionAmount, 0);
-    const totalGrossProfit = soldDeals.reduce((s, d) => s + (d.grossProfit || 0), 0);
-    const totalNetProfit = soldDeals.reduce((s, d) => s + (d.netProfit || 0), 0);
+    const totalCommission = computed.reduce(
+      (s, d) => s + d.commissionAmount,
+      0,
+    );
+    const totalGrossProfit = soldDeals.reduce(
+      (s, d) => s + (d.grossProfit || 0),
+      0,
+    );
+    const totalNetProfit = soldDeals.reduce(
+      (s, d) => s + (d.netProfit || 0),
+      0,
+    );
     const totalPending = computed.reduce((s, d) => s + d.paymentPending, 0);
-    const totalExcess = computed.reduce((s, d) => s + (d.paymentExcess || 0), 0);
+    const totalExcess = computed.reduce(
+      (s, d) => s + (d.paymentExcess || 0),
+      0,
+    );
 
     // Cashback by card
     const cashbackByCard = {};
     computed.forEach((d) => {
       if (d.creditCard && d.cashback) {
-        cashbackByCard[d.creditCard] = (cashbackByCard[d.creditCard] || 0) + d.cashback;
+        cashbackByCard[d.creditCard] =
+          (cashbackByCard[d.creditCard] || 0) + d.cashback;
       }
     });
 
@@ -290,7 +321,8 @@ router.get("/meta/stats", protect, protectVansh, async (req, res) => {
     soldDeals.forEach((d) => {
       const date = new Date(d.purchaseDate);
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      if (!profitByMonth[key]) profitByMonth[key] = { gross: 0, net: 0, revenue: 0, count: 0 };
+      if (!profitByMonth[key])
+        profitByMonth[key] = { gross: 0, net: 0, revenue: 0, count: 0 };
       profitByMonth[key].gross += d.grossProfit || 0;
       profitByMonth[key].net += d.netProfit || 0;
       profitByMonth[key].revenue += d.effectiveSellingPrice || 0;
@@ -311,9 +343,12 @@ router.get("/meta/stats", protect, protectVansh, async (req, res) => {
     // Deal counts by status
     const statusCounts = {
       unsold: computed.filter((d) => d.dealStatus === "unsold").length,
-      pending_payment: computed.filter((d) => d.dealStatus === "pending_payment").length,
+      pending_payment: computed.filter(
+        (d) => d.dealStatus === "pending_payment",
+      ).length,
       complete: computed.filter((d) => d.dealStatus === "complete").length,
-      excess_payment: computed.filter((d) => d.dealStatus === "excess_payment").length,
+      excess_payment: computed.filter((d) => d.dealStatus === "excess_payment")
+        .length,
     };
 
     res.json({
@@ -354,25 +389,43 @@ router.get("/meta/export", protect, protectVansh, async (req, res) => {
     const deals = await PhoneDeal.find(query).sort({ purchaseDate: -1 });
 
     const headers = [
-      "Purchase Date", "Product", "Purchased From", "Account",
-      "Buying Price", "Credit Card", "Cashback", "Cashback Date",
-      "Charges", "Charges Description", "On EMI",
-      "Commission Amount", "Commission To",
-      "Sold To", "Selling Price", "Sale Date",
-      "Total Payments Received", "Payment Pending",
-      "Gross Profit", "Net Profit",
-      "Deal Status", "Notes"
+      "Purchase Date",
+      "Product",
+      "Purchased From",
+      "Account",
+      "Buying Price",
+      "Credit Card",
+      "Cashback",
+      "Cashback Date",
+      "Charges",
+      "Charges Description",
+      "On EMI",
+      "Commission Amount",
+      "Commission To",
+      "Sold To",
+      "Selling Price",
+      "Sale Date",
+      "Total Payments Received",
+      "Payment Pending",
+      "Gross Profit",
+      "Net Profit",
+      "Deal Status",
+      "Notes",
     ];
 
     const rows = deals.map((d) => [
-      d.purchaseDate ? new Date(d.purchaseDate).toLocaleDateString("en-IN") : "",
+      d.purchaseDate
+        ? new Date(d.purchaseDate).toLocaleDateString("en-IN")
+        : "",
       d.product,
       d.purchasedFrom,
       d.purchaseAccount,
       d.buyingPrice,
       d.creditCard,
       d.cashback || 0,
-      d.cashbackDate ? new Date(d.cashbackDate).toLocaleDateString("en-IN") : "",
+      d.cashbackDate
+        ? new Date(d.cashbackDate).toLocaleDateString("en-IN")
+        : "",
       d.charges || 0,
       d.chargesDescription || "",
       d.withGST ? "Yes" : "No",
@@ -391,7 +444,10 @@ router.get("/meta/export", protect, protectVansh, async (req, res) => {
 
     const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
     res.setHeader("Content-Type", "text/csv");
-    res.setHeader("Content-Disposition", `attachment; filename="phone-deals-${Date.now()}.csv"`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="phone-deals-${Date.now()}.csv"`,
+    );
     res.send(csv);
   } catch (err) {
     res.status(500).json({ error: "Internal Server Error" });

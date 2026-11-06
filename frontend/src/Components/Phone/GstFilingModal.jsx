@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { usePhone } from "./PhoneContext";
 import { Modal, Btn, Spinner, ConfirmModal } from "./PhoneUI";
+import { GST_RATE } from "./gstUtils";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Monthly GST filing helper.
@@ -9,11 +10,12 @@ import { Modal, Btn, Spinner, ConfirmModal } from "./PhoneUI";
 // you pick a return + month and mark all matching GST deals as Filed in one go
 // (or flip a month back to Pending if something was marked by mistake).
 //
-//   R1  → matched on purchase date   (GST deals bought in that month)
-//   R3B → matched on sale date       (GST deals sold in that month)
+//   R1  → SALES      matched on sale date     (GST deals sold in that month)
+//   R3B → PURCHASES  matched on purchase date (GST deals bought in that month)
 //
-// Note: R3B is stored in the legacy r2Filed / r2FiledDate fields — only the
-// label changed — so no data had to be migrated.
+// Note: legacy field names are kept — R1 (sales) is stored in r2Filed /
+// r2FiledDate and R3B (purchases) in r1Filed / r1FiledDate — so no data had
+// to be migrated.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MONTHS = [
@@ -24,19 +26,23 @@ const MONTHS = [
 const RETURNS = {
   r1: {
     label: "R1",
-    fileKey: "r1Filed",
-    dateOf: (d) => d.purchaseDate,
-    dateLabel: "Bought",
-    amountOf: (d) => d.buyingPrice,
-    partyOf: (d) => d.purchasedFrom,
-  },
-  r3b: {
-    label: "R3B",
     fileKey: "r2Filed",
     dateOf: (d) => d.saleDate || d.purchaseDate,
     dateLabel: "Sold",
     amountOf: (d) => d.sellingPrice,
     partyOf: (d) => d.soldTo,
+    valueLabel: "Total sales value (incl. GST)",
+    taxableLabel: "Expected R1 value (excl. GST)",
+  },
+  r3b: {
+    label: "R3B",
+    fileKey: "r1Filed",
+    dateOf: (d) => d.purchaseDate,
+    dateLabel: "Bought",
+    amountOf: (d) => d.buyingPrice,
+    partyOf: (d) => d.purchasedFrom,
+    valueLabel: "Total purchase value (incl. GST)",
+    taxableLabel: "Expected R3B value (excl. GST)",
   },
 };
 
@@ -115,7 +121,7 @@ const GstFilingModal = ({ onClose, onDone, initialReturn = "r1" }) => {
     return deals
       .filter((d) => {
         if (!d.withGST) return false;
-        if (returnType === "r3b" && !(d.sellingPrice > 0)) return false;
+        if (returnType === "r1" && !(d.sellingPrice > 0)) return false;
         const isFiled = !!d[c.fileKey];
         const ts = c.dateOf(d) || 0;
         if (mode === "filed") {
@@ -142,6 +148,14 @@ const GstFilingModal = ({ onClose, onDone, initialReturn = "r1" }) => {
     });
 
   const allTicked = candidates.length > 0 && selected.size === candidates.length;
+  const sumOf = (list) =>
+    list.reduce((s, d) => s + (Number(cfg.amountOf(d)) || 0), 0);
+  const listedTotal = sumOf(candidates);
+  const selectedTotal = sumOf(candidates.filter((d) => selected.has(d._id)));
+  // Prices include 18% GST, so the value to report is total × 100 / 118
+  const taxableOf = (t) => Math.round((t / (1 + GST_RATE)) * 100) / 100;
+  const selectedTaxable = taxableOf(selectedTotal);
+  const listedTaxable = taxableOf(listedTotal);
   const monthLabel = `${MONTHS[month]} ${year}`;
   const verb = mode === "filed" ? "Filed" : "Pending";
 
@@ -177,7 +191,7 @@ const GstFilingModal = ({ onClose, onDone, initialReturn = "r1" }) => {
           title={`Mark ${selected.size} deal${selected.size !== 1 ? "s" : ""} as ${cfg.label} ${verb}?`}
           body={`${cfg.label} · ${monthLabel}${
             mode === "filed" && includeOlder ? " (and older pending deals)" : ""
-          }. Type CONFIRM to proceed.`}
+          }. ${cfg.valueLabel}: ${formatCurrency(selectedTotal)}. ${cfg.taxableLabel}: ${formatCurrency(selectedTaxable)}. Type CONFIRM to proceed.`}
           confirmTextRequired={true}
           onConfirm={submit}
           onCancel={() => setConfirming(false)}
@@ -264,7 +278,8 @@ const GstFilingModal = ({ onClose, onDone, initialReturn = "r1" }) => {
         )}
 
         <p className="text-xs text-slate-400">
-          {cfg.label} is matched on {returnType === "r1" ? "purchase" : "sale"}{" "}
+          {cfg.label} ({returnType === "r1" ? "sales" : "purchases"}) is matched on{" "}
+          {returnType === "r1" ? "sale" : "purchase"}{" "}
           date.{" "}
           {mode === "filed"
             ? `Showing pending ${cfg.label} deals up to the end of ${monthLabel}.`
@@ -342,6 +357,36 @@ const GstFilingModal = ({ onClose, onDone, initialReturn = "r1" }) => {
                 );
               })
             )}
+          </div>
+
+          {/* Total value + expected taxable value */}
+          <div className="px-3 py-2.5 bg-slate-50 border-t border-slate-100 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-slate-600">
+                {cfg.valueLabel}
+              </span>
+              <span className="text-sm font-bold text-slate-800">
+                {formatCurrency(selectedTotal)}
+                {selectedTotal !== listedTotal && (
+                  <span className="ml-1.5 text-xs font-normal text-slate-400">
+                    of {formatCurrency(listedTotal)}
+                  </span>
+                )}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-indigo-600">
+                {cfg.taxableLabel}
+              </span>
+              <span className="text-sm font-bold text-indigo-700">
+                {formatCurrency(selectedTaxable)}
+                {selectedTotal !== listedTotal && (
+                  <span className="ml-1.5 text-xs font-normal text-slate-400">
+                    of {formatCurrency(listedTaxable)}
+                  </span>
+                )}
+              </span>
+            </div>
           </div>
         </div>
 

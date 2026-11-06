@@ -19,6 +19,7 @@ const phoneDealSchema = new mongoose.Schema(
     purchasedFrom: { type: String, required: true },       // "Amazon", "Apple Store"
     purchaseAccount: { type: String, required: true },     // whose account: "Vansh", "Anuj"
     buyingPrice: { type: Number, required: true },
+    quantity: { type: Number, default: 1, min: 1 },
     creditCard: { type: String, default: "" },             // "SBI Card", "HDFC Regalia"
     cashback: { type: Number, default: 0 },
     cashbackDate: { type: Number, default: null },
@@ -129,23 +130,23 @@ phoneDealSchema.virtual("netProfit").get(function () {
   return gross - (this.commissionAmount || 0) - (this.gstCharge || 0);
 });
 
-// ── Virtual: R1 status (GST filing on purchase side) ───────────────
-// "not_applicable" → deal is not withGST
-// "pending"        → withGST but not yet filed
-// "filed"          → withGST and filed
-phoneDealSchema.virtual("r1Status").get(function () {
-  if (!this.withGST) return "not_applicable";
-  return this.r1Filed ? "filed" : "pending";
-});
-
-// ── Virtual: R2 status (GST filing on selling side) ─────────────────
+// ── Virtual: R1 status (GST filing on selling side) ─────────────────
 // "not_applicable" → deal is not withGST, or not sold yet
 // "pending"        → withGST, sold, but not yet filed
 // "filed"          → withGST, sold, and filed
-phoneDealSchema.virtual("r2Status").get(function () {
+phoneDealSchema.virtual("r1Status").get(function () {   // R1 = SALES
   if (!this.withGST) return "not_applicable";
   if (!this.sellingPrice) return "not_applicable";
   return this.r2Filed ? "filed" : "pending";
+});
+
+// ── Virtual: R3B status (GST filing on purchase side) ───────────────
+// "not_applicable" → deal is not withGST
+// "pending"        → withGST but not yet filed
+// "filed"          → withGST and filed
+phoneDealSchema.virtual("r2Status").get(function () {   // R3B = PURCHASES
+  if (!this.withGST) return "not_applicable";
+  return this.r1Filed ? "filed" : "pending";
 });
 
 phoneDealSchema.set("toJSON", { virtuals: true });

@@ -37,7 +37,8 @@ export const gstOnMargin = (margin) => {
 export const GST_METHOD_LABEL =
   GST_METHOD === "margin" ? "18% of margin" : "18/118 of margin";
 
-export const isSoldGstDeal = (d) => !!d && !!d.withGST && Number(d.sellingPrice) > 0;
+export const isSoldGstDeal = (d) =>
+  !!d && !!d.withGST && Number(d.sellingPrice) > 0;
 
 // Real margin on the deal (can be negative if sold at a loss)
 export const realMargin = (d) =>
@@ -84,14 +85,16 @@ export const summarizeGst = (deals = []) => {
     actualPaid,
     ideal,
     gap: ideal - actualPaid,
-    effectiveRate: taxableMargin > 0 ? (actualPaid / taxableMargin) * 100 : null,
+    effectiveRate:
+      taxableMargin > 0 ? (actualPaid / taxableMargin) * 100 : null,
     // sold GST deals where nothing was recorded as GST paid (worth a look)
-    noGstRecordedCount: rows.filter((r) => r.actual === 0 && r.ideal > 0).length,
+    noGstRecordedCount: rows.filter((r) => r.actual === 0 && r.ideal > 0)
+      .length,
     // filing status
-    r1Pending: gstDeals.filter((d) => !d.r1Filed).length,
-    r1Filed: gstDeals.filter((d) => d.r1Filed).length,
-    r3bPending: sold.filter((d) => !d.r2Filed).length, // r2Filed = R3B (legacy field name)
-    r3bFiled: sold.filter((d) => d.r2Filed).length,
+    r1Pending: sold.filter((d) => !d.r2Filed).length,
+    r1Filed: sold.filter((d) => d.r2Filed).length,
+    r3bPending: gstDeals.filter((d) => !d.r1Filed).length,
+    r3bFiled: gstDeals.filter((d) => d.r1Filed).length,
     rows,
   };
 };

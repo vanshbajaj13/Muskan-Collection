@@ -5,6 +5,7 @@ import DealForm from "./DealForm";
 import PhoneFilters from "./PhoneFilters";
 import GstFilingModal from "./GstFilingModal";
 import { Modal, Btn, Toast, FullScreenSpinner } from "./PhoneUI";
+import BulkSaleModal from "./BulkSaleModal";
 
 const _now = new Date();
 const _defaultFrom = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, "0")}-01`;
@@ -206,6 +207,7 @@ const PhoneDeals = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [editDeal, setEditDeal] = useState(null);
   const [showGstFiling, setShowGstFiling] = useState(false);
+  const [showBulkSale, setShowBulkSale] = useState(false);
 
   const showToast = (message, type = "success") => {
     setToast({ message, type });
@@ -435,6 +437,15 @@ const PhoneDeals = () => {
           }}
         />
       )}
+      {showBulkSale && (
+        <BulkSaleModal
+          onClose={() => setShowBulkSale(false)}
+          onDone={(msg) => {
+            showToast(msg);
+            fetchDeals(filters.dateFrom, filters.dateTo);
+          }}
+        />
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
@@ -454,6 +465,9 @@ const PhoneDeals = () => {
           </Btn>
           <Btn variant="secondary" onClick={() => setShowGstFiling(true)}>
             GST Filing
+          </Btn>
+          <Btn variant="secondary" onClick={() => setShowBulkSale(true)}>
+            Bulk Sale
           </Btn>
           <Btn variant="primary" onClick={() => setShowAdd(true)}>
             + New Deal

@@ -41,9 +41,10 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
   };
 
   // Manually flip a GST return between Filed / Pending for this deal.
-  // "r3b" is stored in the legacy r2Filed / r2FiledDate fields.
+  // R1 (sales) is stored in the legacy r2Filed / r2FiledDate fields,
+  // R3B (purchases) in the legacy r1Filed / r1FiledDate fields.
   const toggleFiling = async (type, filed) => {
-    const key = type === "r1" ? "r1" : "r2";
+    const key = type === "r1" ? "r2" : "r1";
     const label = type === "r1" ? "R1" : "R3B";
     setTogglingFiling(type);
     try {
@@ -173,6 +174,11 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-slate-800 text-sm ">
               {deal.product}
+              {(deal.quantity || 1) > 1 && (
+                <span className="ml-1.5 text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
+                  ×{deal.quantity}
+                </span>
+              )}
             </p>
             <p className="text-xs text-slate-400 ">
               {deal.purchaseAccount} · {deal.purchasedFrom}
@@ -289,6 +295,14 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                   label="Item Received"
                   value={formatDate(deal.itemReceivedDate)}
                 />
+                {(deal.quantity || 1) > 1 && (
+                  <Row
+                    label="Quantity"
+                    value={`${deal.quantity} × ${formatCurrency(
+                      Math.round((deal.buyingPrice / deal.quantity) * 100) / 100,
+                    )}`}
+                  />
+                )}
                 <Row label="Credit Card" value={deal.creditCard || "—"} />
                 <Row label="With GST" value={deal.withGST ? "Yes" : "No"} />
                 <Row label="IMEI Number" value={deal.imeiNumber || "—"} />
@@ -311,7 +325,7 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                 />
                 {deal.withGST && (
                   <Row
-                    label="R1 Filed"
+                    label="R3B Filed"
                     value={
                       <span className="flex flex-wrap items-center gap-x-2">
                         {deal.r1Filed ? (
@@ -328,8 +342,8 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                         )}
                         <button
                           type="button"
-                          onClick={() => toggleFiling("r1", !deal.r1Filed)}
-                          disabled={togglingFiling === "r1"}
+                          onClick={() => toggleFiling("r3b", !deal.r1Filed)}
+                          disabled={togglingFiling === "r3b"}
                           className="text-xs font-medium text-slate-400 hover:text-indigo-600 underline disabled:opacity-40"
                         >
                           {deal.r1Filed ? "Mark pending" : "Mark filed"}
@@ -361,7 +375,7 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                 )}
                 {deal.withGST && deal.sellingPrice && (
                   <Row
-                    label="R3B Filed"
+                    label="R1 Filed"
                     value={
                       <span className="flex flex-wrap items-center gap-x-2">
                         {deal.r2Filed ? (
@@ -378,8 +392,8 @@ const DealCard = ({ deal, onEdit, onDelete, onRefresh }) => {
                         )}
                         <button
                           type="button"
-                          onClick={() => toggleFiling("r3b", !deal.r2Filed)}
-                          disabled={togglingFiling === "r3b"}
+                          onClick={() => toggleFiling("r1", !deal.r2Filed)}
+                          disabled={togglingFiling === "r1"}
                           className="text-xs font-medium text-slate-400 hover:text-indigo-600 underline disabled:opacity-40"
                         >
                           {deal.r2Filed ? "Mark pending" : "Mark filed"}
