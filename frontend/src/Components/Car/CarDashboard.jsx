@@ -29,6 +29,8 @@ const CarDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  // "mine" (default) = my share of every deal, "all" = whole deals
+  const [view, setView] = useState("mine");
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
@@ -66,7 +68,11 @@ const CarDashboard = () => {
 
   const profitByMonthData = stats
     ? (() => {
-        const entries = Object.entries(stats.profitByMonth || {}).sort(
+        const monthly =
+          view === "mine"
+            ? stats.myProfitByMonth || {}
+            : stats.profitByMonth || {};
+        const entries = Object.entries(monthly).sort(
           ([a], [b]) => a.localeCompare(b),
         );
         return {
@@ -93,10 +99,17 @@ const CarDashboard = () => {
 
   const partnerProfitData = stats
     ? (() => {
-        const entries = Object.entries(stats.partnerProfit || {}).sort(
+        const base = { ...(stats.partnerProfit || {}) };
+        if (!Object.keys(base).length) return null;
+        // my share of the same deals, alongside partners
+        if (stats.mySummary)
+          base["You"] = {
+            profit: stats.mySummary.totalNetProfit,
+            deals: stats.mySummary.soldDeals,
+          };
+        const entries = Object.entries(base).sort(
           ([, a], [, b]) => b.profit - a.profit,
         );
-        if (!entries.length) return null;
         return {
           labels: entries.map(([name]) => name),
           datasets: [
@@ -136,13 +149,25 @@ const CarDashboard = () => {
         labels: ["Sold", "In Stock"],
         datasets: [
           {
-            data: [stats.summary.soldDeals, stats.summary.unsoldDeals],
+            data: (() => {
+              const v =
+                view === "mine" && stats.mySummary
+                  ? stats.mySummary
+                  : stats.summary;
+              return [v.soldDeals, v.unsoldDeals];
+            })(),
             backgroundColor: ["rgba(16,185,129,0.75)", "rgba(245,158,11,0.75)"],
             borderWidth: 0,
           },
         ],
       }
     : null;
+
+  // Numbers shown in the cards follow the selected view
+  const s =
+    stats && view === "mine" && stats.mySummary
+      ? stats.mySummary
+      : stats?.summary;
 
   const legendOpts = {
     position: "bottom",
@@ -157,8 +182,31 @@ const CarDashboard = () => {
       <div className="mb-5">
         <h2 className="text-xl font-bold text-slate-800">Dashboard</h2>
         <p className="text-sm text-slate-500 mt-0.5">
-          Performance overview across all deals
+          {view === "mine"
+            ? "Your share of every deal"
+            : "Whole deals, all partners combined"}
         </p>
+      </div>
+
+      {/* View toggle */}
+      <div className="flex gap-2 mb-5">
+        {[
+          { key: "mine", label: "My Share" },
+          { key: "all", label: "Full Deals" },
+        ].map((v) => (
+          <button
+            key={v.key}
+            onClick={() => setView(v.key)}
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors
+              ${
+                view === v.key
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+          >
+            {v.label}
+          </button>
+        ))}
       </div>
 
       {/* Date filter */}
@@ -213,46 +261,46 @@ const CarDashboard = () => {
           <div className="grid grid-cols-2 gap-3">
             <StatCard
               label="Total Deals"
-              value={stats.summary.totalDeals}
+              value={s.totalDeals}
               color="blue"
             />
             <StatCard
               label="Sold"
-              value={stats.summary.soldDeals}
+              value={s.soldDeals}
               color="green"
             />
             <StatCard
               label="In Stock"
-              value={stats.summary.unsoldDeals}
+              value={s.unsoldDeals}
               color="amber"
             />
             <StatCard
               label="Capital Locked"
-              value={INR(stats.summary.capitalLocked)}
+              value={INR(s.capitalLocked)}
               color="amber"
-              sub={`${stats.summary.unsoldDeals} vehicle${stats.summary.unsoldDeals !== 1 ? "s" : ""}`}
+              sub={`${s.unsoldDeals} vehicle${s.unsoldDeals !== 1 ? "s" : ""}`}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <StatCard
               label="Buying Cost"
-              value={INR(stats.summary.totalBuyingCost)}
+              value={INR(s.totalBuyingCost)}
               color="slate"
             />
             <StatCard
               label="Expenses"
-              value={INR(stats.summary.totalExpenses)}
+              value={INR(s.totalExpenses)}
               color="slate"
             />
             <StatCard
               label="Revenue"
-              value={INR(stats.summary.totalRevenue)}
+              value={INR(s.totalRevenue)}
               color="blue"
             />
             <StatCard
               label="Commissions"
-              value={INR(stats.summary.totalCommission)}
+              value={INR(s.totalCommission)}
               color="purple"
             />
           </div>
@@ -260,14 +308,14 @@ const CarDashboard = () => {
           <div className="grid grid-cols-2 gap-3">
             <StatCard
               label="Gross Profit"
-              value={INR(stats.summary.totalGrossProfit)}
-              color={stats.summary.totalGrossProfit >= 0 ? "green" : "red"}
+              value={INR(s.totalGrossProfit)}
+              color={s.totalGrossProfit >= 0 ? "green" : "red"}
               sub="Revenue − Cost"
             />
             <StatCard
               label="Net Profit"
-              value={INR(stats.summary.totalNetProfit)}
-              color={stats.summary.totalNetProfit >= 0 ? "green" : "red"}
+              value={INR(s.totalNetProfit)}
+              color={s.totalNetProfit >= 0 ? "green" : "red"}
               sub="Gross − Commission"
             />
           </div>
@@ -303,7 +351,7 @@ const CarDashboard = () => {
 
           <div className="grid grid-cols-1 gap-4">
             {/* Status donut */}
-            {statusData && stats.summary.totalDeals > 0 && (
+            {statusData && s.totalDeals > 0 && (
               <ChartBox title="Deal Status" height="h-52">
                 <Doughnut
                   data={statusData}
@@ -380,7 +428,17 @@ const CarDashboard = () => {
                 Partner Earnings
               </h3>
               <div className="space-y-2">
-                {Object.entries(stats.partnerProfit)
+                {Object.entries({
+                  ...stats.partnerProfit,
+                  ...(stats.mySummary
+                    ? {
+                        You: {
+                          profit: stats.mySummary.totalNetProfit,
+                          deals: stats.mySummary.soldDeals,
+                        },
+                      }
+                    : {}),
+                })
                   .sort(([, a], [, b]) => b.profit - a.profit)
                   .map(([name, data]) => (
                     <div
@@ -408,7 +466,7 @@ const CarDashboard = () => {
             </div>
           )}
 
-          {stats.summary.totalDeals === 0 && (
+          {s.totalDeals === 0 && (
             <div className="text-center py-16 bg-white rounded-xl border border-slate-200">
               <p className="text-3xl mb-3">🚗</p>
               <p className="text-base font-semibold text-slate-500">

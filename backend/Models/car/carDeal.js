@@ -128,6 +128,34 @@ carDealSchema.virtual("partnerBreakdown").get(function () {
   });
 });
 
+// ── My share (owner) ─────────────────────────────────────────────────────────
+// Partners are the OTHER people in the deal. Whatever % is not assigned to
+// them belongs to me, so with no partners my share is 100%.
+carDealSchema.virtual("myShare").get(function () {
+  const partnerTotal = (this.partners || []).reduce(
+    (s, p) => s + (p.sharePercent || 0),
+    0,
+  );
+  return Math.max(0, Math.round((100 - partnerTotal) * 100) / 100);
+});
+
+// My slice of cost / revenue / profit. Always present (100% when no partners).
+// Revenue is my share of the selling price; commission and profit are split
+// by the same % (consistent with how partners' profit share is computed).
+carDealSchema.virtual("myBreakdown").get(function () {
+  const pct = this.myShare;
+  const f = pct / 100;
+  const sold = this.sellingPrice !== null && this.sellingPrice !== undefined;
+  return {
+    sharePercent: pct,
+    costShare: Math.round(this.totalCost * f),
+    revenueShare: sold ? Math.round(this.sellingPrice * f) : null,
+    commissionShare: Math.round(this.totalCommission * f),
+    grossProfitShare: sold ? Math.round(this.grossProfit * f) : null,
+    profitShare: sold ? Math.round(this.netProfit * f) : null,
+  };
+});
+
 carDealSchema.set("toJSON", { virtuals: true });
 carDealSchema.set("toObject", { virtuals: true });
 

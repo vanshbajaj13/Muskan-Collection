@@ -39,6 +39,9 @@ const CarDealCard = ({ deal, onEdit, onDelete }) => {
 
   const totalExpenses = (deal.expenses || []).reduce((s, e) => s + e.amount, 0);
   const isSold = deal.dealStatus === "sold";
+  // My share = 100% minus whatever partners hold (100% when no partners)
+  const my = deal.myBreakdown;
+  const hasPartners = deal.partnerBreakdown?.length > 0;
 
   return (
     <>
@@ -93,8 +96,13 @@ const CarDealCard = ({ deal, onEdit, onDelete }) => {
           </p>
 
           {/* Row 3: profit, prominent and unmissable on mobile */}
-          <div className="mt-2.5">
-            <ProfitChip value={deal.netProfit} />
+          <div className="mt-2.5 flex items-baseline gap-2">
+            <ProfitChip value={my ? my.profitShare : deal.netProfit} />
+            {hasPartners && my && (
+              <span className="text-xs text-slate-400">
+                your {my.sharePercent}% share
+              </span>
+            )}
           </div>
 
           {/* Row 4: purchase / sale timeline, stacked for narrow screens */}
@@ -223,10 +231,31 @@ const CarDealCard = ({ deal, onEdit, onDelete }) => {
             )}
 
             {/* Partners breakdown */}
-            {deal.partnerBreakdown?.length > 0 && (
+            {hasPartners && (
               <div>
                 <SectionLabel>Partners</SectionLabel>
                 <div className="space-y-2 mt-2">
+                  {my && (
+                    <div className="px-3 py-2.5 bg-green-50 rounded-lg border border-green-100">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-semibold text-green-800">
+                          You{" "}
+                          <span className="font-normal text-green-600">
+                            ({my.sharePercent}%)
+                          </span>
+                        </span>
+                        {my.profitShare !== null && (
+                          <ProfitChip value={my.profitShare} />
+                        )}
+                      </div>
+                      <div className="flex gap-4 mt-1 text-lg font-bold text-green-600">
+                        <span>Cost: {formatCurrency(my.costShare)}</span>
+                        {my.revenueShare !== null && (
+                          <span>Revenue: {formatCurrency(my.revenueShare)}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {deal.partnerBreakdown.map((p) => (
                     <div
                       key={p.name}

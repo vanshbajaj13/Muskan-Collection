@@ -210,6 +210,8 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
     (s, p) => s + (parseFloat(p.sharePercent) || 0),
     0,
   );
+  // Whatever isn't assigned to partners is mine (100% when no partners)
+  const myPct = Math.max(0, Math.round((100 - totalPartnerShare) * 100) / 100);
 
   // Expenses
   const addExpense = () =>
@@ -271,6 +273,10 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
       const profitShare = netProfit !== null ? (netProfit * pct) / 100 : null;
       return { name: p.name, pct, costShare, revenueShare, profitShare };
     });
+
+  const myCostShare = Math.round((totalCost * myPct) / 100);
+  const myProfitShare =
+    netProfit !== null ? Math.round((netProfit * myPct) / 100) : null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -425,7 +431,7 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
         {/* Partners */}
         <Section
           title="Partners"
-          subtitle="Optional — add if others have a share in this deal."
+          subtitle="Optional — add others who share this deal. The remaining % is yours."
         >
           {form.partners.map((p, i) => (
             <div
@@ -478,9 +484,8 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
                     : "text-amber-600"
               }`}
             >
-              Total share: {totalPartnerShare}%
+              Partners: {totalPartnerShare}% · You: {myPct}%
               {totalPartnerShare > 100 && " — exceeds 100%"}
-              {totalPartnerShare === 100 && " — perfect"}
             </p>
           )}
 
@@ -743,6 +748,18 @@ const CarDealForm = ({ initial, onSave, onCancel, loading }) => {
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                   Partner Breakdown
                 </p>
+                <div className="flex justify-between items-center py-1.5 border-b border-slate-100">
+                  <span className="text-sm font-medium text-slate-700">
+                    You ({myPct}%)
+                  </span>
+                  <span
+                    className={`text-sm font-bold ${myProfitShare >= 0 ? "text-green-600" : "text-red-500"}`}
+                  >
+                    Cost ₹{myCostShare.toLocaleString("en-IN")} → Net{" "}
+                    {myProfitShare >= 0 ? "+" : ""}₹
+                    {myProfitShare.toLocaleString("en-IN")}
+                  </span>
+                </div>
                 {partnerBreakdown.map((p) => (
                   <div
                     key={p.name}

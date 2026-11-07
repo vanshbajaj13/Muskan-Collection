@@ -84,29 +84,47 @@ router.get("/meta/stats", protect, async (req, res) => {
 
     const deals = await CarDeal.find(query);
 
+    // Builds the summary + monthly profit for a set of deals.
+    // `factor(d)` is the fraction of each deal to count:
+    //   whole deal → 1, my share → d.myShare / 100
+    const buildView = (allDeals, factor) => {
+      const list = allDeals.filter((d) => factor(d) > 0);
+      const sold = list.filter((d) => d.dealStatus === "sold");
+      const unsold = list.filter((d) => d.dealStatus === "unsold");
+      const sum = (arr, fn) => arr.reduce((s, d) => s + fn(d) * factor(d), 0);
+
+      const profitByMonth = {};
+      sold.forEach((d) => {
+        const date = new Date(d.purchaseDate);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+        if (!profitByMonth[key]) profitByMonth[key] = { gross: 0, net: 0, count: 0, revenue: 0 };
+        profitByMonth[key].gross += (d.grossProfit || 0) * factor(d);
+        profitByMonth[key].net += (d.netProfit || 0) * factor(d);
+        profitByMonth[key].revenue += (d.sellingPrice || 0) * factor(d);
+        profitByMonth[key].count += 1;
+      });
+
+      return {
+        summary: {
+          totalDeals: list.length,
+          soldDeals: sold.length,
+          unsoldDeals: unsold.length,
+          totalBuyingCost: sum(list, (d) => d.buyingPrice),
+          totalExpenses: sum(list, (d) => d.totalExpenses),
+          totalCost: sum(list, (d) => d.totalCost),
+          totalRevenue: sum(sold, (d) => d.sellingPrice || 0),
+          totalGrossProfit: sum(sold, (d) => d.grossProfit || 0),
+          totalNetProfit: sum(sold, (d) => d.netProfit || 0),
+          totalCommission: sum(list, (d) => d.totalCommission),
+          capitalLocked: sum(unsold, (d) => d.totalCost),
+        },
+        profitByMonth,
+      };
+    };
+
+    const whole = buildView(deals, () => 1);
+    const mine = buildView(deals, (d) => d.myShare / 100);
     const soldDeals = deals.filter((d) => d.dealStatus === "sold");
-    const unsoldDeals = deals.filter((d) => d.dealStatus === "unsold");
-
-    const totalBuyingCost = deals.reduce((s, d) => s + d.buyingPrice, 0);
-    const totalExpenses = deals.reduce((s, d) => s + d.totalExpenses, 0);
-    const totalCost = deals.reduce((s, d) => s + d.totalCost, 0);
-    const totalRevenue = soldDeals.reduce((s, d) => s + (d.sellingPrice || 0), 0);
-    const totalGrossProfit = soldDeals.reduce((s, d) => s + (d.grossProfit || 0), 0);
-    const totalNetProfit = soldDeals.reduce((s, d) => s + (d.netProfit || 0), 0);
-    const totalCommission = deals.reduce((s, d) => s + d.totalCommission, 0);
-    const capitalLocked = unsoldDeals.reduce((s, d) => s + d.totalCost, 0);
-
-    // Profit by month
-    const profitByMonth = {};
-    soldDeals.forEach((d) => {
-      const date = new Date(d.purchaseDate);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-      if (!profitByMonth[key]) profitByMonth[key] = { gross: 0, net: 0, count: 0, revenue: 0 };
-      profitByMonth[key].gross += d.grossProfit || 0;
-      profitByMonth[key].net += d.netProfit || 0;
-      profitByMonth[key].revenue += d.sellingPrice || 0;
-      profitByMonth[key].count += 1;
-    });
 
     // Partner-wise profit
     const partnerProfit = {};
@@ -126,20 +144,10 @@ router.get("/meta/stats", protect, async (req, res) => {
     });
 
     res.json({
-      summary: {
-        totalDeals: deals.length,
-        soldDeals: soldDeals.length,
-        unsoldDeals: unsoldDeals.length,
-        totalBuyingCost,
-        totalExpenses,
-        totalCost,
-        totalRevenue,
-        totalGrossProfit,
-        totalNetProfit,
-        totalCommission,
-        capitalLocked,
-      },
-      profitByMonth,
+      summary: whole.summary,
+      profitByMonth: whole.profitByMonth,
+      mySummary: mine.summary,
+      myProfitByMonth: mine.profitByMonth,
       partnerProfit,
       makeCount,
     });

@@ -98,8 +98,15 @@ const CarDeals = () => {
 
   const sold = visible.filter((d) => d.dealStatus === "sold");
   const unsold = visible.filter((d) => d.dealStatus === "unsold");
-  const totalNetProfit = sold.reduce((s, d) => s + (d.netProfit || 0), 0);
-  const capitalLocked = unsold.reduce((s, d) => s + (d.totalCost || 0), 0);
+  // Summary reflects MY share of each deal (100% when there are no partners)
+  const totalNetProfit = sold.reduce(
+    (s, d) => s + (d.myBreakdown?.profitShare ?? d.netProfit ?? 0),
+    0,
+  );
+  const capitalLocked = unsold.reduce(
+    (s, d) => s + (d.myBreakdown?.costShare ?? d.totalCost ?? 0),
+    0,
+  );
 
   return (
     <div className="relative">
@@ -153,7 +160,7 @@ const CarDeals = () => {
       <div className="grid grid-cols-2 gap-3 mb-4">
         <StatCard label="Total" value={visible.length} color="blue" />
         <StatCard
-          label="Net Profit"
+          label="My Net Profit"
           value={formatCurrency(totalNetProfit)}
           color={totalNetProfit >= 0 ? "green" : "red"}
         />
