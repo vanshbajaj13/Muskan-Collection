@@ -16,6 +16,7 @@ const role = require("./routes/role");
 const path = require("path");
 const verification = require("./routes/verification");
 const salesReport = require("./routes/salesReport");
+const printSets = require("./routes/printSets"); // Import the printSets route
 
 // phones
 require("./audit/attachAuditHooks"); // registers the schema hooks once
@@ -62,7 +63,7 @@ app.use("/signup", signup);
 app.use("/api/role", role);
 app.use("/api/verification", verification);
 app.use("/api/salesreport", salesReport);
-
+app.use("/api/printsets", printSets);
 // phones
 app.use("/api/phones/deals", phoneDeals);
 app.use("/api/phones/expenses", phoneExpenses);

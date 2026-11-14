@@ -28,6 +28,7 @@ import VerificationDashboard from "./Verification/VerificationDashboard";
 import VerificationSession from "./Verification/VerificationSession";
 import SalesReport from "./SalesReport/SalesReport";
 import ItemActivityTimeline from "./ItemActivity/ItemActivityTimeline";
+import PrintSets from "./PrintSets/PrintSets";
 
 const Home = () => {
   const [userRole] = useUserRole();
@@ -44,6 +45,7 @@ const Home = () => {
         <Route path="/customer-purchase" element={<CustomerPurchase />} />
         <Route path="/purchase" element={<Purchase />} />
         <Route path="/print-tag" element={<PrintTag />} />
+        <Route path="/print-sets" element={<PrintSets />} />
         {(isAdmin || isDev) && (
           <Route path="/dashboard" element={<Dashboard />} />
         )}
